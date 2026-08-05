@@ -12,6 +12,30 @@ page cannot do for itself — it can launch onto the device's *second* display.
 
 ---
 
+## Download
+
+Grab the file for your game from the
+**[latest release](https://github.com/Abacus1829/ayn-dual-screen/releases/latest)**, or straight
+from here:
+
+| Game | Download | Also on | Source | Port |
+| --- | --- | --- | --- | --- |
+| **Stardew Valley** (SMAPI) | [`.zip`](https://github.com/Abacus1829/ayn-dual-screen/releases/latest/download/AynDualScreen-Stardew.zip) | [Nexus Mods](https://www.nexusmods.com/stardewvalley/mods/49903) | [`stardew/`](stardew) | 27301 |
+| **Terraria** (tModLoader) | [`.tmod`](https://github.com/Abacus1829/ayn-dual-screen/releases/latest/download/AynDualScreen-Terraria.tmod) | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3778092427) | [`terraria/`](terraria) | 27301 |
+| **Minecraft** (Forge 1.21.1) | [`.jar`](https://github.com/Abacus1829/ayn-dual-screen/releases/latest/download/AynDualScreen-Minecraft-mc1.21.1.jar) | — | [`minecraft/`](minecraft) | 27302 |
+| The Android app *(optional)* | [`.apk`](https://github.com/Abacus1829/ayn-dual-screen/releases/latest/download/AynDualScreen-App.apk) | — | [`android/`](android) | — |
+
+Install steps for each are in the [release notes](https://github.com/Abacus1829/ayn-dual-screen/releases/latest).
+Every file there is built from the source in this repository.
+
+The app is **optional** — any browser pointed at the address the mod prints gives you the same second
+screen.
+
+Minecraft uses 27302 rather than 27301 deliberately: it and Terraria are likely to be installed on
+the same PC, and two mods fighting over one port fails in a way that looks like the app's fault.
+
+---
+
 ## The app is not tied to any one game
 
 The companion app has no game-specific code in it at all. It is a WebView pointed at a host and port
@@ -19,22 +43,11 @@ you type into its setup screen. There is no game detection, no bundled list of s
 hardcoded address and no remote endpoint anywhere in it — it does not know, and does not need to
 know, what is answering on the other end.
 
-That is why the same build serves every mod in the series without a per-game version, and why it
-works just as well against anything else on your network that serves a page worth putting on a
-second screen.
+That is why the same build serves every mod without a per-game version, and why it works just as
+well against anything else on your network that serves a page worth putting on a second screen.
+Each game needs its own mod because each one has to read that game's state; the app does not.
 
-| Game | Get the mod | Mod source | Default port |
-| --- | --- | --- | --- |
-| **Stardew Valley** (SMAPI) | [Nexus Mods](https://www.nexusmods.com/stardewvalley/mods/49903) | [`stardew/`](stardew) | 27301 |
-| **Terraria** (tModLoader) | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3778092427) | [`terraria/`](terraria) | 27301 |
-| **Minecraft** (Forge, 1.21.1) | build from source | [`minecraft/`](minecraft) | 27302 |
-
-Each game needs its own mod because each one has to read that game's state. The app does not.
-
-Minecraft uses 27302 rather than 27301 deliberately: it and Terraria are likely to be installed on
-the same PC, and two mods fighting over one port fails in a way that looks like the app's fault.
-
-The app's on-screen wording still names Stardew in a couple of places (see
+Its on-screen wording still names Stardew in a couple of places (see
 [`strings.xml`](android/app/src/main/res/values/strings.xml)), because that is the project it first
 shipped alongside. That text is cosmetic. It does not limit what the app can connect to.
 
@@ -50,9 +63,7 @@ shipped alongside. That text is cosmetic. It does not limit what the app can con
 | [`minecraft/`](minecraft) | The **Minecraft** mod (Forge, 1.21.1). Client-side only — nothing to install on a server, since it reads only what your own client already knows. | Java 21 / Gradle |
 | each mod's `web/` | The second-screen page that mod serves — plain HTML/CSS/JS, no build step, no dependencies. | HTML, CSS, vanilla JS |
 
-The app is **optional**. Any browser pointed at a mod's URL gives the same second screen.
-
-Each mod is self-contained: they share no files, no build and no output, and neither needs the other
+Each mod is self-contained: they share no files, no build and no output, and none needs the others
 to be present. Ideas were carried across by hand.
 
 Detailed docs live in [`android/README.md`](android/README.md) (the app) and in each mod's own
