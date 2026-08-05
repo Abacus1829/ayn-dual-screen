@@ -1,16 +1,31 @@
-# Ayn Dual Screen — Stardew Valley
+# Ayn Dual Screen
 
-A [SMAPI](https://smapi.io/) mod that turns any second display into a 3DS-style bottom screen for
-Stardew Valley: live map, live touch inventory, clock, date, season, weather, money, health and
-energy. Plus an optional Android companion app for handhelds with a second panel.
+A second-screen system for handhelds with two panels. Built for the **AYN Thor**, but the second
+screen can be any device with a browser — a phone, a tablet, or a second monitor.
+
+A tiny HTTP server runs inside the game and serves a live, touchable UI to that screen: map,
+inventory, clock and status. An Android companion app displays it fullscreen, keeps the panel awake,
+and can launch itself onto the device's *second* display.
 
 **By Abacus.** Contains AI-assisted code, human-reviewed before release.
+
+## The mods
+
+The companion app is one app across all of them — see
+[below](#one-app-across-every-game). Each game gets its own mod, because each one has to read that
+game's state.
+
+| Game | Get it | Source |
+| --- | --- | --- |
+| **Stardew Valley** (SMAPI) | [Nexus Mods](https://www.nexusmods.com/stardewvalley/mods/49903) | in this repository, [`AynDualScreen/`](AynDualScreen) |
+| **Terraria** (tModLoader) | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3778092427) | a separate project, not in this repository |
 
 ---
 
 ## What this repository contains
 
-The project is two independent halves that talk over plain HTTP on your local network.
+The Stardew Valley mod and the companion app: two independent halves that talk over plain HTTP on
+your local network.
 
 | Folder | What it is | Language / toolchain |
 | --- | --- | --- |
@@ -25,14 +40,14 @@ screen. The app exists only to remove browser chrome, keep the display awake, an
 Detailed docs live in [`AynDualScreen/README.md`](AynDualScreen/README.md) (the mod, its HTTP
 endpoints and config) and [`android/README.md`](android/README.md) (the app).
 
-### The app is shared across my mods, not tied to this one
+### One app across every game
 
 The companion app contains no Stardew-specific code. It is a WebView pointed at a host and port you
-type into its setup screen, so it serves as the second screen for **every mod in this series**, not
-just this one — including my **Terraria (tModLoader) port of Ayn Dual Screen**, which serves the same
-kind of second-screen page on the same default port, `27301`. Point the app at whichever PC is
-running whichever game, and it works unchanged. There is no per-game build, no game detection and no
-list of supported titles inside the APK.
+type into its setup screen, so the same build is the second screen for **every mod in this series** —
+including the [Terraria (tModLoader) port](https://steamcommunity.com/sharedfiles/filedetails/?id=3778092427),
+which serves the same kind of page on the same default port, `27301`. Point the app at whichever PC
+is running whichever game, and it works unchanged. There is no per-game build, no game detection and
+no list of supported titles inside the APK.
 
 It lives in this repository because this is the mod it first shipped with, and because the Android
 half only matters here — the Terraria side has no Android build of the game to worry about at all.
