@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Stardew Second Screen</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div id="offline" class="overlay">
+    <div class="overlay-box">
+      <h1>Waiting for the game</h1>
+      <p id="offline-detail">Connecting&hellip;</p>
+    </div>
+  </div>
+
+  <button id="gear" title="Customise this screen" aria-label="Settings">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 15.5A3.5 3.5 0 1 1 15.5 12 3.5 3.5 0 0 1 12 15.5zm7.4-2.1a7.6 7.6 0 0 0 0-2.8l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-2.4-1.4L14.2 2H9.8l-.4 2.6A7.6 7.6 0 0 0 7 6L4.6 5l-2 3.4 2 1.6a7.6 7.6 0 0 0 0 2.8l-2 1.6 2 3.4 2.4-1a7.6 7.6 0 0 0 2.4 1.4l.4 2.8h4.4l.4-2.8a7.6 7.6 0 0 0 2.4-1.4l2.4 1 2-3.4z" />
+    </svg>
+  </button>
+
+  <div id="settings" class="overlay hidden">
+    <div class="settings-box">
+      <div class="settings-head">
+        <span>Customise this screen</span>
+        <button id="settings-close" class="chip">Done</button>
+      </div>
+
+      <p class="settings-note">Saved on this device only, so the Thor and a phone can each be set up differently.</p>
+
+      <div class="settings-section">Show</div>
+      <div id="settings-toggles" class="settings-grid"></div>
+
+      <div class="settings-section">Accent</div>
+      <div id="settings-accents" class="swatches"></div>
+
+      <div class="settings-section">Size</div>
+      <div id="settings-scale" class="segmented"></div>
+
+      <div class="settings-section">Updates per second</div>
+      <div id="settings-rate" class="segmented"></div>
+
+      <div class="settings-section">Wiki</div>
+      <div class="settings-links">
+        <button id="wiki-home" class="linkish">Open the official Stardew Valley Wiki</button>
+        <button id="wiki-item" class="linkish">Look up the selected item</button>
+        <p class="settings-note">Opens in this window. The app's &#8942; menu brings you back; in a plain browser, use Back.</p>
+      </div>
+
+      <div class="settings-foot">
+        <button id="settings-reset" class="chip">Reset to defaults</button>
+      </div>
+    </div>
+  </div>
+
+  <header id="hud" class="framed">
+    <div class="hud-block" id="hud-date">
+      <span class="hud-main" id="date-text">&mdash;</span>
+      <span class="hud-sub" id="year-text"></span>
+    </div>
+    <div class="hud-block" id="hud-clock">
+      <span class="hud-main" id="clock-text">--:--</span>
+      <span class="hud-sub" id="weather-text"></span>
+    </div>
+    <div class="hud-block" id="hud-money">
+      <span class="hud-main" id="money-text">0g</span>
+      <span class="hud-sub" id="location-text"></span>
+    </div>
+    <div class="hud-block bars">
+      <div class="bar" title="Energy"><div class="bar-fill energy" id="bar-energy"></div><span id="energy-text"></span></div>
+      <div class="bar" title="Health"><div class="bar-fill health" id="bar-health"></div><span id="health-text"></span></div>
+    </div>
+  </header>
+
+  <main>
+    <section id="map-panel" class="framed">
+      <div class="panel-head">
+        <span class="tabs">
+          <button class="tab on" data-tab="map">Map</button>
+          <button class="tab" data-tab="today">Today</button>
+          <button class="tab" data-tab="village">Village</button>
+          <button class="tab" data-tab="bundles">Bundles</button>
+        </span>
+        <span class="head-tools">
+          <i id="link-dot" class="dot" title="Connection"></i>
+          <button id="zoom-out" class="chip tight">&minus;</button>
+          <span id="zoom-text">1x</span>
+          <button id="zoom-in" class="chip tight">+</button>
+          <button id="zoom-toggle" class="chip">Fit</button>
+        </span>
+      </div>
+      <div id="tab-map" class="tab-body">
+        <div id="map-wrap">
+          <canvas id="map-canvas"></canvas>
+          <div id="map-tip" class="hidden"></div>
+        </div>
+        <div id="legend">
+          <span><i class="sw" style="background:#6ec1ff"></i>You</span>
+          <span><i class="sw" style="background:#ffd166"></i>NPC</span>
+          <span><i class="sw" style="background:#ff5d5d"></i>Monster</span>
+          <span><i class="sw" style="background:#c58cff"></i>Exit</span>
+        </div>
+      </div>
+
+      <div id="tab-today" class="tab-body hidden">
+        <div id="forecast"></div>
+        <div id="today-notes"></div>
+        <div class="sub-head"><span>Skills</span></div>
+        <div id="skills"></div>
+        <div class="sub-head" id="quest-head">
+          <span>Journal</span>
+          <span id="quest-count"></span>
+        </div>
+        <div id="quests"></div>
+      </div>
+
+      <div id="tab-village" class="tab-body hidden">
+        <div class="sub-head">
+          <span>Villagers</span>
+          <span id="village-count"></span>
+        </div>
+        <input id="village-filter" type="search" placeholder="Filter…" autocomplete="off">
+        <div id="village-list"></div>
+      </div>
+
+      <div id="tab-bundles" class="tab-body hidden">
+        <div class="sub-head">
+          <span>Community Centre</span>
+          <span id="bundle-progress"></span>
+        </div>
+        <div id="bundle-list"></div>
+      </div>
+    </section>
+
+    <section id="inv-panel" class="framed">
+      <div class="panel-head">
+        <span id="inv-title">Inventory</span>
+        <span id="inv-hint">tap to select &middot; drag to move</span>
+      </div>
+      <div id="inv-grid"></div>
+
+      <div id="detail" class="framed">
+        <img id="detail-icon" alt="">
+        <div id="detail-text">
+          <span id="detail-name">Nothing selected</span>
+          <span id="detail-meta"></span>
+        </div>
+        <button id="detail-wiki" class="chip" title="Look this up on the wiki" disabled>Wiki</button>
+      </div>
+
+      <div id="actions">
+        <button class="act" data-act="eat" disabled>Eat</button>
+        <button class="act" data-act="drop" disabled>Drop</button>
+        <button class="act danger" data-act="trash" disabled>Trash</button>
+        <button class="act" data-act="sort">Sort</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

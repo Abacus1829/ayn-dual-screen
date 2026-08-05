@@ -1,0 +1,707 @@
+/* Bottom-screen UI for Stardew Valley. Sized to fill whatever panel it's put on without ever scrolling the page. */
+
+:root {
+  --bg: #14100e;
+  --panel: #221b16;
+  --panel-2: #2d241d;
+  --edge: #3d3128;
+  --edge-hot: #c8a066;
+  --text: #f2e6d5;
+  --text-dim: #a3927c;
+  /*
+   * These were dark browns, on the assumption the panel behind them was a light parchment interior.
+   * It isn't — .panel is #221b16 — so every heading, tab label and forecast line was dark-on-dark and
+   * barely legible, worst of all on the Today tab where nearly all the text uses them.
+   *
+   * Corrected here rather than at the seventeen places that read them, so the whole UI moves together
+   * and nothing is left behind. If a genuinely light panel ever appears, it needs its own variables.
+   */
+  --ink: #f2e6d5;
+  --ink-dim: #b8a68e;
+  --ink-gold: #e8bb5c;
+  --accent: #6ec1ff;
+  --gold: #ffd166;
+  --danger: #ff5d5d;
+  --gap: 6px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  padding: var(--gap);
+}
+
+/* ---------- top HUD ---------- */
+
+/* The panel frame is the game's own menu box, nine-sliced. The source is a 60x60 tile of 20px thirds,
+   which is exactly what IClickableMenu.drawTextureBox uses, so 20px borders render it 1:1. */
+.framed {
+  background: var(--panel);
+  border: 20px solid transparent;
+  border-image: url(/asset/menubox.png) 20 fill / 20px repeat;
+  image-rendering: pixelated;
+}
+
+#hud {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: stretch;
+  gap: var(--gap);
+  padding: 0;
+  border-top-width: 12px;
+  border-bottom-width: 12px;
+}
+
+.hud-block {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.hud-block + .hud-block { border-left: 1px solid var(--edge); padding-left: 10px; }
+
+.hud-main {
+  font-size: clamp(14px, 2.6vh, 20px);
+  font-weight: 600;
+  line-height: 1.1;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.hud-sub {
+  font-size: clamp(10px, 1.7vh, 12px);
+  color: var(--ink-dim);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#money-text { color: var(--ink-gold); }
+#clock-text { font-variant-numeric: tabular-nums; }
+
+/* Past midnight the clock turns; you have two hours before you collapse and lose gold, and the
+   difference between 12:30am and 1:30am is easy to miss when the number is just another number. */
+#clock-text.late { color: #ff9d5c; }
+
+.bars {
+  flex: 1 1 auto;
+  gap: 4px;
+  justify-content: center;
+}
+
+.bar {
+  position: relative;
+  height: 12px;
+  border-radius: 6px;
+  background: #0d0a08;
+  border: 1px solid var(--edge);
+  overflow: hidden;
+}
+
+.bar span {
+  position: absolute;
+  inset: 0;
+  text-align: center;
+  font-size: 9px;
+  line-height: 10px;
+  color: var(--text);
+  text-shadow: 0 1px 1px #000;
+}
+
+.bar-fill { height: 100%; width: 0; transition: width .2s linear; }
+.bar-fill.energy { background: linear-gradient(90deg, #4f8f2f, #8fd14f); }
+.bar-fill.health { background: linear-gradient(90deg, #8f2f2f, #ff6b6b); }
+
+/* ---------- layout ---------- */
+
+main {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+  gap: var(--gap);
+  min-height: 0;
+}
+
+section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  gap: 6px;
+}
+
+.panel-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+#map-title, #inv-title { color: var(--ink); font-weight: 600; }
+
+.chip {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  padding: 3px 12px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.chip:active { background: var(--edge); }
+
+/* ---------- map ---------- */
+
+/* ---------- left-panel tabs ---------- */
+
+.tabs { display: flex; gap: 3px; }
+
+.tab {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 3px 7px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+
+.tab.on { color: var(--ink); border-color: var(--edge-hot); background: rgba(0, 0, 0, .08); }
+
+/* Each tab body fills the panel; only one is ever shown. flex rather than block so the map keeps
+   stretching to the available height the way it did before tabs existed. */
+.tab-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tab-body.hidden { display: none; }
+
+#today-notes { flex: 0 0 auto; display: flex; flex-direction: column; gap: 2px; font-size: 11px; }
+
+.note {
+  padding: 3px 7px;
+  border-radius: 3px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+  color: var(--text);
+}
+
+.note.birthday { border-color: var(--edge-hot); }
+.note.festival { border-color: #b06a3b; }
+
+/* ---------- villager tracker ---------- */
+
+#village-filter, #craft-filter {
+  flex: 0 0 auto;
+  background: #14100e;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  color: var(--text);
+  padding: 5px 8px;
+  font-size: 12px;
+}
+
+#village-list, #bundle-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.villager {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  padding: 3px 7px;
+  border-radius: 3px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+  color: var(--text);
+}
+
+.villager.here { border-color: var(--accent); }
+.villager.birthday { border-color: var(--edge-hot); }
+.villager b { font-weight: 600; white-space: nowrap; }
+.villager span { color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.villager em { font-style: normal; margin-left: auto; flex: 0 0 auto; color: var(--gold); font-size: 10px; }
+.villager i { font-style: normal; flex: 0 0 auto; font-size: 10px; }
+.villager i.talked { color: #5fbf4f; }
+
+#village-count, #bundle-progress { color: var(--ink-gold); }
+
+/* ---------- bundles ---------- */
+
+.room {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 7px;
+  border-radius: 3px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+}
+
+.room.done { opacity: .55; border-color: #4f7a3f; }
+.room-head { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: var(--text); }
+.room-head em { font-style: normal; color: var(--text-dim); font-weight: 400; }
+.room small { font-size: 10px; color: var(--text-dim); }
+
+.head-tools { display: flex; align-items: center; gap: 5px; }
+.chip.tight { padding: 3px 8px; min-width: 26px; }
+#zoom-text { font-size: 10px; color: var(--ink-dim); min-width: 22px; text-align: center; }
+
+/* connection health: green while snapshots keep arriving, amber when they stall, red when they stop */
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  background: var(--ink-dim);
+  transition: background .2s linear;
+}
+
+.dot.live { background: #5fbf4f; }
+.dot.slow { background: #d9a02b; }
+.dot.dead { background: var(--danger); }
+
+/* a label for whatever was last tapped on the map */
+#map-tip {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  max-width: calc(100% - 12px);
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(12, 9, 7, .9);
+  border: 1px solid var(--edge);
+  font-size: 11px;
+  color: var(--text);
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sub-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-top: 2px;
+}
+
+#forecast {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--ink-dim);
+}
+
+#forecast b { color: var(--ink); font-weight: 600; }
+/* also lifted off the dark panel: the old greens and reds were about as dark as the background */
+#forecast .lucky { color: #7ad45f; }
+#forecast .unlucky { color: #ff7a6b; }
+
+/* the journal: enough to know what today needs, not the whole quest text */
+#quests {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.quest {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--ink);
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  padding: 2px 6px;
+}
+
+.quest span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quest i { font-style: normal; color: var(--text-dim); flex: 0 0 auto; }
+.quest i.soon { color: var(--danger); font-weight: 700; }
+.quest.done { opacity: .55; }
+.quest.done span { text-decoration: line-through; }
+
+#map-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  background: #0b0908;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+}
+
+#map-canvas {
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  touch-action: none;
+}
+
+#legend {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 10px;
+  color: var(--ink-dim);
+}
+
+#legend span { display: flex; align-items: center; gap: 4px; }
+.sw { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+
+#skills {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 3px;
+}
+
+.skill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  padding: 2px 0;
+}
+
+.skill b { font-size: 13px; line-height: 1.1; }
+.skill span { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; }
+
+/* ---------- inventory ---------- */
+
+#inv-hint { font-size: 10px; text-transform: none; letter-spacing: 0; }
+
+#inv-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-rows: min-content;
+  align-content: start;
+  gap: 3px;
+}
+
+.slot {
+  position: relative;
+  aspect-ratio: 1;
+  background: var(--panel-2) url(/asset/slot.png) center / 100% 100% no-repeat;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  image-rendering: pixelated;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  touch-action: none;
+  cursor: pointer;
+}
+
+.slot.hotbar { border-color: #4a3b2d; }
+.slot.cursor { border-color: var(--edge-hot); box-shadow: inset 0 0 0 1px var(--edge-hot); }
+.slot.equipped { background: #3c3020; border-color: var(--gold); }
+.slot.dragover { background: #405066; border-color: var(--accent); }
+.slot.dragging { opacity: .35; }
+
+.slot img {
+  width: 84%;
+  height: 84%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.slot .stack {
+  position: absolute;
+  right: 2px;
+  bottom: 0;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-shadow: 0 1px 0 #000, 0 -1px 0 #000, 1px 0 0 #000, -1px 0 0 #000;
+  pointer-events: none;
+}
+
+/* the game's own quality stars, from LooseSprites/Cursors */
+.slot .qual {
+  position: absolute;
+  left: 2px;
+  bottom: 2px;
+  width: 10px;
+  height: 10px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.qual.q1 { background-image: url(/asset/quality1.png); }
+.qual.q2 { background-image: url(/asset/quality2.png); }
+.qual.q4 { background-image: url(/asset/quality4.png); }
+
+/* ---------- detail + actions ---------- */
+
+#detail {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border-width: 12px;
+  min-height: 40px;
+}
+
+#detail-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  visibility: hidden;
+}
+
+#detail-text { display: flex; flex-direction: column; min-width: 0; }
+#detail-name { font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#detail-meta { font-size: 11px; color: var(--ink-dim); }
+
+#actions {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+}
+
+.act {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  padding: 9px 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.act:active:not(:disabled) { background: var(--edge); }
+.act:disabled { opacity: .35; cursor: default; }
+.act.danger:not(:disabled) { color: var(--danger); }
+.act.armed { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+/* ---------- gear + settings ---------- */
+
+#gear {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  z-index: 20;
+  width: 30px;
+  height: 30px;
+  padding: 5px;
+  border-radius: 50%;
+  background: rgba(20, 16, 14, .72);
+  border: 1px solid var(--edge);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#gear svg { width: 100%; height: 100%; fill: var(--text-dim); display: block; }
+#gear:active svg { fill: var(--edge-hot); }
+
+.settings-box {
+  width: min(560px, 94vw);
+  max-height: 92vh;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 2px solid var(--edge);
+  border-radius: 6px;
+  padding: 14px 16px;
+  color: var(--text);
+}
+
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.settings-note { margin: 0 0 6px; font-size: 11px; color: var(--text-dim); }
+
+.settings-section {
+  margin-top: 14px;
+  margin-bottom: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--text-dim);
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 4px 10px;
+}
+
+.settings-grid label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  padding: 3px 0;
+  cursor: pointer;
+}
+
+.settings-grid input { accent-color: var(--edge-hot); width: 16px; height: 16px; }
+
+.swatches { display: flex; flex-wrap: wrap; gap: 7px; }
+
+.swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.swatch.on { border-color: var(--text); }
+
+.segmented { display: flex; gap: 5px; flex-wrap: wrap; }
+
+.segmented button {
+  flex: 1 1 auto;
+  min-width: 62px;
+  background: var(--panel-2);
+  color: var(--text-dim);
+  border: 1px solid var(--edge);
+  border-radius: 5px;
+  padding: 7px 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.segmented button.on { color: var(--text); border-color: var(--edge-hot); }
+
+.settings-links { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+
+.linkish {
+  background: none;
+  border: none;
+  padding: 4px 0;
+  font-size: 13px;
+  color: var(--edge-hot);
+  text-decoration: underline;
+  cursor: pointer;
+  text-align: left;
+}
+
+.linkish:disabled { color: var(--text-dim); text-decoration: none; cursor: default; }
+
+#detail-wiki { flex: 0 0 auto; margin-left: auto; }
+#detail-wiki:disabled { opacity: .35; cursor: default; }
+
+.settings-foot { margin-top: 16px; display: flex; justify-content: flex-end; }
+
+/* Driven by the settings panel. Each toggle just adds a class to <body>, which keeps the panel's
+   wiring trivial and means nothing has to be re-rendered when something is hidden. */
+body.no-hud #hud,
+body.no-map #map-panel,
+body.no-legend #legend,
+body.no-forecast #forecast,
+body.no-skills #skills,
+body.no-quests #quests,
+body.no-quests #quest-head,
+body.no-detail #detail,
+body.no-actions #actions,
+body.no-inv #inv-panel { display: none !important; }
+
+/* with one panel hidden the other should take the whole width */
+body.no-map main, body.no-inv main { grid-template-columns: minmax(0, 1fr); }
+
+/* ---------- offline overlay ---------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 8, 6, .92);
+}
+
+.overlay.hidden { display: none; }
+.overlay-box { text-align: center; padding: 20px; }
+.overlay-box h1 { font-size: 18px; margin: 0 0 6px; }
+.overlay-box p { margin: 0; color: var(--text-dim); font-size: 13px; }
+
+/* ---------- narrow / portrait screens ---------- */
+
+@media (max-aspect-ratio: 1/1) {
+  main { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1.2fr); }
+}
+
+/* the menu frame is chunky pixel art; give it less room when the screen is small */
+@media (max-width: 800px), (max-height: 460px) {
+  .framed { border-width: 12px; }
+  #hud { border-top-width: 8px; border-bottom-width: 8px; }
+  #detail { border-width: 8px; }
+}
+
+@media (max-width: 520px) {
+  #inv-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .hud-block.bars { display: none; }
+}

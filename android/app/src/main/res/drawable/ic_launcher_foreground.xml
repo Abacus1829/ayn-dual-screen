@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Two stacked screens: the game above, the touch panel below. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path
+        android:fillColor="#F2E6D5"
+        android:pathData="M28,26h52a5,5 0 0 1 5,5v22a5,5 0 0 1 -5,5h-52a5,5 0 0 1 -5,-5v-22a5,5 0 0 1 5,-5z" />
+
+    <path
+        android:fillColor="#C8A066"
+        android:pathData="M33,64h42a5,5 0 0 1 5,5v13a5,5 0 0 1 -5,5h-42a5,5 0 0 1 -5,-5v-13a5,5 0 0 1 5,-5z" />
+
+    <path
+        android:fillColor="#221B16"
+        android:pathData="M37,70h13v4h-13z M37,77h20v4h-20z" />
+
+</vector>

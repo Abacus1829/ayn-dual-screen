@@ -1,0 +1,50 @@
+AYN DUAL SCREEN — STARDEW VALLEY
+Copyright (c) 2026 Abacus. All rights reserved.
+
+This mod and its source code are proprietary. They are made available for
+personal use only, on the terms below.
+
+YOU MAY:
+
+  - Download, install and use this mod in your own copy of Stardew Valley.
+
+YOU MAY NOT, without prior written permission from the copyright holder:
+
+  - Reupload, redistribute, republish, mirror or sell this mod or its source
+    code, in whole or in part, in original or modified form. This includes
+    uploading it to Nexus Mods, ModDrop, CurseForge, or any other mod host under
+    any account other than the copyright holder's.
+  - Modify, adapt, port, translate or create derivative works from it, including
+    "patched", "updated", "continued" or "fixed" versions.
+  - Include it in a modpack or compilation, whether or not that pack is
+    distributed for payment.
+  - Decompile, disassemble, reverse engineer or otherwise attempt to derive the
+    source code of the compiled assembly, except to the extent that this
+    restriction is expressly prohibited by applicable law.
+  - Reuse any part of its code in another mod or project.
+  - Remove or alter this notice, or any authorship or attribution notice.
+
+NO WARRANTY
+
+  This mod is provided "as is", without warranty of any kind, express or
+  implied. In no event shall the copyright holder be liable for any claim,
+  damages or other liability, including but not limited to lost or corrupted
+  save files, arising from or in connection with the mod or its use.
+
+SCOPE AND THIRD-PARTY RIGHTS
+
+  This is an independent, unofficial mod. It is not affiliated with, endorsed by
+  or sponsored by ConcernedApe, Chucklefish, or the SMAPI project.
+
+  Stardew Valley and all related assets are the property of ConcernedApe. This
+  mod contains and distributes NO game assets. Every sprite it displays is read
+  at runtime from the user's own installed copy of the game and served only to
+  that user's own screen.
+
+  It is built against SMAPI, which remains under its own licence. Nothing in
+  this notice restricts SMAPI or any other third-party component; it applies to
+  the original work only.
+
+  This mod contains AI-assisted code.
+
+For permissions beyond the scope of this licence, contact the copyright holder.

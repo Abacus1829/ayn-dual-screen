@@ -1,0 +1,18 @@
+# --- Android ---
+android/.gradle/
+android/build/
+android/app/build/
+# machine-specific SDK path (a trailing comment here would be read as part of the pattern)
+android/local.properties
+android/.idea/
+*.iml
+
+# --- SMAPI mod (.NET) ---
+AynDualScreen/bin/
+AynDualScreen/obj/
+
+# --- misc ---
+.vs/
+*.user
+__pycache__/
+.claude/

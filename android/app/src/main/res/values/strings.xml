@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Stardew Second Screen</string>
+
+    <string name="setup_title">Stardew Second Screen</string>
+    <string name="setup_intro">Enter the address of the PC running Stardew Valley with the Ayn Dual Screen mod. The mod prints this address in the SMAPI console when the game starts.</string>
+
+    <string name="label_host">PC address</string>
+    <string name="hint_host">192.168.1.20</string>
+    <string name="label_port">Port</string>
+    <string name="label_display">Show on</string>
+
+    <string name="action_open">Open second screen</string>
+    <string name="action_test">Test connection</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_back">Change address</string>
+
+    <string name="status_testing">Checking…</string>
+    <string name="status_ok">Connected. The game is reachable.</string>
+    <string name="status_bad_code">Reached the PC, but it answered with code %1$d. Is the mod running?</string>
+    <string name="status_unreachable">Couldn\'t reach it: %1$s</string>
+    <string name="status_need_host">Enter the PC\'s address first.</string>
+    <string name="status_bad_port">Port must be between 1 and 65535.</string>
+
+    <string name="hint_lan">On the PC, set \"AllowLanAccess\": true in the mod\'s config.json and restart the game, or this phone won\'t be allowed to connect.</string>
+
+    <string name="error_title">Can\'t reach the game</string>
+    <string name="display_builtin">This screen</string>
+</resources>
