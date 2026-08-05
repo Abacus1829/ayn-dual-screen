@@ -25,6 +25,22 @@ screen. The app exists only to remove browser chrome, keep the display awake, an
 Detailed docs live in [`AynDualScreen/README.md`](AynDualScreen/README.md) (the mod, its HTTP
 endpoints and config) and [`android/README.md`](android/README.md) (the app).
 
+### The app is shared across my mods, not tied to this one
+
+The companion app contains no Stardew-specific code. It is a WebView pointed at a host and port you
+type into its setup screen, so it serves as the second screen for **every mod in this series**, not
+just this one — including my **Terraria (tModLoader) port of Ayn Dual Screen**, which serves the same
+kind of second-screen page on the same default port, `27301`. Point the app at whichever PC is
+running whichever game, and it works unchanged. There is no per-game build, no game detection and no
+list of supported titles inside the APK.
+
+It lives in this repository because this is the mod it first shipped with, and because the Android
+half only matters here — the Terraria side has no Android build of the game to worry about at all.
+
+The app's on-screen wording still names Stardew in a few places (see
+[`strings.xml`](android/app/src/main/res/values/strings.xml)). That is cosmetic text only. It has no
+bearing on what the app can connect to.
+
 ---
 
 ## Building the SMAPI mod
@@ -150,7 +166,10 @@ dependency beyond the three AndroidX libraries above.
 **Cleartext HTTP is enabled**
 ([`network_security_config.xml`](android/app/src/main/res/xml/network_security_config.xml)) because
 the thing it connects to is a plain HTTP server on the user's own LAN, which Android blocks by
-default from API 28. The only URL ever loaded is the one the user types into the setup screen.
+default from API 28. The only URL ever loaded is the one the user types into the setup screen —
+there is no hardcoded host, no remote endpoint and no bundled address list anywhere in the app. That
+is also why the same APK works for the Terraria port described above: it has no idea which game is
+on the other end.
 
 ## Security note on the mod itself
 

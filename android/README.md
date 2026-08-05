@@ -6,6 +6,17 @@ that matters on a dual-panel handheld — it can launch itself onto the *second*
 
 > Made by **Abacus**. Contains AI-assisted code.
 
+## It isn't only for Stardew
+
+Nothing in here is Stardew-specific. The app is a WebView pointed at whatever host and port you type
+in, so it's the second screen for any of my Ayn Dual Screen mods — including the Terraria
+(tModLoader) port, which serves the same kind of page on the same default port `27301`. Same APK,
+no rebuild, no setting to change beyond the address.
+
+The wording on screen still says "Stardew" in a few places, because this is the project it shipped
+with. That's cosmetic text in `app/src/main/res/values/strings.xml` and doesn't limit what it can
+connect to.
+
 ## Why an app instead of just a browser
 
 You can absolutely point any browser at the mod and it works. The app exists because a browser on a
