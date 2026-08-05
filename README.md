@@ -25,8 +25,8 @@ second screen.
 
 | Game | Get the mod | Mod source |
 | --- | --- | --- |
-| **Stardew Valley** (SMAPI) | [Nexus Mods](https://www.nexusmods.com/stardewvalley/mods/49903) | in this repository, [`AynDualScreen/`](AynDualScreen) |
-| **Terraria** (tModLoader) | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3778092427) | a separate project, not in this repository |
+| **Stardew Valley** (SMAPI) | [Nexus Mods](https://www.nexusmods.com/stardewvalley/mods/49903) | [`stardew/`](stardew) |
+| **Terraria** (tModLoader) | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3778092427) | [`terraria/`](terraria) |
 
 Each game needs its own mod because each one has to read that game's state. The app does not.
 
@@ -41,14 +41,18 @@ shipped alongside. That text is cosmetic. It does not limit what the app can con
 | Folder | What it is | Language / toolchain |
 | --- | --- | --- |
 | [`android/`](android) | The companion app: a fullscreen WebView shell that can launch itself onto a device's *second* display. | Kotlin / Gradle + Android SDK |
-| [`AynDualScreen/`](AynDualScreen) | The Stardew Valley mod — the one game mod whose source lives here. Serves the second-screen page and a JSON snapshot of the save over a local HTTP server. | C# / .NET 6, built with `dotnet build` |
-| [`AynDualScreen/web/`](AynDualScreen/web) | The second-screen UI itself — a plain HTML/CSS/JS page with no build step and no dependencies. | HTML, CSS, vanilla JS |
+| [`stardew/`](stardew) | The **Stardew Valley** mod (SMAPI). Snapshots the save to JSON every tick and serves it, with the touch commands applied back on the game thread. | C# / .NET 6 |
+| [`terraria/`](terraria) | The **Terraria** mod (tModLoader). Same architecture; the minimap is rendered to a PNG rather than shipped as a tile grid, because a Terraria world is millions of tiles. | C# / .NET 8 |
+| `stardew/web/`, `terraria/web/` | The second-screen page each mod serves — plain HTML/CSS/JS, no build step, no dependencies. | HTML, CSS, vanilla JS |
 
 The app is **optional**. Any browser pointed at a mod's URL gives the same second screen.
 
-Detailed docs live in [`android/README.md`](android/README.md) (the app) and
-[`AynDualScreen/README.md`](AynDualScreen/README.md) (the Stardew mod, its HTTP endpoints and
-config).
+Each mod is self-contained: they share no files, no build and no output, and neither needs the other
+to be present. Ideas were carried across by hand.
+
+Detailed docs live in [`android/README.md`](android/README.md) (the app),
+[`stardew/README.md`](stardew/README.md) and [`terraria/README.md`](terraria/README.md) (each mod,
+its HTTP endpoints and config).
 
 ---
 
@@ -136,29 +140,24 @@ from API 28. The only URL ever loaded is the one typed into the setup screen.
 
 ---
 
-## Building the game mod
+## Building the game mods
 
-The mod in this repository is the Stardew Valley one.
+Both are `dotnet build` and nothing else — no build script, no code generation, no post-build
+tooling of our own. Each resolves its game's assemblies from your local install, so the game has to
+be installed to compile against.
 
-**Requirements**
+### Stardew Valley — [`stardew/`](stardew)
 
-- [.NET SDK 6.0 or newer](https://dotnet.microsoft.com/download) (developed against 8.0.403; the
-  project targets `net6.0`).
-- Stardew Valley installed, with [SMAPI 4.0.0+](https://smapi.io/) — the build resolves the game's
-  assemblies from the local install.
-
-**Build**
+**Requirements:** [.NET SDK 6.0 or newer](https://dotnet.microsoft.com/download) (developed against
+8.0.403; the project targets `net6.0`), and Stardew Valley with [SMAPI 4.0.0+](https://smapi.io/).
 
 ```bash
-cd AynDualScreen
+cd stardew
 dotnet build
 ```
 
-That's the whole process. There is no build script, no code generation and no post-build tooling of
-our own.
-
 The only NuGet dependencies are declared in
-[`AynDualScreen.csproj`](AynDualScreen/AynDualScreen.csproj):
+[`AynDualScreen.csproj`](stardew/AynDualScreen.csproj):
 
 - `Pathoschild.Stardew.ModBuildConfig` 4.3.2 — the standard SMAPI mod build package. It locates the
   game folder, references the game assemblies, and **copies the built mod into the game's `Mods`
@@ -170,12 +169,35 @@ The only NuGet dependencies are declared in
 Output: `AynDualScreen.dll` plus `manifest.json` and the `web/` folder, landing in
 `bin/Debug/net6.0/` and in `Mods/AynDualScreen/` in the game directory.
 
-To build without installing to the game folder, or if the game isn't on this machine, pass the game
-path explicitly:
+To build without installing to the game folder, or if the game isn't on this machine:
 
 ```bash
 dotnet build -p:GamePath="C:\Program Files (x86)\Steam\steamapps\common\Stardew Valley" -p:EnableModDeploy=false
 ```
+
+### Terraria — [`terraria/`](terraria)
+
+**Requirements:** the .NET SDK, plus Terraria with
+[tModLoader](https://github.com/tModLoader/tModLoader) on the **1.4.4** branch. The target framework
+is `net8.0`, set by tModLoader's own `tMLMod.targets` rather than by this project — the csproj below
+declares no `TargetFramework` of its own.
+
+```bash
+cd terraria
+dotnet build
+```
+
+This project deliberately sits outside tModLoader's `ModSources` folder, so
+[`AynDualScreen.csproj`](terraria/AynDualScreen.csproj) imports `tMLMod.targets` from the game
+install directly rather than via a relative path. If tModLoader isn't in the default Steam location,
+set the `tMLSteamPath` property or environment variable.
+
+The trade-off is that tModLoader's in-game **Workshop → Develop Mods** screen won't list it, since
+that only scans `ModSources`. Build from the command line instead — the packaged `.tmod` still lands
+in the `Mods` folder, so the game picks it up normally.
+
+Version and packaging metadata come from [`build.txt`](terraria/build.txt), which is tModLoader's
+own format.
 
 ## Security note on the mods
 
@@ -183,8 +205,12 @@ A mod's `AllowLanAccess` setting (default `true`) makes its HTTP server reachabl
 on the same network, and the second screen can move, drop and destroy in-game items. There is no
 authentication yet, so it's intended for a home network. Each mod's config carries per-action
 `Allow*` switches to make the screen look-only, and `AllowLanAccess: false` restricts it to the PC
-running the game. The Stardew mod's are documented in
-[`AynDualScreen/README.md`](AynDualScreen/README.md#settings).
+running the game. They are documented per mod in
+[`stardew/README.md`](stardew/README.md#settings) and
+[`terraria/README.md`](terraria/README.md#settings).
+
+The Terraria mod ships tighter defaults: `AllowDrop`, `AllowInventoryEdit` and `AllowShopping` are
+**off** until you turn them on, since shopping spends real coins.
 
 ## Game assets
 

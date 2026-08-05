@@ -7,9 +7,11 @@ android/local.properties
 android/.idea/
 *.iml
 
-# --- SMAPI mod (.NET) ---
-AynDualScreen/bin/
-AynDualScreen/obj/
+# --- game mods (.NET) ---
+stardew/bin/
+stardew/obj/
+terraria/bin/
+terraria/obj/
 
 # --- misc ---
 .vs/

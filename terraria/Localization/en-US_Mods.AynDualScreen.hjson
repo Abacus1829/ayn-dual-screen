@@ -1,0 +1,80 @@
+Configs: {
+	DualScreenConfig: {
+		DisplayName: Dual Screen Config
+
+		Port: {
+			Label: Port
+			Tooltip: ""
+		}
+
+		AllowLanAccess: {
+			Label: Allow Lan Access
+			Tooltip: ""
+		}
+
+		UpdatesPerSecond: {
+			Label: Updates Per Second
+			Tooltip: ""
+		}
+
+		EnableItemIcons: {
+			Label: Enable Item Icons
+			Tooltip: ""
+		}
+
+		AllowTrash: {
+			Label: Allow Trash
+			Tooltip: ""
+		}
+
+		MinimapTilesWide: {
+			Label: Minimap Tiles Wide
+			Tooltip: ""
+		}
+
+		MinimapTilesHigh: {
+			Label: Minimap Tiles High
+			Tooltip: ""
+		}
+
+		WebRootOverride: {
+			Label: Web Root Override
+			Tooltip: ""
+		}
+
+		AllowDrop: {
+			Label: Allow Drop
+			Tooltip: ""
+		}
+
+		AllowInventoryEdit: {
+			Label: Allow Inventory Edit
+			Tooltip: ""
+		}
+
+		AllowQuickUse: {
+			Label: Allow Quick Use
+			Tooltip: ""
+		}
+
+		ShowEnemies: {
+			Label: Show Enemies
+			Tooltip: ""
+		}
+
+		ShowTownNpcs: {
+			Label: Show Town Npcs
+			Tooltip: ""
+		}
+
+		MaxMapEntities: {
+			Label: Max Map Entities
+			Tooltip: ""
+		}
+
+		AllowShopping: {
+			Label: Allow Shopping
+			Tooltip: ""
+		}
+	}
+}

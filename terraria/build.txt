@@ -1,0 +1,5 @@
+displayName = Ayn Dual Screen
+author = Abacus
+version = 0.2.2
+side = Client
+buildIgnore = *.csproj, *.user, obj\*, bin\*, .vs\*, .git\*, tools\*, README.md

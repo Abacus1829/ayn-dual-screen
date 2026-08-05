@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Terraria Second Screen</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div id="offline" class="overlay">
+    <div class="overlay-box">
+      <h1>Waiting for the game</h1>
+      <p id="offline-detail">Connecting&hellip;</p>
+    </div>
+  </div>
+
+  <button id="gear" title="Customise this screen" aria-label="Settings">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 15.5A3.5 3.5 0 1 1 15.5 12 3.5 3.5 0 0 1 12 15.5zm7.4-2.1a7.6 7.6 0 0 0 0-2.8l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-2.4-1.4L14.2 2H9.8l-.4 2.6A7.6 7.6 0 0 0 7 6L4.6 5l-2 3.4 2 1.6a7.6 7.6 0 0 0 0 2.8l-2 1.6 2 3.4 2.4-1a7.6 7.6 0 0 0 2.4 1.4l.4 2.8h4.4l.4-2.8a7.6 7.6 0 0 0 2.4-1.4l2.4 1 2-3.4z" />
+    </svg>
+  </button>
+
+  <div id="settings" class="overlay hidden">
+    <div class="settings-box">
+      <div class="settings-head">
+        <span>Customise this screen</span>
+        <button id="settings-close" class="chip">Done</button>
+      </div>
+
+      <p class="settings-note">Saved on this device only, so the Thor and a phone can each be set up differently.</p>
+
+      <div class="settings-section">Show</div>
+      <div id="settings-toggles" class="settings-grid"></div>
+
+      <div class="settings-section">Accent</div>
+      <div id="settings-accents" class="swatches"></div>
+
+      <div class="settings-section">Slot outline</div>
+      <div id="settings-outline" class="segmented"></div>
+
+      <div class="settings-section">Size</div>
+      <div id="settings-scale" class="segmented"></div>
+
+      <div class="settings-section">Updates per second</div>
+      <div id="settings-rate" class="segmented"></div>
+
+      <div class="settings-section">Wiki</div>
+      <div class="settings-links">
+        <button id="wiki-home" class="linkish">Open the official Terraria Wiki</button>
+        <button id="wiki-item" class="linkish">Look up the selected item</button>
+        <p class="settings-note">Opens in this window. The app's &#8942; menu brings you back; in a plain browser, use Back.</p>
+      </div>
+
+      <div class="settings-foot">
+        <button id="settings-reset" class="chip">Reset to defaults</button>
+      </div>
+    </div>
+  </div>
+
+  <header id="hud" class="framed">
+    <div class="hud-block">
+      <span class="hud-main" id="world-text">&mdash;</span>
+      <span class="hud-sub" id="difficulty-text"></span>
+    </div>
+    <div class="hud-block">
+      <span class="hud-main" id="clock-text">--:--</span>
+      <span class="hud-sub" id="events-text"></span>
+    </div>
+    <div class="hud-block">
+      <span class="hud-main" id="depth-text">0 ft</span>
+      <span class="hud-sub" id="place-text"></span>
+    </div>
+    <div class="hud-block bars">
+      <div class="bar" title="Life"><div class="bar-fill life" id="bar-life"></div><span id="life-text"></span></div>
+      <div class="bar" title="Mana"><div class="bar-fill mana" id="bar-mana"></div><span id="mana-text"></span></div>
+      <div class="bar hidden" id="breath-row" title="Breath"><div class="bar-fill breath" id="bar-breath"></div><span id="breath-text"></span></div>
+    </div>
+  </header>
+
+  <main>
+    <section id="map-panel" class="framed">
+      <div class="panel-head">
+        <span class="tabs">
+          <button class="tab on" data-tab="map">Map</button>
+          <button class="tab" data-tab="boss">Bosses</button>
+          <button class="tab" data-tab="craft">Craft</button>
+          <button class="tab hidden" data-tab="npc" id="tab-npc-button">NPC</button>
+        </span>
+        <span class="head-tools">
+          <i id="link-dot" class="dot" title="Connection"></i>
+          <button id="zoom-out" class="chip tight">&minus;</button>
+          <span id="zoom-text">1x</span>
+          <button id="zoom-in" class="chip tight">+</button>
+          <button id="map-toggle" class="chip">Follow</button>
+        </span>
+      </div>
+      <div id="tab-map" class="tab-body">
+      <div id="map-wrap">
+        <canvas id="map-canvas"></canvas>
+        <div id="map-tip" class="hidden"></div>
+      </div>
+      <div id="legend">
+        <span><i class="sw" style="background:#6ec1ff"></i>You</span>
+        <span><i class="sw" style="background:#ff5d5d"></i>Enemy</span>
+        <span><i class="sw" style="background:#ffd166"></i>Town</span>
+        <span><i class="sw" style="background:#c58cff"></i>Boss</span>
+      </div>
+      </div>
+
+      <div id="tab-boss" class="tab-body hidden">
+        <div class="sub-head">
+          <span>Bosses</span>
+          <span id="boss-progress"></span>
+        </div>
+        <div id="boss-list" class="checklist"></div>
+        <div class="sub-head"><span>Events</span></div>
+        <div id="event-list" class="checklist"></div>
+      </div>
+
+      <div id="tab-craft" class="tab-body hidden">
+        <div class="sub-head">
+          <span>Craftable here</span>
+          <span id="craft-count"></span>
+        </div>
+        <input id="craft-filter" type="search" placeholder="Filter…" autocomplete="off">
+        <div id="craft-list"></div>
+      </div>
+
+      <div id="tab-npc" class="tab-body hidden">
+        <div class="npc-head">
+          <img id="npc-art" alt="">
+          <div>
+            <b id="npc-name"></b>
+            <p id="npc-dialogue"></p>
+          </div>
+        </div>
+        <div class="sub-head">
+          <span>Shop</span>
+          <span id="shop-note"></span>
+        </div>
+        <div id="shop-list"></div>
+      </div>
+
+      <div id="boss" class="hidden">
+        <span id="boss-name"></span>
+        <div class="bar"><div class="bar-fill boss" id="bar-boss"></div><span id="boss-text"></span></div>
+      </div>
+
+      <div id="stats">
+        <div class="stat"><b id="defense-text">0</b><span>Defense</span></div>
+        <div class="stat"><b id="coins-text">0c</b><span>Coins</span></div>
+        <div class="stat"><b id="potion-text">0</b><span id="potion-label">Potions</span></div>
+        <div class="stat"><b id="moon-text">&mdash;</b><span>Moon</span></div>
+      </div>
+
+      <div id="buffs"></div>
+    </section>
+
+    <section id="inv-panel" class="framed">
+      <div class="panel-head">
+        <span id="inv-title">Inventory</span>
+        <span id="inv-hint">tap to select &middot; drag to move</span>
+      </div>
+
+      <div id="inv-hotbar" class="grid"></div>
+      <div id="inv-main" class="grid"></div>
+      <div id="inv-extra" class="grid"></div>
+
+      <div class="sub-head">
+        <span>Equipment</span>
+        <span id="equip-defense"></span>
+      </div>
+      <div id="inv-equip" class="grid"></div>
+
+      <div id="detail" class="framed">
+        <img id="detail-icon" alt="">
+        <div id="detail-text">
+          <span id="detail-name">Nothing selected</span>
+          <span id="detail-meta"></span>
+        </div>
+        <button id="detail-wiki" class="chip" title="Look this up on the wiki" disabled>Wiki</button>
+      </div>
+
+      <div id="actions">
+        <button class="act" data-act="heal">Heal</button>
+        <button class="act" data-act="mana">Mana</button>
+        <button class="act" data-act="buff">Buff</button>
+        <button class="act" data-act="mount">Mount</button>
+        <button class="act" data-act="drop" disabled>Drop</button>
+        <button class="act danger" data-act="trash" disabled>Trash</button>
+        <button class="act" data-act="sort">Sort</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

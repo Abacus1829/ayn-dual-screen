@@ -1,0 +1,762 @@
+/* Bottom-screen UI for Terraria. Sized to fill whatever panel it's put on without ever scrolling the page. */
+
+:root {
+  --bg: #06070f;
+  --panel: rgba(24, 26, 78, .88);
+  --panel-2: #232a63;
+  --edge: #3c4694;
+  --edge-hot: #ffd166;
+  --text: #e8ecff;
+  --text-dim: #8d97cf;
+  --accent: #6ec1ff;
+  --gold: #ffd166;
+  --danger: #ff5d5d;
+  --gap: 6px;
+
+  /* Opaque backing and outline for inventory slots. The game's own slot art is translucent, so these
+     are what actually make a slot visible on the panel — especially an empty one. */
+  --slot-fill: #1b2062;
+  --slot-fill-empty: #080a20;
+  --slot-edge: #6d7cd8;
+  --slot-border: 1px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  padding: var(--gap);
+}
+
+.hidden { display: none !important; }
+
+/* Terraria's own UI is a flat translucent navy panel with a lighter edge rather than a nine-sliced frame,
+   so this is drawn in CSS. The slot backgrounds below are the real thing, served by the mod. */
+.framed {
+  background: var(--panel);
+  border: 2px solid var(--edge);
+  border-radius: 4px;
+  padding: 8px;
+}
+
+/* ---------- top HUD ---------- */
+
+#hud {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: stretch;
+  gap: var(--gap);
+  padding: 6px 10px;
+}
+
+.hud-block {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.hud-block + .hud-block { border-left: 1px solid var(--edge); padding-left: 10px; }
+
+.hud-main {
+  font-size: clamp(14px, 2.6vh, 20px);
+  font-weight: 600;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hud-sub {
+  font-size: clamp(10px, 1.7vh, 12px);
+  color: var(--text-dim);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#clock-text { font-variant-numeric: tabular-nums; }
+#depth-text { color: var(--gold); font-variant-numeric: tabular-nums; }
+
+.bars {
+  flex: 1 1 auto;
+  gap: 4px;
+  justify-content: center;
+}
+
+.bar {
+  position: relative;
+  height: 12px;
+  border-radius: 6px;
+  background: #05060f;
+  border: 1px solid var(--edge);
+  overflow: hidden;
+}
+
+.bar span {
+  position: absolute;
+  inset: 0;
+  text-align: center;
+  font-size: 9px;
+  line-height: 10px;
+  color: var(--text);
+  text-shadow: 0 1px 1px #000;
+}
+
+.bar-fill { height: 100%; width: 0; transition: width .2s linear; }
+.bar-fill.life { background: linear-gradient(90deg, #8f2f2f, #ff6b6b); }
+.bar-fill.mana { background: linear-gradient(90deg, #3a3ac0, #7d7dff); }
+.bar-fill.breath { background: linear-gradient(90deg, #1f6f8f, #59d6ff); }
+.bar-fill.boss { background: linear-gradient(90deg, #7a1f6f, #ff6bd6); }
+
+/* ---------- layout ---------- */
+
+main {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+  gap: var(--gap);
+  min-height: 0;
+}
+
+section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  gap: 6px;
+}
+
+.panel-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+#map-title, #inv-title { color: var(--text); font-weight: 600; }
+
+/* ---------- left-panel tabs ---------- */
+
+.tabs { display: flex; gap: 4px; }
+
+.tab {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.tab.on { color: var(--text); border-color: var(--accent); background: var(--panel-2); }
+
+/* Each tab body fills the panel; only one is ever shown. flex rather than block so the map keeps
+   stretching to the available height the way it did before tabs existed. */
+.tab-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tab-body.hidden { display: none; }
+
+/* ---------- checklist (bosses and events) ---------- */
+
+.checklist {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  padding: 3px 7px;
+  border-radius: 3px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+}
+
+.check i {
+  font-style: normal;
+  width: 14px;
+  flex: 0 0 auto;
+  text-align: center;
+  font-weight: 700;
+}
+
+.check.done { opacity: .55; }
+.check.done i { color: #4be08b; }
+.check.todo i { color: var(--text-dim); }
+.check.todo.next { border-color: var(--accent); opacity: 1; }
+.check span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.check em { font-style: normal; margin-left: auto; font-size: 9px; color: var(--text-dim); flex: 0 0 auto; }
+
+#boss-progress, #craft-count { color: var(--gold); }
+
+/* ---------- craftable list ---------- */
+
+#craft-filter {
+  flex: 0 0 auto;
+  background: #0b0d24;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  color: var(--text);
+  padding: 5px 8px;
+  font-size: 12px;
+}
+
+#craft-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.craft {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 6px;
+  border-radius: 3px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+}
+
+.craft img { width: 22px; height: 22px; object-fit: contain; image-rendering: pixelated; flex: 0 0 auto; }
+.craft div { min-width: 0; display: flex; flex-direction: column; }
+.craft b { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.craft small { font-size: 10px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- talking to an NPC ---------- */
+
+.tab.hidden { display: none; }
+
+.npc-head {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px;
+  border-radius: 4px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+}
+
+/* the sprite is tiny pixel art, so scale it up hard and keep the edges crisp */
+#npc-art {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  flex: 0 0 auto;
+}
+
+.npc-head b { font-size: 15px; display: block; margin-bottom: 3px; }
+.npc-head p { margin: 0; font-size: 12px; color: var(--text-dim); line-height: 1.35; }
+
+#shop-note { color: var(--gold); }
+
+#shop-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.wares {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 3px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+}
+
+.wares img { width: 26px; height: 26px; object-fit: contain; image-rendering: pixelated; flex: 0 0 auto; }
+.wares div { min-width: 0; display: flex; flex-direction: column; flex: 1 1 auto; }
+.wares b { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wares small { font-size: 10px; color: var(--gold); }
+.wares.poor { opacity: .5; }
+.wares.poor small { color: var(--danger); }
+
+.buy {
+  flex: 0 0 auto;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--accent);
+  border-radius: 5px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.buy:disabled { opacity: .35; border-color: var(--edge); cursor: default; }
+
+.head-tools { display: flex; align-items: center; gap: 5px; }
+.chip.tight { padding: 3px 8px; min-width: 26px; }
+#zoom-text { font-size: 10px; color: var(--text-dim); min-width: 22px; text-align: center; }
+
+/* connection health: green while snapshots keep arriving, amber when they stall, red when they stop */
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  background: var(--text-dim);
+  transition: background .2s linear;
+}
+
+.dot.live { background: #4be08b; }
+.dot.slow { background: #ffc24d; }
+.dot.dead { background: var(--danger); }
+
+/* a label for whatever was last tapped on the map */
+#map-tip {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  max-width: calc(100% - 12px);
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(6, 7, 15, .88);
+  border: 1px solid var(--edge);
+  font-size: 11px;
+  color: var(--text);
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sub-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-top: 2px;
+}
+
+#equip-defense { color: var(--gold); }
+
+/* armour and accessories: 10 slots, so they line up under a 10-wide inventory */
+#inv-equip { flex: 0 0 auto; }
+#inv-equip .slot { background-image: url(/asset/slot-cursor.png); }
+
+.chip {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  padding: 3px 12px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.chip:active { background: var(--edge); }
+
+/* ---------- map ---------- */
+
+#map-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  background: #04060d;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+}
+
+#map-canvas {
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  touch-action: none;
+}
+
+#legend {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+#legend span { display: flex; align-items: center; gap: 4px; }
+.sw { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+
+#boss { flex: 0 0 auto; display: flex; flex-direction: column; gap: 2px; }
+#boss-name { font-size: 11px; color: var(--gold); }
+
+#stats {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  padding: 2px 0;
+}
+
+.stat b { font-size: 13px; line-height: 1.1; white-space: nowrap; }
+.stat span { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; }
+
+#buffs {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.buff {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: var(--panel-2);
+}
+
+.buff img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+
+.buff i {
+  position: absolute;
+  right: 1px;
+  bottom: 0;
+  font-style: normal;
+  font-size: 8px;
+  font-weight: 700;
+  text-shadow: 0 1px 0 #000, 0 -1px 0 #000, 1px 0 0 #000, -1px 0 0 #000;
+}
+
+/* ---------- inventory ---------- */
+
+#inv-hint { font-size: 10px; text-transform: none; letter-spacing: 0; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 3px;
+  align-content: start;
+}
+
+#inv-main { flex: 1 1 auto; min-height: 0; }
+#inv-hotbar, #inv-extra { flex: 0 0 auto; }
+#inv-extra { grid-template-columns: repeat(10, minmax(0, 1fr)); }
+
+/* the slot art is the game's own InventoryBack textures, served by the mod at /asset/ */
+.slot {
+  position: relative;
+  aspect-ratio: 1;
+  /* The game's InventoryBack texture is translucent — in-game it's drawn over the world, which is what
+     gives it contrast. On this panel it needs an opaque fill behind it, or an empty slot disappears
+     into the background entirely. */
+  background: var(--slot-fill) url(/asset/slot.png) center / 100% 100% no-repeat;
+  border: var(--slot-border) solid var(--slot-edge);
+  border-radius: 4px;
+  image-rendering: pixelated;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  touch-action: none;
+  cursor: pointer;
+}
+
+.slot.coin { background-image: url(/asset/slot-coin.png); }
+.slot.ammo { background-image: url(/asset/slot-ammo.png); }
+.slot.equipped { background-image: url(/asset/slot-selected.png); }
+
+/* An empty slot has to still read as a slot: darker well, and a lit top edge so it looks recessed
+   rather than simply absent. This is the state that was hardest to see. */
+.slot.empty {
+  background-color: var(--slot-fill-empty);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07), inset 0 -1px 4px rgba(0, 0, 0, .55);
+}
+
+.slot.cursor { border-color: var(--edge-hot); box-shadow: inset 0 0 0 1px var(--edge-hot); }
+.slot.dragover { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+.slot.dragging { opacity: .35; }
+
+.slot img {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.slot .stack {
+  position: absolute;
+  right: 2px;
+  bottom: 0;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-shadow: 0 1px 0 #000, 0 -1px 0 #000, 1px 0 0 #000, -1px 0 0 #000;
+  pointer-events: none;
+}
+
+/* ---------- detail + actions ---------- */
+
+#detail {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  min-height: 40px;
+}
+
+#detail-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  visibility: hidden;
+}
+
+#detail-text { display: flex; flex-direction: column; min-width: 0; }
+#detail-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#detail-meta { font-size: 11px; color: var(--text-dim); }
+
+#actions {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+}
+
+.act {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  padding: 9px 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.act:active:not(:disabled) { background: var(--edge); }
+.act:disabled { opacity: .35; cursor: default; }
+.act.danger:not(:disabled) { color: var(--danger); }
+.act.armed { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+/* ---------- gear + settings ---------- */
+
+#gear {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  z-index: 20;
+  width: 30px;
+  height: 30px;
+  padding: 5px;
+  border-radius: 50%;
+  background: rgba(10, 12, 34, .7);
+  border: 1px solid var(--edge);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#gear svg { width: 100%; height: 100%; fill: var(--text-dim); display: block; }
+#gear:active svg { fill: var(--accent); }
+
+.settings-box {
+  width: min(560px, 94vw);
+  max-height: 92vh;
+  overflow-y: auto;
+  background: var(--panel-2);
+  border: 2px solid var(--edge);
+  border-radius: 6px;
+  padding: 14px 16px;
+}
+
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.settings-note { margin: 0 0 6px; font-size: 11px; color: var(--text-dim); }
+
+.settings-section {
+  margin-top: 14px;
+  margin-bottom: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--text-dim);
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 4px 10px;
+}
+
+.settings-grid label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  padding: 3px 0;
+  cursor: pointer;
+}
+
+.settings-grid input { accent-color: var(--accent); width: 16px; height: 16px; }
+
+.swatches { display: flex; flex-wrap: wrap; gap: 7px; }
+
+.swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.swatch.on { border-color: var(--text); }
+
+.segmented { display: flex; gap: 5px; flex-wrap: wrap; }
+
+.segmented button {
+  flex: 1 1 auto;
+  min-width: 62px;
+  background: var(--panel);
+  color: var(--text-dim);
+  border: 1px solid var(--edge);
+  border-radius: 5px;
+  padding: 7px 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.segmented button.on { color: var(--text); border-color: var(--accent); background: var(--panel-2); }
+
+.settings-links { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+
+.linkish {
+  background: none;
+  border: none;
+  padding: 4px 0;
+  font-size: 13px;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+  text-align: left;
+}
+
+.linkish:disabled { color: var(--text-dim); text-decoration: none; cursor: default; }
+
+#detail-wiki { flex: 0 0 auto; margin-left: auto; }
+#detail-wiki:disabled { opacity: .35; cursor: default; }
+
+.settings-foot { margin-top: 16px; display: flex; justify-content: flex-end; }
+
+/* Driven by the settings panel. Each toggle just adds a class to <body>, which keeps the panel's
+   wiring trivial and means nothing has to be re-rendered when something is hidden. */
+body.no-hud #hud,
+body.no-map #map-panel,
+body.no-legend #legend,
+body.no-stats #stats,
+body.no-buffs #buffs,
+body.no-boss #boss,
+body.no-equip #inv-equip,
+body.no-equip .sub-head,
+body.no-extra #inv-extra,
+body.no-detail #detail,
+body.no-actions #actions,
+body.no-inv #inv-panel { display: none !important; }
+
+/* with one panel hidden the other should take the whole width */
+body.no-map main, body.no-inv main { grid-template-columns: minmax(0, 1fr); }
+
+/* ---------- offline overlay ---------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 5, 12, .94);
+}
+
+.overlay-box { text-align: center; padding: 20px; }
+.overlay-box h1 { font-size: 18px; margin: 0 0 6px; }
+.overlay-box p { margin: 0; color: var(--text-dim); font-size: 13px; }
+
+/* ---------- narrow / portrait screens ---------- */
+
+@media (max-aspect-ratio: 1/1) {
+  main { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1.3fr); }
+}
+
+@media (max-width: 640px) {
+  #legend, #buffs { display: none; }
+  .hud-block.bars { flex: 0 0 90px; }
+}

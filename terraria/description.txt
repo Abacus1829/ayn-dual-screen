@@ -1,0 +1,7 @@
+Turns any second display into a 3DS-style bottom screen for Terraria: live map, live inventory you
+can touch, clock, depth, biome, buffs, life and mana.
+
+The mod runs a tiny HTTP server inside the game; the second screen is just a browser pointed at it,
+so it can be the AYN Thor's second display, a phone, a tablet, or a second monitor.
+
+Client side only. Contains AI-assisted code.

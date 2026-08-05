@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    tModLoader's own project template sits inside ModSources and imports "..\..\tMLMod.targets".
+    This project lives outside that folder, so it points straight at the targets file in the game
+    install instead. Override tMLSteamPath (property or environment variable) if tModLoader isn't in
+    the default Steam location. tModLoader's -build step takes the project directory as an argument
+    and writes the packaged .tmod to the Mods folder, so nothing depends on where the source lives.
+  -->
+  <PropertyGroup>
+    <tMLSteamPath Condition="'$(tMLSteamPath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\tModLoader</tMLSteamPath>
+  </PropertyGroup>
+
+  <Import Project="$(tMLSteamPath)\tMLMod.targets" />
+
+  <PropertyGroup>
+    <AssemblyName>AynDualScreen</AssemblyName>
+    <RootNamespace>AynDualScreen</RootNamespace>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+
+</Project>
