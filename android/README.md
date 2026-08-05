@@ -1,22 +1,22 @@
-# Stardew Second Screen — companion app
+# Ayn Dual Screen — companion app
 
-The Android companion for the **Ayn Dual Screen** SMAPI mod. It's a kiosk-style shell around the
-second-screen page the mod serves: full-bleed, no browser chrome, screen kept awake, and — the part
-that matters on a dual-panel handheld — it can launch itself onto the *second* display.
+A kiosk-style shell around the second-screen page an Ayn Dual Screen mod serves: full-bleed, no
+browser chrome, screen kept awake, and — the part that matters on a dual-panel handheld — it can
+launch itself onto the *second* display.
 
 > Made by **Abacus**. Contains AI-assisted code.
 
-## It isn't only for Stardew
+## It isn't tied to a game
 
-Nothing in here is Stardew-specific. The app is a WebView pointed at whatever host and port you type
-in, so it's the second screen for any of the Ayn Dual Screen mods — including the
-[Terraria (tModLoader) port](https://steamcommunity.com/sharedfiles/filedetails/?id=3778092427),
+Nothing in here is specific to any one game. The app is a WebView pointed at whatever host and port
+you type in, so it's the second screen for any of the mods — the Stardew Valley one in this
+repository, or the [Terraria (tModLoader) port](https://steamcommunity.com/sharedfiles/filedetails/?id=3778092427),
 which serves the same kind of page on the same default port `27301`. Same APK, no rebuild, no
 setting to change beyond the address.
 
-The wording on screen still says "Stardew" in a few places, because this is the project it shipped
-with. That's cosmetic text in `app/src/main/res/values/strings.xml` and doesn't limit what it can
-connect to.
+The wording on screen still says "Stardew" in a few places, because that's the project it first
+shipped alongside. That's cosmetic text in `app/src/main/res/values/strings.xml` and doesn't limit
+what it can connect to.
 
 ## Why an app instead of just a browser
 
