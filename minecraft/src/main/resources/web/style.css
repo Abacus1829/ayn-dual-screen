@@ -1,0 +1,809 @@
+/*
+ * The second screen's own look.
+ *
+ * Deliberately not a copy of the Terraria page's stylesheet: the two mods stay separate, and Minecraft's
+ * palette is earth and stone rather than that game's blues. Everything is sized off the viewport so the
+ * page fills a handheld's lower panel with no scrolling in the parts that matter.
+ */
+
+:root {
+  --bg: #0e1410;
+  --panel: #18211a;
+  --panel-hi: #1f2b21;
+  --edge: #2c3a2f;
+  --edge-hi: #46603f;
+  --text: #e8f0e6;
+  --text-dim: #9aab97;
+  --text-faint: #6b7a69;
+  --accent: #7bc96f;
+
+  --slot-fill: #202b22;
+  --slot-fill-empty: #131b15;
+  --slot-edge: #3e5240;
+  --slot-selected: #7bc96f;
+
+  --health: #e04a4a;
+  --food: #c08a3e;
+  --armor: #a8b6c8;
+  --air: #5ab8e0;
+  --xp: #7fe04a;
+
+  --hostile: #e05c5c;
+  --passive: #8fd96f;
+  --player: #6ec1ff;
+  --item: #e0c76a;
+
+  /* the atlas page: vanilla map parchment, and the leather it's bound in */
+  --parchment: #c7b797;
+  --atlas-edge: #6b4f2a;
+  --atlas-band: #9c7b48;
+  --atlas-pad: 7px;
+
+  /* container chrome: hard two-tone bevels, no gradients, the way the game draws a GUI */
+  --bevel: 2px;
+  --slot-shadow: #1d2620;
+  --slot-light: #46523f;
+  --panel-light: #2f3d31;
+  --panel-shadow: #0a0f0b;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font: var(--text-size, 14px)/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+h2 {
+  margin: 14px 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* ---------- top bar ---------- */
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--edge);
+}
+
+.place { flex: 1; min-width: 0; }
+
+.world {
+  font-weight: 700;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.where {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clock { text-align: right; }
+.time { font-weight: 700; font-variant-numeric: tabular-nums; }
+.day { font-size: 11px; color: var(--text-dim); }
+
+.icon {
+  background: none;
+  border: 0;
+  color: var(--text-dim);
+  font-size: 19px;
+  padding: 4px 6px;
+  cursor: pointer;
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  flex: 0 0 auto;
+}
+
+.dot.live { background: var(--accent); }
+.dot.slow { background: #d9a03a; }
+.dot.dead { background: var(--health); }
+
+/* ---------- tabs ---------- */
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 6px 8px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--edge);
+}
+
+.tab {
+  flex: 1;
+  padding: 9px 4px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: var(--panel-hi);
+  color: var(--text-faint);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab.active {
+  border-color: var(--accent);
+  color: var(--text);
+  background: #223021;
+}
+
+main { flex: 1; overflow: hidden; position: relative; }
+
+.panel {
+  display: none;
+  height: 100%;
+  overflow-y: auto;
+  padding: 4px 12px 16px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.panel.active { display: block; }
+
+/* ---------- vitals ---------- */
+
+.vitals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.vital {
+  background: var(--panel);
+  border: 0;
+  border-radius: var(--corner, 0);
+  padding: 7px 9px;
+  box-shadow:
+    inset var(--bevel) var(--bevel) 0 var(--panel-light),
+    inset calc(var(--bevel) * -1) calc(var(--bevel) * -1) 0 var(--panel-shadow);
+}
+
+.vital .label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.vital .value { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* Slow enough to notice without becoming a distraction while you are trying to play. */
+.vital.low { animation: nudge 1.6s ease-in-out infinite; }
+.vital.low .value { color: var(--health); }
+
+@keyframes nudge {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vital.low { animation: none; }
+}
+
+.meter {
+  height: 5px;
+  margin-top: 5px;
+  border-radius: 3px;
+  background: #0c110d;
+  overflow: hidden;
+}
+
+.meter span { display: block; height: 100%; }
+
+/* ---------- slots ---------- */
+
+.hotbar {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 4px;
+}
+
+/* Column count is a setting: fewer columns means bigger slots, which is the whole point on a handheld */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(var(--inv-cols, 9), 1fr);
+  gap: 4px;
+}
+
+.worn {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  max-width: 320px;
+}
+
+/*
+ * A slot, cut into the panel the way Minecraft draws one.
+ *
+ * The whole look is two hard bevels: dark along the top and left, light along the bottom and right, no
+ * gradients and no rounding. That inset is what makes a slot read as a hole in the panel rather than a
+ * rectangle drawn on top of it, and it is the single biggest difference between this and a web grid.
+ */
+.slot {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--corner, 0);
+  background: var(--slot-fill);
+  border: 0;
+  box-shadow:
+    inset var(--bevel) var(--bevel) 0 var(--slot-shadow),
+    inset calc(var(--bevel) * -1) calc(var(--bevel) * -1) 0 var(--slot-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--bevel) + 1px);
+  overflow: hidden;
+  cursor: default;
+}
+
+.slot.empty { background: var(--slot-fill-empty); }
+
+/* the held slot gets the vanilla white selection frame rather than a coloured border */
+.slot.selected {
+  outline: var(--bevel) solid var(--slot-selected);
+  outline-offset: 0;
+  z-index: 1;
+}
+
+/* Item art is 16x16; pixelated keeps it crisp instead of smearing it when the slot is bigger */
+.slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  display: block;
+}
+
+.slot .abbr {
+  font-size: 9px;
+  line-height: 1.05;
+  text-align: center;
+  color: var(--text-dim);
+  word-break: break-word;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.slot .count {
+  position: absolute;
+  right: 2px;
+  bottom: 1px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text);
+  text-shadow: 0 1px 2px #000;
+}
+
+.slot .wear {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 1px;
+  background: #0c110d;
+  overflow: hidden;
+}
+
+.slot .wear span { display: block; height: 100%; }
+.slot.enchanted { border-color: #a983e0; }
+
+/* ---------- map: an atlas page, not a screen ---------- */
+
+/*
+ * The map is drawn to look like a page out of a bound atlas rather than a HUD overlay: parchment
+ * underneath, a tooled leather edge around it, and unexplored ground simply left as blank paper. The
+ * terrain colours are already the game's own cartography palette, so the only thing that made it read
+ * as a debug view was the black background it sat on.
+ */
+.atlas {
+  position: relative;
+  border-radius: 4px;
+  background: var(--parchment);
+  padding: var(--atlas-pad);
+  box-shadow:
+    inset 0 0 0 2px var(--atlas-edge),
+    inset 0 0 0 6px var(--atlas-band),
+    inset 0 0 22px rgba(90, 62, 28, 0.45),
+    0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.atlas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  border-radius: 2px;
+}
+
+.atlas .north {
+  position: absolute;
+  top: calc(var(--atlas-pad) + 3px);
+  right: calc(var(--atlas-pad) + 5px);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #6b4f2a;
+  pointer-events: none;
+  text-shadow: 0 1px 0 rgba(255, 245, 220, 0.6);
+}
+
+.atlas.full { flex: 1; height: 100%; min-width: 0; }
+
+/* the wire binding across the top of the book */
+.rings {
+  position: absolute;
+  top: -7px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-evenly;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.rings i {
+  width: 7px;
+  height: 20px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #6d6d75, #cfcfd6 45%, #8a8a92);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+/* ---------- the book, its tabs, and the coordinate plate ---------- */
+
+.panel.flush { padding: 10px 6px 6px; }
+
+.mapwrap {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  height: calc(100% - 34px);
+  padding-top: 8px;
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 14px;
+  flex: 0 0 auto;
+  overflow-y: auto;
+  scrollbar-width: none;
+  max-height: 100%;
+}
+
+.rail::-webkit-scrollbar { display: none; }
+
+/* Tabs poke out of the book's edge, so they tuck under it rather than floating beside it */
+.tab-pin {
+  width: 38px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--atlas-edge);
+  background: linear-gradient(180deg, #d9c9a4, #b8a582);
+  color: #4a3618;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  flex: 0 0 auto;
+}
+
+.rail.left .tab-pin { border-radius: 5px 0 0 5px; border-right: 0; margin-right: -2px; }
+.rail.right .tab-pin { border-radius: 0 5px 5px 0; border-left: 0; margin-left: -2px; }
+
+.tab-pin:active { filter: brightness(1.12); }
+.tab-pin canvas { image-rendering: pixelated; }
+
+.coords {
+  margin: 6px auto 0;
+  padding: 3px 14px;
+  width: fit-content;
+  border-radius: 4px;
+  background: rgba(28, 20, 10, 0.85);
+  border: 1px solid var(--atlas-edge);
+  color: #e6d7b4;
+  font-family: monospace;
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- pin editor ---------- */
+
+.pintypes { display: flex; flex-wrap: wrap; gap: 8px; padding: 6px 0 2px; }
+
+.pintype {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 2px solid var(--edge);
+  background: var(--panel-hi);
+  cursor: pointer;
+  padding: 0;
+}
+
+.pintype.on { border-color: var(--accent); }
+.pintype canvas { image-rendering: pixelated; }
+
+#pinName {
+  width: 100%;
+  padding: 11px;
+  border-radius: 7px;
+  border: 1px solid var(--edge);
+  background: var(--panel-hi);
+  color: var(--text);
+  font-size: 15px;
+}
+
+/* the glanceable one, pinned beside the vitals */
+.atlas.mini {
+  width: 122px;
+  height: 122px;
+  flex: 0 0 auto;
+}
+
+.topline { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; }
+.topline .vitals { flex: 1; margin-top: 0; }
+
+
+/* ---------- status ---------- */
+
+.effects { display: flex; flex-direction: column; gap: 5px; }
+
+.effect {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border-radius: var(--corner, 0);
+  background: var(--panel);
+  border: 0;
+  border-left: 3px solid var(--edge);
+  box-shadow:
+    inset var(--bevel) var(--bevel) 0 var(--panel-light),
+    inset calc(var(--bevel) * -1) calc(var(--bevel) * -1) 0 var(--panel-shadow);
+}
+
+.effect.good { border-left-color: var(--accent); }
+.effect.bad { border-left-color: var(--health); }
+.effecticon {
+  width: 22px;
+  height: 22px;
+  image-rendering: pixelated;
+  flex: 0 0 auto;
+}
+
+.effect .name { flex: 1; }
+.effect .left { color: var(--text-dim); font-variant-numeric: tabular-nums; }
+
+.readout {
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: 7px;
+  padding: 9px 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.7;
+}
+
+.readout .k { color: var(--text-faint); display: inline-block; min-width: 78px; }
+
+.chatrow { display: flex; gap: 6px; }
+
+.chatrow input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px;
+  border-radius: 7px;
+  border: 1px solid var(--edge);
+  background: var(--panel-hi);
+  color: var(--text);
+  font-size: 15px;
+}
+
+.chatrow input:disabled { opacity: 0.5; }
+
+button.wide, .chatrow button {
+  padding: 11px 16px;
+  border-radius: 7px;
+  border: 1px solid var(--edge-hi);
+  background: var(--panel-hi);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button.wide { width: 100%; }
+button:disabled { opacity: 0.5; cursor: default; }
+
+.note { font-size: 11px; color: var(--text-faint); margin: 6px 0 0; }
+code { background: #0c110d; padding: 1px 4px; border-radius: 3px; }
+
+/* ---------- inventory header: free count and search ---------- */
+
+.headrow { display: flex; align-items: center; gap: 8px; }
+.headrow h2 { margin-right: 0; flex: 0 0 auto; }
+
+.free {
+  flex: 1;
+  font-size: 11px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+#invSearch {
+  width: 140px;
+  flex: 0 0 auto;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--corner, 0);
+  background: var(--panel-hi);
+  color: var(--text);
+  font-size: 13px;
+  box-shadow:
+    inset var(--bevel) var(--bevel) 0 var(--slot-shadow),
+    inset calc(var(--bevel) * -1) calc(var(--bevel) * -1) 0 var(--slot-light);
+}
+
+/* A search dims what doesn't match rather than hiding it, so the grid keeps its shape and you can
+   still see at a glance how much of the inventory the match represents. */
+.slot.dimmed { opacity: 0.18; }
+.slot.hit { outline: var(--bevel) solid var(--accent); z-index: 1; }
+
+.itemrow { display: flex; gap: 12px; align-items: flex-start; padding-top: 4px; }
+.itemrow .slot { width: 72px; height: 72px; aspect-ratio: auto; flex: 0 0 auto; }
+.itemrow .readout { flex: 1; min-width: 0; }
+
+/* ---------- the bench ---------- */
+
+/*
+ * A crafting station, drawn as the game draws one: a raised panel with the grid cut into it and the
+ * result off to the right behind an arrow. It changes shape with whatever is actually open — two by
+ * two from your own inventory, three by three at a table.
+ */
+.bench {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--panel);
+  border-radius: var(--corner, 0);
+  box-shadow:
+    inset var(--bevel) var(--bevel) 0 var(--panel-light),
+    inset calc(var(--bevel) * -1) calc(var(--bevel) * -1) 0 var(--panel-shadow);
+}
+
+.bench.shut { opacity: 0.55; }
+
+.benchhead {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 8px;
+}
+
+.benchrow { display: flex; align-items: center; gap: 12px; }
+
+.benchgrid {
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(var(--bench-cols, 3), 46px);
+  flex: 0 0 auto;
+}
+
+.benchgrid .slot { width: 46px; height: 46px; aspect-ratio: auto; }
+
+.arrow { color: var(--text-faint); font-size: 20px; flex: 0 0 auto; }
+
+.benchout { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+.benchout .slot { width: 54px; height: 54px; aspect-ratio: auto; }
+
+/* ---------- crafting ---------- */
+
+.craftbar { display: flex; gap: 6px; margin-top: 10px; }
+
+.craftbar input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px;
+  border: 0;
+  border-radius: var(--corner, 0);
+  background: var(--panel-hi);
+  color: var(--text);
+  font-size: 15px;
+  box-shadow:
+    inset var(--bevel) var(--bevel) 0 var(--slot-shadow),
+    inset calc(var(--bevel) * -1) calc(var(--bevel) * -1) 0 var(--slot-light);
+}
+
+.pill {
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--corner, 0);
+  background: var(--panel-hi);
+  color: var(--text-faint);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow:
+    inset var(--bevel) var(--bevel) 0 var(--panel-light),
+    inset calc(var(--bevel) * -1) calc(var(--bevel) * -1) 0 var(--panel-shadow);
+}
+
+.pill.on { color: var(--text); outline: var(--bevel) solid var(--accent); }
+
+.recipes { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
+
+.recipe {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 9px;
+  background: var(--panel);
+  border-radius: var(--corner, 0);
+  cursor: pointer;
+  box-shadow:
+    inset var(--bevel) var(--bevel) 0 var(--panel-light),
+    inset calc(var(--bevel) * -1) calc(var(--bevel) * -1) 0 var(--panel-shadow);
+}
+
+.recipe.cannot { opacity: 0.45; }
+.recipe .art { width: 30px; height: 30px; image-rendering: pixelated; flex: 0 0 auto; }
+.recipe .who { flex: 1; min-width: 0; }
+.recipe .who b { display: block; font-weight: 600; }
+
+.recipe .of {
+  font-size: 11px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recipe .yield { color: var(--text-dim); font-variant-numeric: tabular-nums; }
+
+/* ---------- settings sheet ---------- */
+
+.sheet {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: flex-end;
+  z-index: 20;
+}
+
+/*
+ * Without this the sheet can never close.
+ *
+ * The `hidden` attribute works by a `display: none` rule in the browser's own stylesheet, and any
+ * author rule that sets `display` beats it — so the `display: flex` above silently wins and the panel
+ * stays on screen no matter what the script does to the attribute.
+ */
+.sheet[hidden],
+.toast[hidden] {
+  display: none;
+}
+
+.sheetbody {
+  width: 100%;
+  max-height: 82%;
+  overflow-y: auto;
+  background: var(--panel);
+  border-top: 1px solid var(--edge-hi);
+  border-radius: 12px 12px 0 0;
+  padding: 12px 16px 22px;
+}
+
+.sheethead { display: flex; align-items: center; }
+.sheethead h2 { flex: 1; margin: 4px 0 8px; }
+
+.setting {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--edge);
+}
+
+.setting label { flex: 1; }
+.setting input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); }
+.setting input[type="range"] { width: 130px; accent-color: var(--accent); }
+
+/* ---------- toast ---------- */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  background: #223021;
+  border: 1px solid var(--edge-hi);
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 13px;
+  z-index: 30;
+  max-width: 88%;
+}
+
+/* ---------- narrow screens ---------- */
+
+@media (max-width: 420px) {
+  .grid, .hotbar { gap: 3px; }
+  .slot .abbr { font-size: 8px; }
+}
+
+/* ---------- swatches in the settings sheet ---------- */
+
+.swatches { display: flex; flex-wrap: wrap; gap: 7px; padding: 4px 0 2px; }
+
+.swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.swatch.on { border-color: var(--text); }
+
+.segments { display: flex; gap: 5px; flex: 1; justify-content: flex-end; }
+
+.segments button {
+  min-width: 40px;
+  padding: 7px 9px;
+  border-radius: 5px;
+  border: 1px solid var(--edge);
+  background: var(--panel-hi);
+  color: var(--text-faint);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.segments button.on {
+  border-color: var(--accent);
+  color: var(--text);
+  background: #223021;
+}
+
+.setting.stack { display: block; }
+.setting.stack > label { display: block; margin-bottom: 2px; }

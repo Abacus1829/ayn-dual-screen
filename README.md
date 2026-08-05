@@ -23,12 +23,16 @@ That is why the same build serves every mod in the series without a per-game ver
 works just as well against anything else on your network that serves a page worth putting on a
 second screen.
 
-| Game | Get the mod | Mod source |
-| --- | --- | --- |
-| **Stardew Valley** (SMAPI) | [Nexus Mods](https://www.nexusmods.com/stardewvalley/mods/49903) | [`stardew/`](stardew) |
-| **Terraria** (tModLoader) | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3778092427) | [`terraria/`](terraria) |
+| Game | Get the mod | Mod source | Default port |
+| --- | --- | --- | --- |
+| **Stardew Valley** (SMAPI) | [Nexus Mods](https://www.nexusmods.com/stardewvalley/mods/49903) | [`stardew/`](stardew) | 27301 |
+| **Terraria** (tModLoader) | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3778092427) | [`terraria/`](terraria) | 27301 |
+| **Minecraft** (Forge, 1.21.1) | build from source | [`minecraft/`](minecraft) | 27302 |
 
 Each game needs its own mod because each one has to read that game's state. The app does not.
+
+Minecraft uses 27302 rather than 27301 deliberately: it and Terraria are likely to be installed on
+the same PC, and two mods fighting over one port fails in a way that looks like the app's fault.
 
 The app's on-screen wording still names Stardew in a couple of places (see
 [`strings.xml`](android/app/src/main/res/values/strings.xml)), because that is the project it first
@@ -43,16 +47,17 @@ shipped alongside. That text is cosmetic. It does not limit what the app can con
 | [`android/`](android) | The companion app: a fullscreen WebView shell that can launch itself onto a device's *second* display. | Kotlin / Gradle + Android SDK |
 | [`stardew/`](stardew) | The **Stardew Valley** mod (SMAPI). Snapshots the save to JSON every tick and serves it, with the touch commands applied back on the game thread. | C# / .NET 6 |
 | [`terraria/`](terraria) | The **Terraria** mod (tModLoader). Same architecture; the minimap is rendered to a PNG rather than shipped as a tile grid, because a Terraria world is millions of tiles. | C# / .NET 8 |
-| `stardew/web/`, `terraria/web/` | The second-screen page each mod serves — plain HTML/CSS/JS, no build step, no dependencies. | HTML, CSS, vanilla JS |
+| [`minecraft/`](minecraft) | The **Minecraft** mod (Forge, 1.21.1). Client-side only — nothing to install on a server, since it reads only what your own client already knows. | Java 21 / Gradle |
+| each mod's `web/` | The second-screen page that mod serves — plain HTML/CSS/JS, no build step, no dependencies. | HTML, CSS, vanilla JS |
 
 The app is **optional**. Any browser pointed at a mod's URL gives the same second screen.
 
 Each mod is self-contained: they share no files, no build and no output, and neither needs the other
 to be present. Ideas were carried across by hand.
 
-Detailed docs live in [`android/README.md`](android/README.md) (the app),
-[`stardew/README.md`](stardew/README.md) and [`terraria/README.md`](terraria/README.md) (each mod,
-its HTTP endpoints and config).
+Detailed docs live in [`android/README.md`](android/README.md) (the app) and in each mod's own
+README — [`stardew/`](stardew/README.md), [`terraria/`](terraria/README.md),
+[`minecraft/`](minecraft/README.md) — covering its HTTP endpoints and config.
 
 ---
 
@@ -142,8 +147,8 @@ from API 28. The only URL ever loaded is the one typed into the setup screen.
 
 ## Building the game mods
 
-Both are `dotnet build` and nothing else — no build script, no code generation, no post-build
-tooling of our own. Each resolves its game's assemblies from your local install, so the game has to
+Each one uses its own ecosystem's standard toolchain and nothing else — no build scripts of our own,
+no code generation. Each resolves its game's assemblies from your local install, so the game has to
 be installed to compile against.
 
 ### Stardew Valley — [`stardew/`](stardew)
@@ -199,18 +204,49 @@ in the `Mods` folder, so the game picks it up normally.
 Version and packaging metadata come from [`build.txt`](terraria/build.txt), which is tModLoader's
 own format.
 
+### Minecraft — [`minecraft/`](minecraft)
+
+**Requirements:** JDK 21 (Forge for 1.21.1 needs it anyway). Gradle is not needed separately — the
+wrapper is checked in.
+
+```bash
+cd minecraft
+./gradlew build
+```
+
+The jar lands in `build/libs/`. The first build is slow and needs network: ForgeGradle downloads and
+decompiles Minecraft itself before it can compile anything against it.
+
+Build targets are pinned in [`gradle.properties`](minecraft/gradle.properties) — Minecraft 1.21.1,
+Forge 52.1.0 — rather than left open-ended, so this source rebuilds into the same jar later. They
+can be overridden per invocation:
+
+```bash
+./gradlew build -Pmc=1.21.11 -Pforge=61.1.14 -Prange="[1.21.9,1.22)"
+```
+
+That is a real limit rather than an oversight: **this builds for 1.21.1 only.** ForgeGradle 6 fails
+during MCP setup on newer Minecraft, so reaching current Forge needs a migration to a newer
+ForgeGradle or to NeoForge's ModDevGradle. [`buildAll.ps1`](minecraft/buildAll.ps1) walks the
+targets that are actually known to compile.
+
 ## Security note on the mods
 
 A mod's `AllowLanAccess` setting (default `true`) makes its HTTP server reachable from other devices
 on the same network, and the second screen can move, drop and destroy in-game items. There is no
 authentication yet, so it's intended for a home network. Each mod's config carries per-action
 `Allow*` switches to make the screen look-only, and `AllowLanAccess: false` restricts it to the PC
-running the game. They are documented per mod in
-[`stardew/README.md`](stardew/README.md#settings) and
-[`terraria/README.md`](terraria/README.md#settings).
+running the game. They are documented in each mod's own README.
 
-The Terraria mod ships tighter defaults: `AllowDrop`, `AllowInventoryEdit` and `AllowShopping` are
-**off** until you turn them on, since shopping spends real coins.
+The later mods ship tighter defaults. Terraria has `AllowDrop`, `AllowInventoryEdit` and
+`AllowShopping` **off** until you turn them on, since shopping spends real coins. Minecraft's
+`[control]` section allows hotbar selection and crafting but leaves `allowChat` and `allowDrop`
+**off** — the two that can lose you something, or speak as you.
+
+The Minecraft mod is **client-side only**: nothing is installed on a server, and it reads only what
+your own client already knows, so it works in single-player, on a LAN world, or on any server you
+join. Its crafting goes through the same packets the vanilla recipe book uses, so the server still
+does the moving and applies its own rules.
 
 ## Game assets
 

@@ -1,0 +1,94 @@
+plugins {
+    id 'java'
+    id 'eclipse'
+    id 'net.minecraftforge.gradle' version '[6.0.24,6.2)'
+}
+
+/*
+ * Which Minecraft to build against.
+ *
+ * Overridable from the command line so one source tree can produce jars for several versions:
+ *
+ *     gradlew build                                        the default in gradle.properties
+ *     gradlew build -Pmc=1.21.11 -Pforge=61.1.14           a specific target
+ *
+ * Every target gets its own jar name, so the outputs sit side by side in build/libs instead of
+ * overwriting each other and leaving you unsure which one you have.
+ */
+ext.mcVersion = project.findProperty('mc') ?: minecraft_version
+ext.forgeVersion = project.findProperty('forge') ?: forge_version
+ext.mcRange = project.findProperty('range') ?: mc_range
+
+version = "${mod_version}+mc${mcVersion}"
+group = "${mod_group}"
+base.archivesName = "${mod_id}"
+
+java {
+    // 1.21 onwards runs on Java 21; anything lower will not load.
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
+}
+
+minecraft {
+    mappings channel: mapping_channel, version: mcVersion
+
+    // The mod is client-only: it reads what the local player can already see and serves it to a browser
+    // on the same network. There is nothing for it to do on a dedicated server.
+    runs {
+        client {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', ''
+            property 'forge.logging.console.level', 'info'
+            mods {
+                "${mod_id}" {
+                    source sourceSets.main
+                }
+            }
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    minecraft "net.minecraftforge:forge:${mcVersion}-${forgeVersion}"
+}
+
+// The mod metadata is generated from gradle.properties so the version lives in exactly one place.
+tasks.named('processResources', ProcessResources).configure {
+    var replacements = [
+            mod_id           : mod_id,
+            mod_name         : mod_name,
+            mod_version      : mod_version,
+            mod_authors      : mod_authors,
+            mod_description  : mod_description,
+            forge_version    : forgeVersion,
+            minecraft_version: mcVersion,
+            mc_range         : mcRange
+    ]
+    inputs.properties replacements
+
+    filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
+        expand replacements
+    }
+}
+
+tasks.named('jar', Jar).configure {
+    manifest {
+        attributes([
+                'Specification-Title'     : mod_id,
+                'Specification-Vendor'    : mod_authors,
+                'Specification-Version'   : '1',
+                'Implementation-Title'    : mod_name,
+                'Implementation-Version'  : mod_version,
+                'Implementation-Vendor'   : mod_authors
+        ])
+    }
+    // No reobfJar here on purpose: 1.20.6 onwards builds against official mappings, so the jar is
+    // already named the way the game is. Adding the old reobf step just fails to resolve.
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}

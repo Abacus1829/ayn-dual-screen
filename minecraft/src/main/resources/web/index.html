@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#0e1410">
+  <title>Ayn Dual Screen</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="bar">
+  <div class="place">
+    <div class="world" id="world">Not connected</div>
+    <div class="where" id="where"></div>
+  </div>
+
+  <div class="clock">
+    <div class="time" id="time"></div>
+    <div class="day" id="day"></div>
+  </div>
+
+  <button class="icon" id="gear" title="Settings" aria-label="Settings">&#9881;</button>
+  <span class="dot" id="link" title="Connection"></span>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="tab active" data-tab="gear-tab">Gear</button>
+  <button class="tab" data-tab="map-tab">Map</button>
+  <button class="tab" data-tab="craft-tab">Craft</button>
+  <button class="tab" data-tab="status-tab">Status</button>
+</nav>
+
+<main>
+  <!-- ===== gear ===== -->
+  <section class="panel active" id="gear-tab">
+    <div class="topline">
+      <div class="vitals" id="vitals"></div>
+
+      <!-- always-on minimap, so the map tab is for looking around rather than for glancing -->
+      <div class="atlas mini">
+        <canvas id="mini"></canvas>
+        <span class="north" id="miniNorth">N</span>
+      </div>
+    </div>
+
+    <h2>Hotbar</h2>
+    <div class="hotbar" id="hotbar"></div>
+
+    <div class="headrow">
+      <h2>Inventory</h2>
+      <span class="free" id="freeSlots"></span>
+      <input id="invSearch" type="search" placeholder="Find an item" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="grid" id="inventory"></div>
+
+    <h2>Worn</h2>
+    <div class="worn" id="worn"></div>
+  </section>
+
+  <!-- ===== map ===== -->
+  <section class="panel flush" id="map-tab">
+    <div class="mapwrap">
+      <!-- pins live on tabs down the outside of the book, the way an atlas is indexed -->
+      <div class="rail left" id="pinRail"></div>
+
+      <div class="atlas full" id="atlasFrame">
+        <div class="rings"><i></i><i></i><i></i></div>
+        <canvas id="canvas"></canvas>
+        <span class="north" id="mapNorth">N</span>
+      </div>
+
+      <div class="rail right">
+        <button class="tab-pin" id="centreButton" title="Centre on me">&#9678;</button>
+        <button class="tab-pin" id="zoomIn" title="Zoom in">+</button>
+        <button class="tab-pin" id="zoomOut" title="Zoom out">&minus;</button>
+        <button class="tab-pin" id="addPin" title="Drop a pin">&#9873;</button>
+      </div>
+    </div>
+
+    <div class="coords" id="mapinfo">&mdash;</div>
+  </section>
+
+  <!-- ===== craft ===== -->
+  <section class="panel" id="craft-tab">
+    <div class="bench" id="bench">
+      <div class="benchhead" id="benchTitle">Crafting</div>
+      <div class="benchrow">
+        <div class="benchgrid" id="benchGrid"></div>
+        <div class="arrow">&#10132;</div>
+        <div class="benchout">
+          <div class="slot empty" id="benchResult"></div>
+          <button class="pill" id="takeResult">Take</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="craftbar">
+      <input id="craftSearch" type="text" placeholder="Search recipes" autocomplete="off" spellcheck="false">
+      <button id="craftFilter" class="pill">Craftable</button>
+    </div>
+    <div class="recipes" id="recipes"></div>
+    <p class="note" id="craftNote"></p>
+  </section>
+
+  <!-- ===== status ===== -->
+  <section class="panel" id="status-tab">
+    <h2>Effects</h2>
+    <div class="effects" id="effects"></div>
+
+    <h2>Position</h2>
+    <div class="readout" id="position"></div>
+
+    <h2>Say something</h2>
+    <div class="chatrow">
+      <input id="chat" type="text" placeholder="Message or /command" autocomplete="off" spellcheck="false">
+      <button id="send">Send</button>
+    </div>
+    <p class="note" id="chatnote"></p>
+
+    <h2>Reference</h2>
+    <button class="wide" id="wiki">Open the Minecraft Wiki</button>
+  </section>
+</main>
+
+<!-- ===== settings ===== -->
+<div class="sheet" id="settings" hidden>
+  <div class="sheetbody">
+    <div class="sheethead">
+      <h2>Settings</h2>
+      <button class="icon" id="closeSettings" aria-label="Close">&#10005;</button>
+    </div>
+    <div id="settingsBody"></div>
+    <p class="note">These change this page only. What the mod is allowed to do lives in its own config,
+      under <code>config/ayndualscreen-client.toml</code>.</p>
+  </div>
+</div>
+
+<!-- ===== item detail ===== -->
+<div class="sheet" id="itemSheet" hidden>
+  <div class="sheetbody">
+    <div class="sheethead">
+      <h2 id="itemTitle">Item</h2>
+      <button class="icon" id="closeItem" aria-label="Close">&#10005;</button>
+    </div>
+    <div class="itemrow">
+      <div class="slot" id="itemArt"></div>
+      <div class="readout" id="itemFacts"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== pin editor ===== -->
+<div class="sheet" id="pinSheet" hidden>
+  <div class="sheetbody">
+    <div class="sheethead">
+      <h2 id="pinTitle">New pin</h2>
+      <button class="icon" id="closePin" aria-label="Close">&#10005;</button>
+    </div>
+
+    <div class="setting stack">
+      <label for="pinName">Name</label>
+      <input id="pinName" type="text" maxlength="28" autocomplete="off" spellcheck="false">
+    </div>
+
+    <div class="setting stack">
+      <label>Marker</label>
+      <div class="pintypes" id="pinTypes"></div>
+    </div>
+
+    <p class="note" id="pinWhere"></p>
+
+    <button class="wide" id="savePin">Save pin</button>
+    <button class="wide" id="deletePin" style="margin-top:8px">Delete</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>
