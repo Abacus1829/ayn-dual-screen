@@ -1,4 +1,4 @@
-AYN DUAL SCREEN
+AYN DUAL SCREEN - MINECRAFT
 Source-Available Licence, version 1.0
 Copyright (c) 2026 Abacus. All rights reserved except as granted below.
 
@@ -101,23 +101,22 @@ PLAIN ENGLISH SUMMARY (not the licence - the terms below are)
 
 6. THIRD-PARTY RIGHTS AND GAME ASSETS
 
-   These are independent, unofficial projects. They are not affiliated with,
-   endorsed by or sponsored by Re-Logic, 505 Games, ConcernedApe, Mojang
-   Studios, Microsoft, Google, AYN, or the tModLoader, SMAPI or MinecraftForge
-   projects.
+   This is an independent, unofficial mod. It is not affiliated with,
+   endorsed by or sponsored by Mojang Studios, Microsoft, or the
+   MinecraftForge project.
 
-   Each game and all its assets remain the property of its owner. The Work
-   contains and distributes NO game assets. Every icon, sprite and map colour
-   shown is read at runtime from the user's own installed copy of the game and
-   served only to that user's own screen.
+   Minecraft and all related assets are the property of Mojang Studios. The
+   Work contains and distributes NO game assets. Item icons are rendered by
+   the game's own item renderer at runtime, mob heads are cut from the mob's
+   own texture, effect icons come from the effect atlas, and the map is drawn
+   from block colours in the user's own loaded world - all read from that
+   user's installation and served only to that user's own screen.
 
-   Each project is built against its own loader or SDK, which remain under
-   their own licences. Nothing here restricts those or any other third-party
-   component; this licence applies to the original work only.
+   It is built against MinecraftForge and runs under the user's own Minecraft
+   licence from Mojang. Nothing here restricts MinecraftForge or any other
+   third-party component; this licence applies to the original work only.
 
-   Per-project terms are in the LICENSE.txt inside each project folder.
-
-   This project contains AI-assisted code.
+   This mod contains AI-assisted code.
 
 7. NO WARRANTY
 
@@ -125,7 +124,7 @@ PLAIN ENGLISH SUMMARY (not the licence - the terms below are)
    implied, including but not limited to the warranties of merchantability,
    fitness for a particular purpose and non-infringement. In no event shall
    the Author be liable for any claim, damages or other liability, including
-   but not limited to lost or corrupted worlds, characters or saves, arising
+   but not limited to lost or corrupted worlds, inventories or saves, arising
    from or in connection with the Work or its use.
 
 8. TERMINATION

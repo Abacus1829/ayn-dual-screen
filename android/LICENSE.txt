@@ -1,4 +1,4 @@
-AYN DUAL SCREEN
+ABACUS'S DUAL SCREEN INTERFACE - ANDROID APP
 Source-Available Licence, version 1.0
 Copyright (c) 2026 Abacus. All rights reserved except as granted below.
 
@@ -19,7 +19,7 @@ PLAIN ENGLISH SUMMARY (not the licence - the terms below are)
 
 1. DEFINITIONS
 
-   "The Work" means this mod: its source code, its assets, its documentation,
+   "The Work" means this application: its source code, its assets, its documentation,
    and any build produced from them.
 
    "You" means anyone exercising the rights granted here.
@@ -99,25 +99,20 @@ PLAIN ENGLISH SUMMARY (not the licence - the terms below are)
    Keep this file, and the copyright notice, with any copy of the source or of
    a build. Where a derivative is shown publicly, say what it is derived from.
 
-6. THIRD-PARTY RIGHTS AND GAME ASSETS
+6. THIRD-PARTY RIGHTS
 
-   These are independent, unofficial projects. They are not affiliated with,
-   endorsed by or sponsored by Re-Logic, 505 Games, ConcernedApe, Mojang
-   Studios, Microsoft, Google, AYN, or the tModLoader, SMAPI or MinecraftForge
-   projects.
+   This is an independent application. It is not affiliated with, endorsed by
+   or sponsored by Google, AYN, Re-Logic, ConcernedApe or Mojang Studios.
 
-   Each game and all its assets remain the property of its owner. The Work
-   contains and distributes NO game assets. Every icon, sprite and map colour
-   shown is read at runtime from the user's own installed copy of the game and
-   served only to that user's own screen.
+   The Work contains and distributes NO game assets. It displays pages served
+   by the companion mods running on the user's own machine, over the user's
+   own network. It talks to no service of the Author's, and collects nothing.
 
-   Each project is built against its own loader or SDK, which remain under
-   their own licences. Nothing here restricts those or any other third-party
-   component; this licence applies to the original work only.
+   It is built against the Android SDK and AndroidX libraries, which remain
+   under their own licences. Nothing here restricts those or any other
+   third-party component; this licence applies to the original work only.
 
-   Per-project terms are in the LICENSE.txt inside each project folder.
-
-   This project contains AI-assisted code.
+   This application contains AI-assisted code.
 
 7. NO WARRANTY
 
@@ -125,7 +120,7 @@ PLAIN ENGLISH SUMMARY (not the licence - the terms below are)
    implied, including but not limited to the warranties of merchantability,
    fitness for a particular purpose and non-infringement. In no event shall
    the Author be liable for any claim, damages or other liability, including
-   but not limited to lost or corrupted worlds, characters or saves, arising
+   but not limited to lost data or device settings, arising
    from or in connection with the Work or its use.
 
 8. TERMINATION

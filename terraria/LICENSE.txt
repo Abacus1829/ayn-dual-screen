@@ -1,4 +1,4 @@
-AYN DUAL SCREEN
+AYN DUAL SCREEN - TERRARIA
 Source-Available Licence, version 1.0
 Copyright (c) 2026 Abacus. All rights reserved except as granted below.
 
@@ -101,23 +101,20 @@ PLAIN ENGLISH SUMMARY (not the licence - the terms below are)
 
 6. THIRD-PARTY RIGHTS AND GAME ASSETS
 
-   These are independent, unofficial projects. They are not affiliated with,
-   endorsed by or sponsored by Re-Logic, 505 Games, ConcernedApe, Mojang
-   Studios, Microsoft, Google, AYN, or the tModLoader, SMAPI or MinecraftForge
-   projects.
+   This is an independent, unofficial mod. It is not affiliated with,
+   endorsed by or sponsored by Re-Logic, 505 Games, or the tModLoader project.
 
-   Each game and all its assets remain the property of its owner. The Work
-   contains and distributes NO game assets. Every icon, sprite and map colour
-   shown is read at runtime from the user's own installed copy of the game and
-   served only to that user's own screen.
+   Terraria and all related assets are the property of Re-Logic. The Work
+   contains and distributes NO game assets. Every sprite it displays - item
+   and buff icons, inventory slot backgrounds, NPC artwork, map colours - is
+   read at runtime from the user's own installed copy of the game and served
+   only to that user's own screen.
 
-   Each project is built against its own loader or SDK, which remain under
-   their own licences. Nothing here restricts those or any other third-party
-   component; this licence applies to the original work only.
+   It is built against tModLoader, which remains under its own licence.
+   Nothing here restricts tModLoader or any other third-party component; this
+   licence applies to the original work only.
 
-   Per-project terms are in the LICENSE.txt inside each project folder.
-
-   This project contains AI-assisted code.
+   This mod contains AI-assisted code.
 
 7. NO WARRANTY
 

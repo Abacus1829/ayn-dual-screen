@@ -266,7 +266,7 @@ cropped at runtime from your own installed copy of the game and served only to y
 
 ## Licence
 
-Source-available, **all rights reserved** — see [LICENSE.txt](LICENSE.txt). Publishing the source
+Source-available under the Source-Available Licence v1.0 — see [LICENSE.txt](LICENSE.txt). Publishing the source
 here is for transparency and review; it does not grant permission to redistribute, reupload, port or
 reuse the code.
 
