@@ -109,6 +109,9 @@ namespace AynDualScreen
 		private readonly ConcurrentQueue<ActionDto> PendingActions = new();
 		private readonly ConcurrentDictionary<string, byte[]> IconCache = new();
 
+		/// <summary>The second-screen page, read out of the mod file at load and served from memory after that.</summary>
+		private readonly ConcurrentDictionary<string, byte[]> WebFiles = new();
+
 		/// <summary>"local" or "world". Written from a request thread, read on the game thread — a reference write, so atomic.</summary>
 		private volatile string MapMode = "local";
 		private string BuiltMapMode = string.Empty;
@@ -134,6 +137,9 @@ namespace AynDualScreen
 
 			DualScreenConfig config = this.Config;
 			this.StateTickInterval = Math.Max(1, 60 / Math.Clamp(config.UpdatesPerSecond, 1, 60));
+
+			// must happen before the server starts answering, and while the mod file is still open
+			this.CacheWebFiles();
 
 			IPAddress address = config.AllowLanAccess ? IPAddress.Any : IPAddress.Loopback;
 
@@ -272,6 +278,7 @@ namespace AynDualScreen
 			this.Server?.Dispose();
 			this.Server = null;
 			this.IconCache.Clear();
+			this.WebFiles.Clear();
 			ModIntegration.Reset(); // the next load may be a different mod list entirely
 		}
 
@@ -1375,11 +1382,44 @@ namespace AynDualScreen
 					return HttpResponse.Bytes(File.ReadAllBytes(full), contentType);
 			}
 
-			string modPath = "web/" + relative;
-			if (!this.Mod.FileExists(modPath))
-				return HttpResponse.NotFound();
+			return this.WebFiles.TryGetValue("web/" + relative, out byte[] bytes)
+				? HttpResponse.Bytes(bytes, contentType)
+				: HttpResponse.NotFound();
+		}
 
-			return HttpResponse.Bytes(this.Mod.GetFileBytes(modPath), contentType);
+		/// <summary>
+		/// Read the whole second-screen page into memory while the mod file is still open.
+		/// </summary>
+		/// <remarks>
+		/// This used to read out of the .tmod on each request, which is only legal while tModLoader has the
+		/// archive open — it isn't, once loading has finished, and the first request then failed with
+		/// "File not open" and served nothing at all. Publishing to the Workshop is what exposed it, because
+		/// that closes and reopens the file underneath a running game.
+		/// <para>
+		/// Caching also removes an archive decompress from every request, and it is a few hundred KB. The
+		/// <c>WebRootOverride</c> path still reads from disk per request, which is the point of it: editing
+		/// the UI without rebuilding needs the file re-read every time.
+		/// </para>
+		/// </remarks>
+		private void CacheWebFiles()
+		{
+			foreach (string name in this.Mod.GetFileNames())
+			{
+				if (!name.StartsWith("web/", StringComparison.Ordinal))
+					continue;
+
+				try
+				{
+					this.WebFiles[name] = this.Mod.GetFileBytes(name);
+				}
+				catch (Exception ex)
+				{
+					this.Mod.Logger.Warn($"Couldn't read {name} out of the mod file: {ex.Message}");
+				}
+			}
+
+			if (!this.WebFiles.ContainsKey("web/index.html"))
+				this.Mod.Logger.Error("The second-screen page is missing from the mod file. The server will start but serve nothing.");
 		}
 
 		private static string GuessContentType(string path)

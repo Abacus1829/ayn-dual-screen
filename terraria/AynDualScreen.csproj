@@ -1,6 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
+    Do not re-add an "..\tModLoader.targets" import above this comment. tModLoader's Develop Mods
+    screen inserts one automatically when it touches this project, and it breaks the build: that
+    file only exists inside ModSources, and this project deliberately lives on the Desktop. If the
+    build suddenly fails with MSB4019 looking for tModLoader.targets one folder up, that is what
+    happened — delete the inserted line.
+  -->
+  <!--
     tModLoader's own project template sits inside ModSources and imports "..\..\tMLMod.targets".
     This project lives outside that folder, so it points straight at the targets file in the game
     install instead. Override tMLSteamPath (property or environment variable) if tModLoader isn't in
