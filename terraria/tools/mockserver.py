@@ -91,10 +91,19 @@ EQUIPMENT = [
 ]
 
 BUFFS = [
-    {"type": 1, "name": "Obsidian Skin", "seconds": 412, "iconKey": "b1"},
-    {"type": 2, "name": "Regeneration", "seconds": 88, "iconKey": "b2"},
-    {"type": 3, "name": "Swiftness", "seconds": 19, "iconKey": "b3"},
-    {"type": 4, "name": "Shine", "seconds": -1, "iconKey": "b4"},
+    {"type": 1, "name": "Obsidian Skin", "seconds": 412, "iconKey": "b1",
+     "description": "Immune to lava"},
+    {"type": 2, "name": "Regeneration", "seconds": 88, "iconKey": "b2",
+     "description": "Provides life regeneration"},
+    {"type": 3, "name": "Swiftness", "seconds": 19, "iconKey": "b3",
+     "description": "25% increased movement speed"},
+    {"type": 4, "name": "Shine", "seconds": -1, "iconKey": "b4",
+     "description": "Emitting light"},
+    # a debuff and a modded buff, so the strip's two special cases are always on screen while working on it
+    {"type": 30, "name": "Poisoned", "seconds": 12, "iconKey": "b30", "debuff": True,
+     "description": "Slowly losing life"},
+    {"type": 4001, "name": "Draconic Surge", "seconds": 240, "iconKey": "b4001",
+     "description": "Vastly increased damage · Reduced defence", "source": "Calamity Mod"},
 ]
 
 PROGRESS = {
@@ -117,6 +126,21 @@ PROGRESS = {
         {"name": "Pirate Invasion", "done": False, "hardmode": True},
         {"name": "Martian Madness", "done": False, "hardmode": True},
     ],
+    # bosses from other mods, grouped by where they came from
+    "moddedBosses": [
+        {"name": "Desert Scourge", "source": "Calamity Mod", "done": True, "lifeMax": 5000},
+        {"name": "Crabulon", "source": "Calamity Mod", "done": False, "lifeMax": 6000},
+        {"name": "The Grand Thunder Bird", "source": "Thorium Mod", "done": True, "lifeMax": 4500},
+        {"name": "Queen Jellyfish", "source": "Thorium Mod", "done": False, "lifeMax": 5200},
+    ],
+    "moddedDone": 2,
+    "moddedTotal": 4,
+    "mods": [
+        {"name": "Ayn Dual Screen", "internalName": "AynDualScreen", "version": "0.3.0"},
+        {"name": "Calamity Mod", "internalName": "CalamityMod", "version": "2.0.4.4"},
+        {"name": "Thorium Mod", "internalName": "ThoriumMod", "version": "1.7.2"},
+    ],
+    "checklistLinked": False,
     "bossesDone": 3,
     "bossesTotal": 11,
     "hardMode": False,

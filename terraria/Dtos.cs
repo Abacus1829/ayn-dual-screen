@@ -124,6 +124,15 @@ namespace AynDualScreen
 		/// <summary>Remaining seconds, or -1 for a buff with no timer.</summary>
 		public int Seconds { get; set; }
 		public string IconKey { get; set; }
+
+		/// <summary>Whether this is something working against the player, so the screen can colour it as a warning.</summary>
+		public bool Debuff { get; set; }
+
+		/// <summary>What it does, in the game's own words. Modded buffs supply this the same way vanilla ones do.</summary>
+		public string Description { get; set; }
+
+		/// <summary>Which mod added it, or null for a vanilla buff.</summary>
+		public string Source { get; set; }
 	}
 
 	/// <summary>Something to draw on the minimap that moves. Coordinates are world tiles.</summary>
@@ -152,6 +161,9 @@ namespace AynDualScreen
 		public string Name { get; set; }
 		public int Life { get; set; }
 		public int LifeMax { get; set; }
+
+		/// <summary>Which mod the boss came from, or null when it's a vanilla one.</summary>
+		public string Source { get; set; }
 	}
 
 	/// <summary>
@@ -232,6 +244,47 @@ namespace AynDualScreen
 		public int BossesDone { get; set; }
 		public int BossesTotal { get; set; }
 		public bool HardMode { get; set; }
+
+		/// <summary>Bosses added by other mods, in as close to progression order as we can work out.</summary>
+		public List<ModBossDto> ModdedBosses { get; set; }
+
+		public int ModdedDone { get; set; }
+		public int ModdedTotal { get; set; }
+
+		/// <summary>Every other mod in the load order, so the screen can show what this list was built from.</summary>
+		public List<ModInfoDto> Mods { get; set; }
+
+		/// <summary>Whether Boss Checklist is installed and answering, which is what supplies real ordering.</summary>
+		public bool ChecklistLinked { get; set; }
+	}
+
+	/// <summary>One boss added by another mod.</summary>
+	internal sealed class ModBossDto
+	{
+		public string Name { get; set; }
+
+		/// <summary>The mod that added it, used to group the list.</summary>
+		public string Source { get; set; }
+
+		public bool Done { get; set; }
+
+		/// <summary>NPC type of the meatiest part of the fight. Not shown; kept for grouping and debugging.</summary>
+		public int Type { get; set; }
+
+		public int LifeMax { get; set; }
+
+		/// <summary>
+		/// Boss Checklist's progression value where it's available, otherwise <c>float.MaxValue</c> so the
+		/// health-based fallback ordering decides.
+		/// </summary>
+		public float Progression { get; set; }
+	}
+
+	internal sealed class ModInfoDto
+	{
+		public string Name { get; set; }
+		public string InternalName { get; set; }
+		public string Version { get; set; }
 	}
 
 	internal sealed class ProgressEntryDto

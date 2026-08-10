@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Terraria;
 using Terraria.GameContent.Events;
+using Terraria.ModLoader;
 
 namespace AynDualScreen
 {
@@ -68,14 +69,63 @@ namespace AynDualScreen
 					done++;
 			}
 
+			DualScreenConfig config = ModContent.GetInstance<DualScreenConfig>();
+			List<ModBossDto> modded = config.ShowModdedBosses ? ReadModded() : new List<ModBossDto>();
+
+			int moddedDone = 0;
+			foreach (ModBossDto boss in modded)
+			{
+				if (boss.Done)
+					moddedDone++;
+			}
+
 			return new ProgressDto
 			{
 				Bosses = bosses,
 				Events = events,
 				BossesDone = done,
 				BossesTotal = bosses.Count,
-				HardMode = Main.hardMode
+				HardMode = Main.hardMode,
+
+				ModdedBosses = modded,
+				ModdedDone = moddedDone,
+				ModdedTotal = modded.Count,
+				Mods = config.ShowModList ? ModIntegration.LoadedMods() : new List<ModInfoDto>(),
+				ChecklistLinked = ModLoader.HasMod("BossChecklist")
 			};
+		}
+
+		/// <summary>
+		/// The modded half of the checklist, with each boss's defeat state filled in.
+		/// </summary>
+		/// <remarks>
+		/// Two sources, in order of trust: Boss Checklist if it's installed, because it knows about kills
+		/// from before this mod existed; otherwise our own per-world log. Either way the boss list itself
+		/// is the same one, read from the load order rather than from any mod's cooperation.
+		/// </remarks>
+		private static List<ModBossDto> ReadModded()
+		{
+			Dictionary<string, bool> checklist = ModIntegration.ChecklistDowned();
+			var entries = new List<ModBossDto>();
+
+			foreach (ModBossDto boss in ModIntegration.ModdedBosses())
+			{
+				bool done = checklist != null && checklist.TryGetValue(boss.Name, out bool flag)
+					? flag
+					: BossLog.IsDefeated(boss.Name);
+
+				entries.Add(new ModBossDto
+				{
+					Name = boss.Name,
+					Source = boss.Source,
+					Type = boss.Type,
+					LifeMax = boss.LifeMax,
+					Progression = boss.Progression,
+					Done = done
+				});
+			}
+
+			return entries;
 		}
 
 		private static List<ProgressEntryDto> Read((string Name, Func<bool> Done, bool Hardmode)[] source)

@@ -272,6 +272,7 @@ namespace AynDualScreen
 			this.Server?.Dispose();
 			this.Server = null;
 			this.IconCache.Clear();
+			ModIntegration.Reset(); // the next load may be a different mod list entirely
 		}
 
 		public override void OnWorldUnload()
@@ -438,7 +439,13 @@ namespace AynDualScreen
 					Type = type,
 					Name = Lang.GetBuffName(type),
 					Seconds = seconds,
-					IconKey = config.EnableItemIcons ? this.EnsureBuffIcon(type) : null
+					IconKey = config.EnableItemIcons ? this.EnsureBuffIcon(type) : null,
+
+					// modded buffs go through exactly the same lookups: tModLoader grows Lang, Main.debuff
+					// and TextureAssets.Buff to cover them, so nothing here needs to know they exist
+					Debuff = type < Main.debuff.Length && Main.debuff[type],
+					Description = DescribeBuff(type),
+					Source = ModIntegration.BuffSource(type)
 				});
 			}
 
@@ -783,6 +790,30 @@ namespace AynDualScreen
 			return entities;
 		}
 
+		/// <summary>
+		/// What a buff actually does, in the game's own words.
+		/// </summary>
+		/// <remarks>
+		/// Descriptions are written for a tooltip and are frequently multi-line; the second screen shows
+		/// them on one line, so the breaks become separators. Modded buffs register their description with
+		/// the same localisation system, so they come back here for free.
+		/// </remarks>
+		private static string DescribeBuff(int type)
+		{
+			try
+			{
+				string text = Lang.GetBuffDescription(type);
+				if (string.IsNullOrWhiteSpace(text))
+					return null;
+
+				return text.Replace("\r", string.Empty).Replace("\n", " · ").Trim();
+			}
+			catch (Exception)
+			{
+				return null; // a mod with a missing localisation entry shouldn't cost us the buff strip
+			}
+		}
+
 		/// <summary>The most substantial boss currently alive, so the screen can show a health bar for it.</summary>
 		private static BossDto FindBoss()
 		{
@@ -799,7 +830,13 @@ namespace AynDualScreen
 			if (best == null)
 				return null;
 
-			return new BossDto { Name = best.FullName, Life = best.life, LifeMax = best.lifeMax };
+			return new BossDto
+			{
+				Name = best.FullName,
+				Life = best.life,
+				LifeMax = best.lifeMax,
+				Source = ModIntegration.NpcSource(best)
+			};
 		}
 
 		/*********

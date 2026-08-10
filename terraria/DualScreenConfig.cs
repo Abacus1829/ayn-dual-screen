@@ -61,6 +61,21 @@ namespace AynDualScreen
 		[DefaultValue(false)]
 		public bool AllowShopping = false;
 
+		/// <summary>
+		/// Whether the checklist also lists bosses added by other mods.
+		/// </summary>
+		/// <remarks>
+		/// The list is read from the load order itself, so it works with any mod without either side
+		/// knowing about the other. Turn it off for a checklist of the vanilla progression only — worth
+		/// doing with a very large content mod, where the modded list can run to dozens of entries.
+		/// </remarks>
+		[DefaultValue(true)]
+		public bool ShowModdedBosses = true;
+
+		/// <summary>Whether the checklist tab lists the mods currently loaded.</summary>
+		[DefaultValue(true)]
+		public bool ShowModList = true;
+
 		/// <summary>Whether hostile NPCs appear on the minimap.</summary>
 		[DefaultValue(true)]
 		public bool ShowEnemies = true;

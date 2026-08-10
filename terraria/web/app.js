@@ -266,6 +266,12 @@ const dom = {
   bossList: el('boss-list'),
   eventList: el('event-list'),
   bossProgress: el('boss-progress'),
+  moddedHead: el('modded-head'),
+  moddedProgress: el('modded-progress'),
+  moddedList: el('modded-list'),
+  moddedNote: el('modded-note'),
+  modListHead: el('modlist-head'),
+  modList: el('mod-list'),
   craftList: el('craft-list'),
   craftCount: el('craft-count'),
   craftFilter: el('craft-filter'),
@@ -292,6 +298,7 @@ const dom = {
   potionLabel: el('potion-label'),
   moon: el('moon-text'),
   buffs: el('buffs'),
+  buffDetail: el('buff-detail'),
   invPanel: el('inv-panel'),
   invHint: el('inv-hint'),
   hotbar: el('inv-hotbar'),
@@ -520,14 +527,43 @@ function renderHud() {
 
   if (state.boss) {
     dom.boss.classList.remove('hidden');
-    dom.bossName.textContent = state.boss.name;
+    dom.bossName.textContent = state.boss.source
+      ? `${state.boss.name} · ${state.boss.source}`
+      : state.boss.name;
     setBar(dom.bossBar, dom.bossText, state.boss.life, state.boss.lifeMax);
   } else {
     dom.boss.classList.add('hidden');
   }
 }
 
+/**
+ * The full text for a buff: name, time left, what it does, and which mod it came from.
+ *
+ * Modded buffs are the reason the description is here at all — a vanilla one you can recognise by its
+ * icon, but a buff from a content mod is usually a 32x32 image you have never seen before.
+ */
+function buffTooltip(buff) {
+  const lines = [buff.seconds >= 0 ? `${buff.name} — ${buff.seconds}s` : buff.name];
+  if (buff.description) lines.push(buff.description);
+  if (buff.source) lines.push(`from ${buff.source}`);
+  return lines.join('\n');
+}
+
 let buffSignature = null;
+let selectedBuffType = null;
+
+function showBuffDetail(buff) {
+  // tapping the same one again puts the line away
+  if (selectedBuffType === buff.type) {
+    selectedBuffType = null;
+    dom.buffDetail.classList.add('hidden');
+    return;
+  }
+
+  selectedBuffType = buff.type;
+  dom.buffDetail.textContent = buffTooltip(buff).replace(/\n/g, ' — ');
+  dom.buffDetail.classList.remove('hidden');
+}
 
 function renderBuffs() {
   const buffs = state.buffs || [];
@@ -535,11 +571,23 @@ function renderBuffs() {
   if (signature === buffSignature) return;
   buffSignature = signature;
 
+  // a buff that has run out should not leave its description sitting on screen
+  const selected = buffs.find((b) => b.type === selectedBuffType);
+  if (selected) {
+    dom.buffDetail.textContent = buffTooltip(selected).replace(/\n/g, ' — ');
+  } else {
+    selectedBuffType = null;
+    dom.buffDetail.classList.add('hidden');
+  }
+
   dom.buffs.textContent = '';
   for (const buff of buffs) {
     const cell = document.createElement('div');
-    cell.className = 'buff';
-    cell.title = buff.seconds >= 0 ? `${buff.name} — ${buff.seconds}s` : buff.name;
+    cell.className = buff.debuff ? 'buff debuff' : 'buff';
+    cell.title = buffTooltip(buff);
+
+    // there is no hover on a handheld, so the tooltip needs somewhere to go on a tap
+    cell.addEventListener('click', () => showBuffDetail(buff));
 
     if (buff.iconKey) {
       const img = document.createElement('img');
@@ -729,6 +777,74 @@ function renderProgress() {
   dom.bossProgress.textContent = `${progressData.bossesDone} / ${progressData.bossesTotal}`;
   fillChecklist(dom.bossList, progressData.bosses || [], true);
   fillChecklist(dom.eventList, progressData.events || [], false);
+  renderModdedBosses();
+  renderModList();
+}
+
+/**
+ * The modded half of the checklist.
+ *
+ * Grouped by the mod each boss came from, because with two content mods installed an interleaved list
+ * is unreadable — you want to see how far through Calamity you are, not a merged ladder. The whole
+ * section disappears when there are no modded bosses, which is the common case.
+ */
+function renderModdedBosses() {
+  const bosses = progressData.moddedBosses || [];
+
+  dom.moddedHead.classList.toggle('hidden', bosses.length === 0);
+  dom.moddedNote.classList.toggle('hidden', bosses.length === 0);
+  dom.moddedList.textContent = '';
+  if (bosses.length === 0) return;
+
+  dom.moddedProgress.textContent = `${progressData.moddedDone} / ${progressData.moddedTotal}`;
+
+  dom.moddedNote.textContent = progressData.checklistLinked
+    ? 'Order and defeats come from Boss Checklist.'
+    : 'Ordered by health, and defeats are counted from when this mod was installed. Install Boss Checklist for a proper progression order.';
+
+  let currentSource = null;
+  for (const boss of bosses) {
+    if (boss.source !== currentSource) {
+      currentSource = boss.source;
+      const head = document.createElement('div');
+      head.className = 'check-group';
+      head.textContent = currentSource;
+      dom.moddedList.appendChild(head);
+    }
+
+    const row = document.createElement('div');
+    row.className = 'check ' + (boss.done ? 'done' : 'todo');
+
+    const tick = document.createElement('i');
+    tick.textContent = boss.done ? '✔' : '·';
+
+    const name = document.createElement('span');
+    name.textContent = boss.name;
+
+    row.append(tick, name);
+    dom.moddedList.appendChild(row);
+  }
+}
+
+function renderModList() {
+  const mods = progressData.mods || [];
+
+  dom.modListHead.classList.toggle('hidden', mods.length === 0);
+  dom.modList.textContent = '';
+
+  for (const mod of mods) {
+    const row = document.createElement('div');
+    row.className = 'modrow';
+
+    const name = document.createElement('span');
+    name.textContent = mod.name;
+
+    const version = document.createElement('em');
+    version.textContent = mod.version ? `v${mod.version}` : '';
+
+    row.append(name, version);
+    dom.modList.appendChild(row);
+  }
 }
 
 /**

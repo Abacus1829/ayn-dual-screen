@@ -76,5 +76,15 @@ Configs: {
 			Label: Allow Shopping
 			Tooltip: ""
 		}
+
+		ShowModdedBosses: {
+			Label: Show Modded Bosses
+			Tooltip: List bosses added by other mods on the checklist as well as the vanilla ones.
+		}
+
+		ShowModList: {
+			Label: Show Mod List
+			Tooltip: Show which mods are loaded at the bottom of the checklist tab.
+		}
 	}
 }

@@ -226,7 +226,46 @@ section {
 .check span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .check em { font-style: normal; margin-left: auto; font-size: 9px; color: var(--text-dim); flex: 0 0 auto; }
 
-#boss-progress, #craft-count { color: var(--gold); }
+#boss-progress, #craft-count, #modded-progress { color: var(--gold); }
+
+/* ---------- modded content ---------- */
+
+/* The mod a run of bosses came from. With two content mods loaded, one flat list is unreadable. */
+.check-group {
+  font-size: 9px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  padding: 6px 2px 2px;
+}
+
+.check-group:first-child { padding-top: 2px; }
+
+.note {
+  margin: 4px 2px 0;
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--text-dim);
+}
+
+.modlist {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow-y: auto;
+}
+
+.modrow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 11px;
+  padding: 2px 7px;
+  color: var(--text-dim);
+}
+
+.modrow span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modrow em { font-style: normal; margin-left: auto; font-size: 9px; flex: 0 0 auto; opacity: .7; }
 
 /* ---------- craftable list ---------- */
 
@@ -473,6 +512,14 @@ section {
 }
 
 .buff img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+
+/* Something working against you. Worth telling apart at a glance, modded or not. */
+.buff.debuff {
+  border-color: #a8384a;
+  background: #2a1418;
+}
+
+#buff-detail { margin-top: 5px; }
 
 .buff i {
   position: absolute;
