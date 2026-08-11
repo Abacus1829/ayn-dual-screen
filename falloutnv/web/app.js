@@ -283,17 +283,23 @@ const DEVICE_TEXTURES = {
 // The layout is hand-placed because these are UI sprites the game positions itself; the numbers
 // below are percentages of the figure box, chosen so the pieces meet at the joints.
 
+// Individual limb sprites, each placed by hand. I tried treating them as one shared canvas -- each
+// texture being the whole figure with only its own limb painted -- and it composited into a
+// scribble, so they are genuinely separate pieces that carry no position of their own.
+//
+// These percentages are of the figure box, and they are ESTIMATES. The authoritative numbers are
+// in the game's own stats menu XML (menus\ inside Fallout - Misc.bsa), which places each piece
+// explicitly; reading those out and pasting them here is the way to make this exact rather than
+// close. Until then, nudge these.
 const FIGURE_LAYERS = [
   // key        file          left    top     width   z
-  ["torso",    "torso",       50,     44,     34,     2],
-  ["head",     "head",        50,     14,     26,     3],
-  ["rightArm", "right_arm",   26,     42,     26,     1],
-  ["leftArm",  "left_arm",    74,     42,     26,     1],
-  ["rightLeg", "right_leg",   40,     76,     22,     1],
-  ["leftLeg",  "left_leg",    60,     76,     22,     1],
+  ["torso",    "torso",       50,     47,     46,     2],
+  ["head",     "head",        50,     16,     30,     3],
+  ["rightArm", "right_arm",   28,     40,     30,     1],
+  ["leftArm",  "left_arm",    72,     40,     30,     1],
+  ["rightLeg", "right_leg",   42,     70,     28,     1],
+  ["leftLeg",  "left_leg",    58,     70,     28,     1],
 ];
-
-let figureReady = false;
 
 function buildFigure() {
   const host = document.getElementById("figurelayers");
@@ -308,20 +314,22 @@ function buildFigure() {
     img.style.top = top + "%";
     img.style.width = width + "%";
     img.style.zIndex = String(z);
+
+    // Each layer reveals the figure itself once it has actually decoded. There is no separate
+    // probe: an earlier version used one, and if that single request lost a race at startup the
+    // whole figure stayed hidden forever with no way to recover. This way any layer arriving is
+    // enough to switch over, and a layer that never arrives costs only itself.
+    img.onload = () => {
+      host.hidden = false;
+      // A class, not the hidden attribute: [hidden] is an HTML attribute and browsers do not
+      // reliably apply the UA display:none rule to an <svg>, so the drawn figure was still
+      // showing through underneath the real one.
+      document.getElementById("doll").classList.add("replaced");
+    };
+    img.onerror = () => { img.style.visibility = "hidden"; };
+
     host.appendChild(img);
   }
-
-  // If even the torso can't be fetched the mod isn't serving assets, so the drawn SVG stays and
-  // this whole layer is left hidden.
-  const probe = new Image();
-  probe.onload = () => {
-    figureReady = true;
-    host.hidden = false;
-    document.getElementById("doll").hidden = true;
-    if (state) renderStat(state);
-  };
-  probe.onerror = () => { figureReady = false; };
-  probe.src = statsAsset("torso");
 }
 
 /** textures\interface\stats\<file>.dds -- the mod prepends "textures\" itself. */
@@ -331,8 +339,6 @@ function statsAsset(file) {
 
 /** Point each layer at its good or broken variant, following the live condition values. */
 function updateFigure(condition) {
-  if (!figureReady) return;
-
   for (const img of document.querySelectorAll("#figurelayers .limb-layer")) {
     const value = condition[img.dataset.limb];
     const broken = value != null && value <= 0;
