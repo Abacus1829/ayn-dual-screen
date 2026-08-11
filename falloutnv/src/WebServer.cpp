@@ -228,9 +228,33 @@ void WebServer::Serve(unsigned long long clientHandle)
 
 	HttpResponse res;
 	if (req.method == "OPTIONS")
+	{
 		res.status = 200;                 // the browser's CORS preflight for POST /action
+	}
 	else
-		res = handler(req);
+	{
+		// NOTHING the handler does may take the game down.
+		//
+		// This is a worker thread inside FalloutNV.exe, and an exception that escapes a thread
+		// terminates the process -- so a single bad request would crash somebody's game rather
+		// than return an error. That is exactly what happened with the 2048x2048 world map:
+		// decoding it allocates tens of megabytes at once in a 32-bit process, and when that
+		// failed the bad_alloc came straight out through here.
+		try
+		{
+			res = handler(req);
+		}
+		catch (const std::exception& e)
+		{
+			res.status = 500;
+			res.body = std::string("handler failed: ") + e.what();
+		}
+		catch (...)
+		{
+			res.status = 500;
+			res.body = "handler failed";
+		}
+	}
 
 	char header[512];
 	int headerLen = std::snprintf(header, sizeof header,

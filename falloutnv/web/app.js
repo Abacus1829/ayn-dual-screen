@@ -898,7 +898,10 @@ function renderMap(s) {
   if (!renderMap.art) {
     renderMap.art = new Image();
     renderMap.art.onload = () => { if (state) renderMap(state); };
-    renderMap.art.src = "asset/interface/worldmap/wasteland_nv_2048_no_map.png";
+    // The 1024 mip, not the 2048. The larger one decodes to 16 MB and the encoder needs roughly
+    // triple that at once, which a 32-bit game cannot reliably find -- the mod refuses it above a
+    // megapixel for that reason. Scaled up to a panel this size the difference is invisible.
+    renderMap.art.src = "asset/interface/worldmap/wasteland_nv_1024_no_map.png";
   }
   if (!bounds) {
     ctx.fillStyle = dim;

@@ -181,7 +181,27 @@ bool Assets::Png(const std::string& request, std::string& out)
 	if (!Dds::Decode(raw, image) || !image.Valid())
 		return false;
 
-	std::string png = ::Png::Encode(image.rgba, image.width, image.height);
+	// Refuse anything too large to encode safely.
+	//
+	// This runs inside a 32-bit game with a fragmented address space. A 2048x2048 texture is 16 MB
+	// decoded, and the encoder's stored-deflate output plus its intermediate buffer roughly triples
+	// that -- enough to fail an allocation and, before the handler learned to catch, to take the
+	// game down. UI art is never this big; the world map is, and it is better served scaled by the
+	// browser from a smaller mip than by risking the process.
+	const uint32_t kMaxPixels = 1024 * 1024;   // 1024x1024, or any shape up to the same area
+	if (static_cast<uint32_t>(image.width) * image.height > kMaxPixels)
+		return false;
+
+	std::string png;
+	try
+	{
+		png = ::Png::Encode(image.rgba, image.width, image.height);
+	}
+	catch (...)
+	{
+		return false;                        // out of memory encoding it; a missing icon is fine
+	}
+
 	if (png.empty())
 		return false;
 
