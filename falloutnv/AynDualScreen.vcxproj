@@ -63,10 +63,24 @@
       <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\src;$(NvseDir);$(NvseDir)\nvse;$(NvseDir)\nvse\nvse;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <!-- RUNTIME selects the game build of the SDK rather than the GECK one. RUNTIME_VERSION is
            New Vegas 1.4.0.525, the only version the script extender supports. -->
-      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;RUNTIME;RUNTIME_VERSION=0x040020D0;_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <!-- Deliberately NOT defining NOMINMAX or WIN32_LEAN_AND_MEAN: the SDK's headers use the
+           Windows min/max macros and expect the full Windows.h that nvse/prefix.h pulls in.
+           Suppressing either breaks the SDK, not our code. -->
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;RUNTIME;RUNTIME_VERSION=0x040020D0;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <!-- The SDK's headers assume its prefix has already been pulled in: UInt32 and friends are
+           defined there, not in the headers that use them. xNVSE's own projects force-include it
+           the same way, so this is the supported arrangement rather than a workaround.
+           It resolves against $(NvseDir)\nvse from the include path above. -->
+      <ForcedIncludeFiles>nvse/prefix.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <!-- The SDK uses std::span and std::ranges, so C++17 is not enough. xNVSE's own projects
+           build at 'latest'; matching them is the arrangement least likely to break on an
+           SDK update. -->
+      <LanguageStandard>stdcpplatest</LanguageStandard>
       <WarningLevel>Level3</WarningLevel>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <!-- /FS serialises writes to the shared .pdb. Parallel compilation without it fails with
+           "cannot open program database", intermittently and confusingly. -->
+      <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
       <!-- The SDK reaches into game structures constantly; its own projects turn these off too. -->
       <DisableSpecificWarnings>4267;4244;4018;4996;4200;4291</DisableSpecificWarnings>
       <ConformanceMode>false</ConformanceMode>

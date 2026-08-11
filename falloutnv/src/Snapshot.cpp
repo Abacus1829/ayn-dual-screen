@@ -671,7 +671,9 @@ void Snapshot::DrainCommands(const Config& config)
 		else if (cmd.action == "drop" && config.allowDrop)
 		{
 			if (TESForm* form = LookupFormByID(ParseFormId(cmd.id)))
-				player->RemoveItem(form, nullptr, std::max(1, cmd.count), 0, 0, nullptr, 0, 0, 1, 0);
+				// Parenthesised because the SDK needs Windows' min/max macros left defined, and
+				// a bare std::max( would be eaten by the macro.
+				player->RemoveItem(form, nullptr, (std::max)(1, cmd.count), 0, 0, nullptr, 0, 0, 1, 0);
 		}
 		// setQuest, fastTravel and radio are accepted and queued, but not applied yet.
 		//
