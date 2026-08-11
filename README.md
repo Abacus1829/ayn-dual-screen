@@ -23,7 +23,7 @@ from here:
 | **Stardew Valley** (SMAPI) | [`.zip`](https://github.com/Abacus1829/ayn-dual-screen/releases/latest/download/AynDualScreen-Stardew.zip) | [Nexus Mods](https://www.nexusmods.com/stardewvalley/mods/49903) | [`stardew/`](stardew) | 27301 |
 | **Terraria** (tModLoader) | [`.tmod`](https://github.com/Abacus1829/ayn-dual-screen/releases/latest/download/AynDualScreen-Terraria.tmod) | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3778092427) | [`terraria/`](terraria) | 27301 |
 | **Minecraft** (Forge 1.21.1) | [`.jar`](https://github.com/Abacus1829/ayn-dual-screen/releases/latest/download/AynDualScreen-Minecraft-mc1.21.1.jar) | — | [`minecraft/`](minecraft) | 27302 |
-| **Fallout: New Vegas** (xNVSE) | *build it yourself* | — | [`falloutnv/`](falloutnv) | 27303 |
+| **Fallout: New Vegas** (xNVSE) | [`.zip`](https://github.com/Abacus1829/ayn-dual-screen/releases/latest/download/AynDualScreen-FalloutNV.zip) | — | [`falloutnv/`](falloutnv) | 27303 |
 | The Android app *(optional)* | [`.apk`](https://github.com/Abacus1829/ayn-dual-screen/releases/latest/download/AynDualScreen-App.apk) | — | [`android/`](android) | — |
 
 Install steps for each are in the [release notes](https://github.com/Abacus1829/ayn-dual-screen/releases/latest).
@@ -36,9 +36,12 @@ Minecraft uses 27302 and New Vegas 27303 rather than all sharing 27301 deliberat
 to be installed on the same PC, and two mods fighting over one port fails in a way that looks like
 the app's fault.
 
-The **Fallout: New Vegas** mod runs — it loads under xNVSE and serves a live Pip-Boy off a real
-save — but it is early, and a few tabs are still empty on purpose rather than showing invented
-numbers. Build it yourself for now; see [`falloutnv/README.md`](falloutnv/README.md) for exactly
+The **Fallout: New Vegas** mod is the newest and the least proven. It runs — it loads under xNVSE
+and serves a live Pip-Boy off a real save — but it has had far less play than the other three, and
+unlike them it reads the game's memory directly rather than going through a modding API, so a wrong
+read is a crash rather than a wrong number. It also needs
+[xNVSE](https://github.com/xNVSE/NVSE/releases), which is not bundled, and the game has to be
+launched through `nvse_loader.exe`. See [`falloutnv/README.md`](falloutnv/README.md) for exactly
 what is and isn't done.
 
 ---
