@@ -306,15 +306,30 @@ const DEVICE_TEXTURES = {
 // mistake that made the figure come apart.
 const FIGURE_BOX = { w: 300, h: 340 };
 
+// Positioned by hand in tools/figure-align.html, against the real art at real size. These are not
+// derived from anything and should not be "corrected" by calculation -- the pieces do not share an
+// origin, so where they sit is a judgement about how the figure looks, not a number to compute.
+// Re-run that tool to change them.
 const FIGURE_LAYERS = [
   // key        file          x    y    w    h    z
-  ["rightArm", "right_arm",     2,  95,  99,  52,  1],
-  ["leftArm",  "left_arm",    199,  95, 100,  52,  1],
-  ["rightLeg", "right_leg",   100, 168,  85, 109,  1],
-  ["leftLeg",  "left_leg",    150, 168,  70, 110,  1],
-  ["torso",    "torso",       102,  82,  97,  92,  2],
-  ["head",     "head",        109,   0,  83,  91,  3],
+  ["rightArm", "right_arm",    28,  77,  99,  50,  1],
+  ["leftArm",  "left_arm",    163,  81,  91,  46,  1],
+  ["rightLeg", "right_leg",    72, 145,  92,  92,  1],
+  ["leftLeg",  "left_leg",    136, 148,  84,  84,  1],
+  ["torso",    "torso",        97,  81,  97,  97,  2],
+  ["head",     "head",        111,  23,  89,  89,  3],
 ];
+
+// Where each condition bar sits, as percentages of the figure box. Also hand-placed, and kept
+// separate from the limb table on purpose: a bar reads best slightly off a limb's exact centre.
+const BAR_SPOTS = {
+  rightArm: [25.8, 30.0],
+  leftArm:  [69.5, 30.6],
+  rightLeg: [39.3, 56.2],
+  leftLeg:  [59.3, 55.9],
+  torso:    [48.5, 38.1],
+  head:     [51.8, 19.9],
+};
 
 function buildFigure() {
   const host = document.getElementById("figurelayers");
@@ -468,13 +483,15 @@ function renderStat(s) {
     // The condition bars sit on the figure rather than beside it.
     const host = document.getElementById("limbbars");
     if (!host.childElementCount) {
-      // Placed from the same measured table the limbs use, at each piece's centre, so the bars
-      // sit on their limb at any size and cannot drift out of step with the figure.
-      for (const [key, , x, y, w, h] of FIGURE_LAYERS) {
+      // Straight from BAR_SPOTS. These were placed by eye alongside the limbs rather than
+      // computed from them -- deriving a bar from its limb's centre put several of them off the
+      // figure, because a limb's bounding box centre is not where the limb looks like it is.
+      for (const [key] of FIGURE_LAYERS) {
+        const [left, top] = BAR_SPOTS[key] || [50, 50];
         const b = el("div", "limbbar");
         b.dataset.limb = key;
-        b.style.left = (100 * (x + w / 2) / FIGURE_BOX.w).toFixed(3) + "%";
-        b.style.top = (100 * (y + h / 2) / FIGURE_BOX.h).toFixed(3) + "%";
+        b.style.left = left + "%";
+        b.style.top = top + "%";
         b.appendChild(el("div", "fill"));
         host.appendChild(b);
       }
