@@ -1,0 +1,213 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Ayn Dual Screen — figure alignment</title>
+
+<!--
+  Drag the limbs into place and copy the result.
+
+  I had been guessing these coordinates and nudging them a few percent at a time, which never
+  converged. This puts the numbers in the hands of whoever can actually see the figure.
+
+  The limb art is served live from the running game via the mod's /asset route, so nothing is
+  extracted to disk. Open this file straight off disk while New Vegas is running.
+
+    - drag a limb to move it
+    - drag its corner handle to resize
+    - arrow keys nudge the selected limb by 1 (hold shift for 10)
+    - COPY writes a FIGURE_LAYERS block to the clipboard; paste it into web/app.js
+-->
+
+<style>
+  :root { --fg:#3cff88; --dim:#2aa85c; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:1rem; background:#06100a; color:var(--fg);
+         font:14px/1.4 Consolas,"DejaVu Sans Mono",monospace; display:flex; gap:1rem; align-items:flex-start; }
+  h1 { font-size:1rem; font-weight:normal; letter-spacing:.16em; margin:0 0 .4rem; }
+  .hint { color:var(--dim); margin:.2rem 0 .8rem; max-width:34rem; }
+
+  #stage { position:relative; background:#0a1a0f; border:1px solid var(--dim); flex:none; }
+  #stage .grid { position:absolute; inset:0; pointer-events:none;
+    background-image:linear-gradient(var(--dim) 1px,transparent 1px),linear-gradient(90deg,var(--dim) 1px,transparent 1px);
+    background-size:10% 10%,10% 10%; opacity:.15; }
+  #stage .mid { position:absolute; top:0; bottom:0; left:50%; width:1px; background:var(--dim); opacity:.4; pointer-events:none; }
+
+  .limb { position:absolute; cursor:move; user-select:none; }
+  .limb img { display:block; width:100%; height:auto; pointer-events:none;
+              filter:drop-shadow(0 0 3px var(--fg)); }
+  .limb.sel { outline:1px dashed var(--fg); outline-offset:2px; }
+  .limb .handle { position:absolute; right:-5px; bottom:-5px; width:11px; height:11px;
+                  background:var(--fg); cursor:nwse-resize; }
+  .limb:not(.sel) .handle { display:none; }
+
+  aside { flex:1; min-width:22rem; }
+  table { border-collapse:collapse; width:100%; font-size:12px; }
+  th,td { text-align:right; padding:.15rem .35rem; border-bottom:1px solid #14401f; }
+  th:first-child,td:first-child { text-align:left; }
+  tr.sel { background:#12301c; }
+  button { background:#0a1a0f; color:var(--fg); border:1px solid var(--dim); font:inherit;
+           padding:.3rem .8rem; cursor:pointer; margin-right:.3rem; }
+  button:hover { background:#12301c; }
+  pre { background:#081409; border:1px solid #14401f; padding:.6rem; overflow:auto; font-size:12px;
+        max-height:16rem; white-space:pre; }
+  #status { color:var(--dim); }
+</style>
+
+<div>
+  <h1>FIGURE ALIGNMENT</h1>
+  <p class="hint">
+    Drag to move, corner to resize, arrows to nudge. The grid is 10% steps.
+    Art comes live from the running game — if it is blank, New Vegas is not running.
+  </p>
+  <div id="stage"><div class="grid"></div><div class="mid"></div></div>
+  <p><button id="reset">RESET</button><button id="fit">FIT TO ART</button><span id="status"></span></p>
+</div>
+
+<aside>
+  <p><button id="copy">COPY FIGURE_LAYERS</button><button id="copyBars">COPY BAR SPOTS</button></p>
+  <table id="tbl"><thead><tr><th>limb</th><th>x</th><th>y</th><th>w</th><th>h</th></tr></thead><tbody></tbody></table>
+  <pre id="out"></pre>
+</aside>
+
+<script>
+const HOST = "http://localhost:27303";
+
+// Must match FIGURE_BOX in web/app.js.
+const BOX = { w: 300, h: 340 };
+const SCALE = 1.8;                       // on-screen pixels per canvas unit
+
+// Starting positions and the measured opaque sizes of each texture.
+const START = [
+  ["rightArm", "right_arm",   2,  95,  99,  52],
+  ["leftArm",  "left_arm",  199,  95, 100,  52],
+  ["rightLeg", "right_leg", 100, 168,  85, 109],
+  ["leftLeg",  "left_leg",  150, 168,  70, 110],
+  ["torso",    "torso",     102,  82,  97,  92],
+  ["head",     "head",      109,   0,  83,  91],
+];
+
+const stage = document.getElementById("stage");
+stage.style.width = BOX.w * SCALE + "px";
+stage.style.height = BOX.h * SCALE + "px";
+
+let limbs = [];
+let selected = null;
+
+function load() {
+  for (const el of document.querySelectorAll(".limb")) el.remove();
+  limbs = START.map(([key, file, x, y, w, h]) => {
+    const node = document.createElement("div");
+    node.className = "limb";
+    const img = document.createElement("img");
+    img.src = `${HOST}/asset/interface/stats/${file}.png`;
+    img.onerror = () => { node.style.opacity = .25; };
+    const handle = document.createElement("div");
+    handle.className = "handle";
+    node.append(img, handle);
+    stage.appendChild(node);
+    const limb = { key, file, x, y, w, h, node, img, handle };
+    wire(limb);
+    return limb;
+  });
+  layout();
+}
+
+function layout() {
+  for (const l of limbs) {
+    l.node.style.left   = l.x * SCALE + "px";
+    l.node.style.top    = l.y * SCALE + "px";
+    l.node.style.width  = l.w * SCALE + "px";
+    l.node.classList.toggle("sel", l === selected);
+    // Height follows the image's aspect; keep the model in step for the output.
+    if (l.img.naturalWidth) l.h = Math.round(l.w * l.img.naturalHeight / l.img.naturalWidth);
+  }
+  table();
+  output();
+}
+
+function wire(l) {
+  const down = (e, mode) => {
+    e.preventDefault();
+    selected = l;
+    const startX = e.clientX, startY = e.clientY;
+    const ox = l.x, oy = l.y, ow = l.w;
+    const move = (m) => {
+      const dx = (m.clientX - startX) / SCALE, dy = (m.clientY - startY) / SCALE;
+      if (mode === "move") { l.x = Math.round(ox + dx); l.y = Math.round(oy + dy); }
+      else { l.w = Math.max(8, Math.round(ow + dx)); }
+      layout();
+    };
+    const up = () => { removeEventListener("pointermove", move); removeEventListener("pointerup", up); };
+    addEventListener("pointermove", move);
+    addEventListener("pointerup", up);
+    layout();
+  };
+  l.node.addEventListener("pointerdown", (e) => down(e, "move"));
+  l.handle.addEventListener("pointerdown", (e) => { e.stopPropagation(); down(e, "resize"); });
+}
+
+addEventListener("keydown", (e) => {
+  if (!selected) return;
+  const step = e.shiftKey ? 10 : 1;
+  if (e.key === "ArrowLeft")  selected.x -= step;
+  else if (e.key === "ArrowRight") selected.x += step;
+  else if (e.key === "ArrowUp")    selected.y -= step;
+  else if (e.key === "ArrowDown")  selected.y += step;
+  else return;
+  e.preventDefault();
+  layout();
+});
+
+function table() {
+  const body = document.querySelector("#tbl tbody");
+  body.textContent = "";
+  for (const l of limbs) {
+    const tr = document.createElement("tr");
+    if (l === selected) tr.className = "sel";
+    for (const v of [l.key, l.x, l.y, l.w, l.h]) {
+      const td = document.createElement("td");
+      td.textContent = v;
+      tr.appendChild(td);
+    }
+    tr.onclick = () => { selected = l; layout(); };
+    body.appendChild(tr);
+  }
+}
+
+function figureBlock() {
+  const z = { rightArm:1, leftArm:1, rightLeg:1, leftLeg:1, torso:2, head:3 };
+  const rows = limbs.map(l =>
+    `  ["${l.key}",${" ".repeat(Math.max(0,10-l.key.length))} "${l.file}",${" ".repeat(Math.max(0,11-l.file.length))}` +
+    `${String(l.x).padStart(3)}, ${String(l.y).padStart(3)}, ${String(l.w).padStart(3)}, ${String(l.h).padStart(3)},  ${z[l.key]}],`);
+  return `const FIGURE_BOX = { w: ${BOX.w}, h: ${BOX.h} };\n\nconst FIGURE_LAYERS = [\n` +
+         `  // key        file          x    y    w    h    z\n${rows.join("\n")}\n];`;
+}
+
+function barBlock() {
+  const rows = limbs.map(l => {
+    const cx = (100 * (l.x + l.w / 2) / BOX.w).toFixed(1);
+    const cy = (100 * (l.y + l.h / 2) / BOX.h).toFixed(1);
+    return `        ${l.key}:${" ".repeat(Math.max(0,9-l.key.length))} [${cx}, ${cy}],`;
+  });
+  return `const BAR_SPOTS = {\n${rows.join("\n")}\n      };`;
+}
+
+function output() { document.getElementById("out").textContent = figureBlock() + "\n\n" + barBlock(); }
+
+async function copy(text, label) {
+  try { await navigator.clipboard.writeText(text); document.getElementById("status").textContent = label + " copied"; }
+  catch (e) { document.getElementById("status").textContent = "clipboard blocked — copy from the box below"; }
+}
+
+document.getElementById("copy").onclick = () => copy(figureBlock(), "FIGURE_LAYERS");
+document.getElementById("copyBars").onclick = () => copy(barBlock(), "BAR_SPOTS");
+document.getElementById("reset").onclick = load;
+
+// Size every limb to its texture's true pixel size, as a sane starting point.
+document.getElementById("fit").onclick = () => {
+  for (const l of limbs) if (l.img.naturalWidth) l.w = l.img.naturalWidth;
+  layout();
+};
+
+load();
+setTimeout(layout, 900);   // re-run once the images have their natural sizes
+</script>

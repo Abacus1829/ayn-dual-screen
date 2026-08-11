@@ -86,26 +86,53 @@ void Assets::Init(const std::string& dataFolder, bool enabled)
 	if (g_ready)
 		return;
 
-	// Only the two stock texture archives. Sound and mesh archives hold nothing the screen wants,
-	// and indexing a gigabyte of meshes to never read from it would be rude.
-	const char* names[] = { "Fallout - Textures2.bsa", "Fallout - Textures.bsa" };
+	// Every .bsa in Data, not a fixed list.
+	//
+	// A hardcoded pair of base archives meant DLC items had no icon at all -- Dead Money, Honest
+	// Hearts and the rest each ship their own -- and any texture a mod added was invisible too.
+	// Scanning costs nothing: opening an archive reads its header and name table, never pixels.
+	//
+	// Sound and voice archives are skipped by name. They are hundreds of megabytes of audio with
+	// no texture in them, and indexing one to never read from it would be waste.
+	std::vector<std::string> names;
+	{
+		WIN32_FIND_DATAA found{};
+		HANDLE search = FindFirstFileA((dataFolder + "\\*.bsa").c_str(), &found);
+		if (search != INVALID_HANDLE_VALUE)
+		{
+			do
+			{
+				std::string name = found.cFileName;
+				std::string lower = Lower(name);
+				if (lower.find("sound") != std::string::npos || lower.find("voice") != std::string::npos)
+					continue;
+				names.push_back(name);
+			} while (FindNextFileA(search, &found));
+			FindClose(search);
+		}
+	}
+
+	// Later archives win on a name collision, which is the same order the game resolves in, so
+	// search back to front and let a DLC or mod texture take precedence over the base game's.
+	std::sort(names.begin(), names.end());
 
 	std::string summary;
-	for (const char* name : names)
+	size_t total = 0;
+	for (const std::string& name : names)
 	{
 		Bsa archive;
 		if (!archive.Open(dataFolder + "\\" + name))
-		{
-			summary += std::string(name) + ": not found; ";
-			continue;
-		}
+			continue;                        // not a v104 BSA, or unreadable; simply skip it
 
-		summary += std::string(name) + ": " + std::to_string(archive.FileCount()) + " files; ";
+		total += archive.FileCount();
 		g_archives.push_back(std::move(archive));
 	}
 
+	summary = std::to_string(g_archives.size()) + " archives, "
+		+ std::to_string(total) + " files indexed";
+
 	if (g_archives.empty())
-		summary += "no texture archives opened, so icons are unavailable";
+		summary = "no archives opened, so icons are unavailable";
 
 	g_summary = summary;
 	g_ready = true;

@@ -249,7 +249,10 @@ function icon(path, cls) {
   img.decoding = "async";
   img.alt = "";
   img.src = "asset/" + path.replace(/\\/g, "/").replace(/\.dds$/i, ".png");
-  img.onerror = () => img.remove();
+  // Hidden rather than removed. Removing it collapsed the row and left names in a list ragged
+  // wherever one item's texture was missing, which made a gap look like a layout bug rather than
+  // a missing icon. The slot stays; only the picture goes.
+  img.onerror = () => { img.style.visibility = "hidden"; };
   return img;
 }
 
