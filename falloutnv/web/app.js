@@ -925,8 +925,14 @@ function renderMap(s) {
   // Draw the map itself first, stretched across the worldspace bounds so markers plotted from
   // world coordinates land where they belong on it. Tinted to the current phosphor rather than
   // left sepia, so a custom colour scheme still holds.
+  // Only in WORLD mode, and only when there is a worldspace to be the map of.
+  //
+  // It was drawn in both modes and everywhere, so walking into a building put the Mojave behind a
+  // room-sized local view -- a world map claiming to be a floor plan. Interiors report no
+  // worldspace name, which is how the page knows.
   const art = renderMap.art;
-  if (art && art.complete && art.naturalWidth) {
+  const hasWorld = !!(m.world && m.world.length);
+  if (mapMode === "world" && hasWorld && art && art.complete && art.naturalWidth) {
     const ax = px(bounds.minX), ay = py(bounds.maxY);
     ctx.save();
     ctx.globalAlpha = 0.55;
@@ -989,18 +995,35 @@ function renderMap(s) {
     mapHit.push({ x, y, r: 12 * dpr, marker: mk });
   }
 
+  // You. Drawn last so nothing covers it, and deliberately unlike a marker: a marker is a filled
+  // disc with a glyph, so an arrow the same colour and size sitting on one reads as "the marker
+  // became the player" -- which is exactly how this looked after fast travelling onto a location.
+  // The punched-out ring is what separates the two at a glance.
   if (m.x != null) {
     const x = px(m.x), y = py(m.y);
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(((m.angle || 0) * Math.PI) / 180);
-    ctx.fillStyle = fg;
+
+    // Knock a hole in whatever is underneath, so the arrow never blends into a marker it is
+    // standing on.
+    ctx.globalCompositeOperation = "destination-out";
     ctx.beginPath();
-    ctx.moveTo(0, -9 * dpr);
-    ctx.lineTo(6 * dpr, 7 * dpr);
-    ctx.lineTo(0, 4 * dpr);
-    ctx.lineTo(-6 * dpr, 7 * dpr);
+    ctx.arc(0, 0, 13 * dpr, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = "source-over";
+
+    ctx.rotate(((m.angle || 0) * Math.PI) / 180);
+
+    ctx.fillStyle = fg;
+    ctx.strokeStyle = css.getPropertyValue("--bg").trim() || "#000";
+    ctx.lineWidth = 2.5 * dpr;
+    ctx.beginPath();
+    ctx.moveTo(0, -12 * dpr);
+    ctx.lineTo(8 * dpr, 9 * dpr);
+    ctx.lineTo(0, 5 * dpr);
+    ctx.lineTo(-8 * dpr, 9 * dpr);
     ctx.closePath();
+    ctx.stroke();
     ctx.fill();
     ctx.restore();
   }
@@ -1022,8 +1045,22 @@ function renderMap(s) {
     }
   });
 
-  for (const b of document.querySelectorAll("[data-mapmode]"))
+  // Inside a building there is no world map to show, so say so rather than presenting an empty
+  // grid that looks like a failure. The local view still plots you and anything nearby.
+  if (!hasWorld) {
+    ctx.fillStyle = dim;
+    ctx.font = `${12 * dpr}px monospace`;
+    ctx.textAlign = "center";
+    ctx.fillText(mapMode === "world"
+      ? "No world map indoors — " + (m.cell || "interior")
+      : (m.cell || "Interior"), w / 2, 18 * dpr);
+  }
+
+  for (const b of document.querySelectorAll("[data-mapmode]")) {
     b.setAttribute("aria-pressed", String(b.dataset.mapmode === mapMode));
+    // WORLD is meaningless in an interior; grey it out rather than letting it show nothing.
+    b.disabled = (b.dataset.mapmode === "world") && !hasWorld;
+  }
   document.getElementById("mapzoom").textContent = mapZoom.toFixed(1) + "x";
 }
 
