@@ -34,6 +34,8 @@ Config Config::Load(const std::string& path)
 	c.maxMapMarkers = GetPrivateProfileIntA("Limits", "MaxMapMarkers", c.maxMapMarkers, p);
 	c.maxInventoryItems = GetPrivateProfileIntA("Limits", "MaxInventoryItems", c.maxInventoryItems, p);
 
+	c.enableIcons = ReadBool("Assets", "EnableIcons", c.enableIcons, p);
+
 	char buf[MAX_PATH]{};
 	GetPrivateProfileStringA("Paths", "WebRootOverride", "", buf, sizeof buf, p);
 	c.webRootOverride = buf;
@@ -83,13 +85,19 @@ void Config::WriteDefaults(const std::string& path) const
 		"MaxMapMarkers=%d\n"
 		"MaxInventoryItems=%d\n"
 		"\n"
+		"[Assets]\n"
+		"; Read item and perk icons out of the game's own texture archives and serve them to your\n"
+		"; screen. Nothing is copied or written anywhere -- the images are decoded in memory from\n"
+		"; your own installed copy of the game. Set 0 to skip opening the archives entirely.\n"
+		"EnableIcons=%d\n"
+		"\n"
 		"[Paths]\n"
 		"; Serve web/ from somewhere else, so the UI can be edited without rebuilding the DLL.\n"
 		"WebRootOverride=\n",
 		static_cast<unsigned>(port), allowLan ? 1 : 0, updatesPerSecond,
 		allowEquip ? 1 : 0, allowUse ? 1 : 0, allowSetQuest ? 1 : 0, allowRadio ? 1 : 0,
 		allowDrop ? 1 : 0, allowFastTravel ? 1 : 0,
-		maxMapMarkers, maxInventoryItems);
+		maxMapMarkers, maxInventoryItems, enableIcons ? 1 : 0);
 
 	std::fclose(f);
 }

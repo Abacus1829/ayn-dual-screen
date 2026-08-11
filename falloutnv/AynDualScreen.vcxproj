@@ -118,10 +118,18 @@
   <!-- Our code. -->
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\Assets.cpp" />
+    <ClCompile Include="src\Bsa.cpp" />
     <ClCompile Include="src\Config.cpp" />
+    <ClCompile Include="src\Dds.cpp" />
+    <ClCompile Include="src\Png.cpp" />
     <ClCompile Include="src\Snapshot.cpp" />
     <ClCompile Include="src\WebServer.cpp" />
+    <ClInclude Include="src\Assets.h" />
+    <ClInclude Include="src\Bsa.h" />
     <ClInclude Include="src\Config.h" />
+    <ClInclude Include="src\Dds.h" />
+    <ClInclude Include="src\Png.h" />
     <ClInclude Include="src\Dtos.h" />
     <ClInclude Include="src\Json.h" />
     <ClInclude Include="src\Snapshot.h" />

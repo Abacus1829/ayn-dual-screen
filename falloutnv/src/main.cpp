@@ -16,6 +16,7 @@
 #include "nvse/CommandTable.h"
 #include "nvse/GameAPI.h"
 
+#include "Assets.h"
 #include "Config.h"
 #include "Snapshot.h"
 #include "WebServer.h"
@@ -128,6 +129,22 @@ static HttpResponse Route(const HttpRequest& req)
 	if (req.path == "/state")
 		return HttpResponse::Json(Snapshot::Current());
 
+	// /asset/<archive path>.png -- an icon out of the game's own texture archives.
+	// Safe on a worker thread: it reads files and decodes pixels, and never touches game state.
+	if (req.path.compare(0, 7, "/asset/") == 0)
+	{
+		if (req.method != "GET")
+			return HttpResponse::NotFound();
+
+		std::string png;
+		if (!Assets::Png(req.path.substr(7), png))
+			return HttpResponse::NotFound();
+
+		HttpResponse res = HttpResponse::Text(std::move(png), "image/png");
+		res.cacheControl = "max-age=86400";   // a texture never changes under us
+		return res;
+	}
+
 	if (req.path == "/action")
 	{
 		if (req.method != "POST")
@@ -177,6 +194,7 @@ static void StartServer()
 	}
 
 	_MESSAGE("Serving the page from %s", g_webRoot.c_str());
+	_MESSAGE("Icons: %s", Assets::Describe().c_str());
 }
 
 static void MessageHandler(NVSEMessagingInterface::Message* msg)
@@ -245,6 +263,17 @@ __declspec(dllexport) bool NVSEPlugin_Load(const NVSEInterface* nvse)
 	g_webRoot = g_config.webRootOverride.empty()
 		? directory + "\\AynDualScreen\\web"
 		: g_config.webRootOverride;
+
+	// The DLL sits in Data\NVSE\Plugins, so the Data folder is two levels up. That is where the
+	// texture archives live.
+	std::string data = directory;
+	for (int i = 0; i < 2; ++i)
+	{
+		size_t slash = data.find_last_of("\\/");
+		if (slash != std::string::npos)
+			data.resize(slash);
+	}
+	Assets::Init(data, g_config.enableIcons);
 
 	g_messaging = static_cast<NVSEMessagingInterface*>(nvse->QueryInterface(kInterface_Messaging));
 	if (!g_messaging)

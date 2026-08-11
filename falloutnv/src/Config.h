@@ -25,6 +25,10 @@ struct Config
 	int maxMapMarkers = 250;
 	int maxInventoryItems = 400;
 
+	/// Read icons out of the game's own texture archives and serve them to your screen. Nothing is
+	/// written anywhere; set false to skip opening the archives at all.
+	bool enableIcons = true;
+
 	/// A folder to serve web/ from instead of the one beside the DLL. Set it to this project's
 	/// web/ folder and a CSS change is live on the next refresh, with no rebuild.
 	std::string webRootOverride;

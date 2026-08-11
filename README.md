@@ -119,8 +119,8 @@ From [`android/app/build.gradle.kts`](android/app/build.gradle.kts):
 
 | | |
 | --- | --- |
-| Application ID | `com.abacus.aynsecondscreen` |
-| versionName / versionCode | `0.1.0` / `1` |
+| Application ID | `com.abacus.dualscreen` |
+| versionName / versionCode | `0.6.0` / `6` |
 | minSdk / targetSdk / compileSdk | 26 / 34 / 34 |
 | Android Gradle Plugin | 8.5.2 |
 | Kotlin | 1.9.24 |
@@ -132,30 +132,40 @@ Dependencies, all from Google's standard AndroidX repositories and nothing else:
 `androidx.core:core-ktx:1.13.1`, `androidx.appcompat:appcompat:1.7.0`,
 `androidx.activity:activity-ktx:1.9.0`.
 
-The APK in [`android/`](android) is a **debug build**, signed with Android's auto-generated
-per-machine debug key. A rebuild on another machine is therefore signed with a different key and
-will not install over it without uninstalling first.
+Builds are **debug builds**, signed with Android's auto-generated per-machine debug key. A rebuild on
+another machine is therefore signed with a different key and will not install over it without
+uninstalling first. No APK is committed here — take one from the
+[releases](https://github.com/Abacus1829/ayn-dual-screen/releases/latest), or build your own.
 
 ## What the app does, and what it doesn't
 
-The entire app is three Kotlin files, ~350 lines total, in
-[`android/app/src/main/java/com/abacus/aynsecondscreen/`](android/app/src/main/java/com/abacus/aynsecondscreen):
+The source is in
+[`android/app/src/main/java/com/abacus/dualscreen/`](android/app/src/main/java/com/abacus/dualscreen).
+The parts worth knowing:
 
 | File | Role |
 | --- | --- |
-| `SetupActivity.kt` | Address/port entry, a reachability test, and a display picker. |
-| `ScreenActivity.kt` | A fullscreen `WebView` pointed at `http://<address>:<port>/`. |
-| `Settings.kt` | Remembers the last address in `SharedPreferences`. |
+| `Game.kt` | The list of things the app can connect to, and their ports and colours. **Adding a game is an entry here** — the dropdown, the saved addresses and the detection all read this list. |
+| `Probe.kt` | Works out what is listening at an address, and why it isn't when it isn't. |
+| `Scanner.kt` | Sweeps the local subnet for a mod, so an address rarely has to be typed. |
+| `HomeActivity.kt` | The connection screen. |
+| `ScreenActivity.kt` | A fullscreen `WebView` pointed at `http://<address>:<port>/`, on the second display where there is one. |
+| `Settings.kt` | Remembers the last address per game. |
 
-It requests exactly two permissions, both in
-[`AndroidManifest.xml`](android/app/src/main/res/AndroidManifest.xml):
+The rest are the optional tools — an on-screen keyboard, a macro overlay, notes, and screen
+mirroring — each behind its own activity or service.
 
-- `INTERNET` — to reach the mod's HTTP server on the local network.
-- `ACCESS_NETWORK_STATE` — to tell "no network" apart from "wrong address" in the connection test.
+Permissions, in [`AndroidManifest.xml`](android/app/src/main/AndroidManifest.xml):
 
-No storage, camera, microphone, location, contacts or background-service permissions. No analytics
-SDK, no ad SDK, no crash reporter, no telemetry, no auto-update mechanism, and no third-party
-dependency beyond the three AndroidX libraries above.
+- `INTERNET`, `ACCESS_NETWORK_STATE` — reach the mod on the local network, and tell "no network"
+  apart from "wrong address" in the connection test.
+- `SYSTEM_ALERT_WINDOW`, `FOREGROUND_SERVICE*`, `POST_NOTIFICATIONS` — the macro overlay and the
+  mirroring service, which are opt-in and idle unless you turn them on.
+- `MODIFY_AUDIO_SETTINGS`, `WRITE_SETTINGS` — the controls page.
+
+No storage, camera, microphone, location or contacts permissions. No analytics SDK, no ad SDK, no
+crash reporter, no telemetry, no auto-update mechanism, and no third-party dependency beyond the
+three AndroidX libraries above.
 
 **Cleartext HTTP is enabled**
 ([`network_security_config.xml`](android/app/src/main/res/xml/network_security_config.xml)) because

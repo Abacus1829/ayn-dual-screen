@@ -67,28 +67,41 @@ address is actually running, so the two can't disagree.
 
 | Game | Mod required | Default port |
 | --- | --- | --- |
-| Stardew Valley | Ayn Dual Screen (SMAPI) — `Desktop\stardew mod` | 27301 |
-| Terraria | Ayn Dual Screen (tModLoader) — `Desktop\terraria mod` | 27301 |
+| Stardew Valley | Ayn Dual Screen (SMAPI) | 27301 |
+| Terraria | Ayn Dual Screen (tModLoader) | 27301 |
+| Minecraft | Ayn Dual Screen (Forge 1.21.1) | 27302 |
+| Fallout: New Vegas | Ayn Dual Screen (xNVSE) | 27303 |
+| Other address | — | 80 |
 
-Each game remembers **its own address**, so switching between them doesn't mean retyping. They
-default to the same port because they're never running at once, but they may well be on different
-machines, so nothing is shared between them.
+Each game remembers **its own address**, so switching between them doesn't mean retyping. Stardew and
+Terraria share a port because they're never running at once; the later two were given their own so
+that four mods on one PC can't collide.
 
-Adding a third game later means adding one entry to `Game.kt` and two strings. The picker, the
-settings and the detection all read from that list — no layout or logic changes.
+Fallout needs the game launched through `nvse_loader.exe`. Started as `FalloutNV.exe` the plugin
+never loads, and the app will correctly report nothing listening. Tale of Two Wastelands works with
+the same plugin and needs no separate entry.
+
+Adding a game means one entry in `Game.kt` and two strings. The picker, the settings and the
+detection all read from that list — no layout or logic changes.
 
 ### It works out which game is running
 
-Both mods default to port 27301, so pointing the app at the wrong one is an easy mistake that would
-otherwise show up as a blank screen. **Test connection** identifies what's actually there:
+Pointing the app at the wrong mod would otherwise show up as a blank screen, so **Test connection**
+identifies what's actually there rather than trusting the dropdown:
 
-- If a save is loaded, `/state` says which game it is and names the world or farm — Terraria's
-  snapshot has a `worldName`, Stardew's has a `season` and a `locationName`.
+- If a save is loaded, `/state` identifies the game. The Minecraft and Fallout mods name themselves
+  in a `game` field; the older two are recognised by fields they happen to have — Terraria's snapshot
+  has a `worldName`, Stardew's a `season` and a `locationName`.
 - At the main menu `/state` says nothing useful, so it falls back to which map endpoint exists: the
   Terraria mod routes `/minimap` and 404s `/map`, and the Stardew mod does the reverse.
 
+**Fallout is the exception to the fallback.** The plugin serves only `/`, `/state` and `/action`, and
+`/` answers for every mod — so there is no endpoint that would identify it rather than misidentify
+something else. It is recognised from the snapshot once a save is loaded, and simply not guessed at
+before then. That is why `Game.probePath` is allowed to be null while `isMod` stays true.
+
 So the status line can distinguish all five cases: connected and in-game, connected but at the menu,
-connected to *the other game*, something answering that isn't a mod at all, and nothing answering.
+connected to *a different game*, something answering that isn't a mod at all, and nothing answering.
 
 ## Building
 
