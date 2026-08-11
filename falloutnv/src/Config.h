@@ -37,5 +37,16 @@ struct Config
 	std::string webRootOverride;
 
 	static Config Load(const std::string& path);
+
+	/// Writes every current value, with the explanatory comments. Used both to lay the file down
+	/// the first time and to save a change made from the second screen.
 	void WriteDefaults(const std::string& path) const;
+
+	/// The settings as JSON, for the screen's settings panel. Includes which of them need a
+	/// restart, so the panel can say so rather than leaving someone wondering why nothing changed.
+	std::string ToJson() const;
+
+	/// Apply one setting by name. Returns false if the name isn't known or the value is out of
+	/// range -- the caller keeps the old value rather than storing something nonsensical.
+	bool Set(const std::string& key, const std::string& value);
 };

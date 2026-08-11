@@ -891,6 +891,23 @@ function renderMap(s) {
 
   ctx.clearRect(0, 0, w, h);
 
+  // Follow the player indoors and back out again.
+  //
+  // WORLD is meaningless in an interior, so entering one switches to LOCAL and leaving restores
+  // whatever mode you were in outside. Only automatic switches are undone -- if you picked LOCAL
+  // yourself out in the Mojave, walking through a door and back out leaves you on LOCAL.
+  const insideNow = !(m.world && m.world.length);
+  if (insideNow !== renderMap.wasInside) {
+    if (insideNow) {
+      renderMap.restoreTo = mapMode;
+      mapMode = "local";
+    } else if (renderMap.restoreTo) {
+      mapMode = renderMap.restoreTo;
+      renderMap.restoreTo = null;
+    }
+    renderMap.wasInside = insideNow;
+  }
+
   const bounds = mapMode === "world" ? m.worldBounds : m.localBounds;
 
   // The worldspace map, from the game's own 2048px texture. Loaded once and reused; if the mod
@@ -1003,14 +1020,6 @@ function renderMap(s) {
     const x = px(m.x), y = py(m.y);
     ctx.save();
     ctx.translate(x, y);
-
-    // Knock a hole in whatever is underneath, so the arrow never blends into a marker it is
-    // standing on.
-    ctx.globalCompositeOperation = "destination-out";
-    ctx.beginPath();
-    ctx.arc(0, 0, 13 * dpr, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalCompositeOperation = "source-over";
 
     ctx.rotate(((m.angle || 0) * Math.PI) / 180);
 
@@ -1311,7 +1320,38 @@ function runBoot() {
 
 let setSection = "colour";
 
-const SECTIONS = [["colour", "COLOUR"], ["layout", "LAYOUT"], ["screen", "SCREEN"], ["tabs", "TABS"]];
+const SECTIONS = [["colour", "COLOUR"], ["layout", "LAYOUT"], ["screen", "SCREEN"], ["tabs", "TABS"],
+                  ["mod", "MOD"]];
+
+// The mod's own ini, fetched from /config. Distinct from `settings` above, which never leaves this
+// browser: these change the plugin for everyone connected, and are saved to disk by the mod.
+let modConfig = null;
+
+async function loadModConfig() {
+  try {
+    const res = await fetch("config", { cache: "no-store" });
+    modConfig = (await res.json()).settings || [];
+  } catch (e) {
+    modConfig = null;      // mod not reachable, or an older build without the endpoint
+  }
+}
+
+async function setModSetting(key, value) {
+  try {
+    const res = await fetch("config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key, value: String(value) }),
+    });
+    const out = await res.json();
+    if (!out.ok) return false;
+    // Re-read rather than assume: the mod clamps values, so what it stored may not be what we sent.
+    await loadModConfig();
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
 
 function buildSetNav() {
   const nav = document.getElementById("setnav");
@@ -1435,6 +1475,70 @@ function buildSettings() {
     addRow("", replay);
   }
 
+  if (setSection === "mod") {
+    if (modConfig === null) {
+      host.appendChild(el("p", "hint",
+        "Can't reach the mod's settings. Either the game isn't running, or this is an older build."));
+      return;
+    }
+
+    host.appendChild(el("p", "hint",
+      "These change the mod itself and are saved to AynDualScreen.ini. Everything above only "
+      + "affects this browser; these affect every screen."));
+
+    for (const setting of modConfig) {
+      const control = setting.type === "bool"
+        ? choicesFor([true, false], setting.value, (v) => (v ? "ON" : "OFF"),
+            (v) => setModSetting(setting.key, v ? "1" : "0"))
+        : numberFor(setting);
+
+      const r = el("div", "setrow");
+      const label = el("label", null, setting.label + (setting.restart ? " *" : ""));
+      label.title = setting.help + (setting.restart ? "  (needs a game restart)" : "");
+      r.appendChild(label);
+      r.appendChild(control);
+      host.appendChild(r);
+    }
+
+    host.appendChild(el("p", "hint", "* needs the game restarted before it takes effect."));
+  }
+
+  /** Like `choices`, but the pick is async and the panel rebuilds once the mod confirms. */
+  function choicesFor(values, current, labelFor, onPick) {
+    const box = el("div", "choices");
+    for (const v of values) {
+      const b = el("button", "btn", labelFor(v));
+      b.setAttribute("aria-pressed", String(v === current));
+      b.onclick = async () => {
+        b.disabled = true;
+        await onPick(v);
+        buildSettings();
+      };
+      box.appendChild(b);
+    }
+    return box;
+  }
+
+  /** A number box that only commits on blur or Enter, so typing "20" isn't read as "2". */
+  function numberFor(setting) {
+    const wrap = el("div", "choices");
+    const input = el("input");
+    input.type = "number";
+    input.min = setting.min;
+    input.max = setting.max;
+    input.value = setting.value;
+    input.style.width = "6rem";
+    const commit = async () => {
+      if (String(input.value) === String(setting.value)) return;
+      await setModSetting(setting.key, input.value);
+      buildSettings();
+    };
+    input.onblur = commit;
+    input.onkeydown = (e) => { if (e.key === "Enter") input.blur(); };
+    wrap.appendChild(input);
+    return wrap;
+  }
+
   if (setSection === "tabs") {
     host.appendChild(el("p", "hint", "Which tabs appear, and in what order."));
 
@@ -1483,10 +1587,13 @@ function buildSettings() {
   }
 }
 
-document.getElementById("gear").onclick = () => {
+document.getElementById("gear").onclick = async () => {
   buildSetNav();
   buildSettings();
   document.getElementById("settings").hidden = false;
+  // Fetch the mod's own settings in the background; the panel redraws when they land.
+  await loadModConfig();
+  if (setSection === "mod") buildSettings();
 };
 document.getElementById("closesettings").onclick = () => { document.getElementById("settings").hidden = true; };
 document.getElementById("settings").onclick = (e) => {

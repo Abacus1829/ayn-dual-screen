@@ -23,6 +23,7 @@
 
 #include <windows.h>
 #include <memory>
+#include <mutex>
 #include <string>
 
 IDebugLog gLog("AynDualScreen.log");
@@ -33,6 +34,17 @@ static NVSEMessagingInterface* g_messaging = nullptr;
 static Config g_config;
 static std::unique_ptr<WebServer> g_server;
 static std::string g_webRoot;
+static std::string g_configPath;
+
+/// Guards g_config. The game thread reads it every frame; the settings panel writes it from a
+/// worker thread, so both take a copy under this rather than sharing the live object.
+static std::mutex g_configLock;
+
+static Config ConfigSnapshot()
+{
+	std::lock_guard<std::mutex> guard(g_configLock);
+	return g_config;
+}
 
 // ── paths ───────────────────────────────────────────────────────────────────
 
@@ -124,6 +136,37 @@ static HttpResponse ServeStatic(const std::string& urlPath)
 
 // ── routing ─────────────────────────────────────────────────────────────────
 
+/// Pull one string field out of a flat JSON object. The settings panel posts
+/// {"key":"...","value":"..."} and nothing more nested than that, so this is enough and saves
+/// taking a JSON parser as a dependency for two fields.
+static std::string FieldOf(const std::string& body, const char* name)
+{
+	std::string needle = "\"";
+	needle += name;
+	needle += "\"";
+
+	size_t at = body.find(needle);
+	if (at == std::string::npos)
+		return {};
+
+	size_t colon = body.find(':', at + needle.size());
+	if (colon == std::string::npos)
+		return {};
+
+	size_t open = body.find('"', colon);
+	if (open == std::string::npos)
+		return {};
+
+	std::string out;
+	for (size_t i = open + 1; i < body.size(); ++i)
+	{
+		if (body[i] == '\\' && i + 1 < body.size()) { out += body[++i]; continue; }
+		if (body[i] == '"') break;
+		out += body[i];
+	}
+	return out;
+}
+
 static HttpResponse Route(const HttpRequest& req)
 {
 	if (req.path == "/state")
@@ -143,6 +186,38 @@ static HttpResponse Route(const HttpRequest& req)
 		HttpResponse res = HttpResponse::Text(std::move(png), "image/png");
 		res.cacheControl = "max-age=86400";   // a texture never changes under us
 		return res;
+	}
+
+	// The mod's own settings, so the ini can be edited from the screen rather than by alt-tabbing
+	// out and restarting. Reads are free; writes save the file straight away so a change survives
+	// a crash as well as a clean exit.
+	if (req.path == "/config")
+	{
+		if (req.method == "GET")
+			return HttpResponse::Json(ConfigSnapshot().ToJson());
+
+		if (req.method != "POST")
+			return HttpResponse::NotFound();
+
+		// Body is {"key":"AllowDrop","value":"1"} -- one setting at a time, so a rejected value
+		// never takes a good one down with it.
+		std::string key = FieldOf(req.body, "key");
+		std::string value = FieldOf(req.body, "value");
+		if (key.empty())
+			return HttpResponse::Json(R"({"ok":false,"error":"no key"})");
+
+		bool ok = false;
+		{
+			std::lock_guard<std::mutex> guard(g_configLock);
+			ok = g_config.Set(key, value);
+			if (ok)
+				g_config.WriteDefaults(g_configPath);
+		}
+
+		if (ok)
+			_MESSAGE("Setting changed from the second screen: %s = %s", key.c_str(), value.c_str());
+
+		return HttpResponse::Json(ok ? R"({"ok":true})" : R"({"ok":false,"error":"bad key or value"})");
 	}
 
 	if (req.path == "/action")
@@ -206,8 +281,9 @@ static void MessageHandler(NVSEMessagingInterface::Message* msg)
 		break;
 
 	case NVSEMessagingInterface::kMessage_MainGameLoop:
-		// The only place game state is ever touched.
-		Snapshot::Tick(g_config);
+		// The only place game state is ever touched. Takes a copy of the config rather than the
+		// live object, since the settings panel can write it from a worker thread.
+		Snapshot::Tick(ConfigSnapshot());
 		break;
 
 	case NVSEMessagingInterface::kMessage_PreLoadGame:
@@ -258,7 +334,8 @@ __declspec(dllexport) bool NVSEPlugin_Load(const NVSEInterface* nvse)
 	g_pluginHandle = nvse->GetPluginHandle();
 
 	std::string directory = PluginDirectory();
-	g_config = Config::Load(directory + "\\AynDualScreen.ini");
+	g_configPath = directory + "\\AynDualScreen.ini";
+	g_config = Config::Load(g_configPath);
 
 	g_webRoot = g_config.webRootOverride.empty()
 		? directory + "\\AynDualScreen\\web"
