@@ -233,6 +233,28 @@ function row(onclick) {
   return li;
 }
 
+/**
+ * An <img> pointed at the mod's /asset route, which decodes the texture out of the game's own
+ * archives. Nothing is bundled: if the mod is running with icons disabled, or the texture isn't
+ * there, the image simply fails to load and removes itself, leaving the text-only row it had
+ * before. That is why every caller can add one unconditionally.
+ */
+function icon(path, cls) {
+  if (!path) return null;
+  const img = el("img", "icon-img" + (cls ? " " + cls : ""));
+  img.loading = "lazy";
+  img.decoding = "async";
+  img.alt = "";
+  img.src = "asset/" + path.replace(/\\/g, "/").replace(/\.dds$/i, ".png");
+  img.onerror = () => img.remove();
+  return img;
+}
+
+/** The game's own Vault Boy art for a SPECIAL attribute. */
+function specialIcon(name) {
+  return icon("interface/icons/pipboyimages/s.p.e.c.i.a.l/special_" + name.toLowerCase() + ".dds", "big");
+}
+
 /** Rebuild a list only when its contents changed, so scroll position survives a redraw. */
 function fill(node, key, build) {
   if (node.dataset.key === key) return false;
@@ -373,6 +395,8 @@ function renderStat(s) {
     fill(list, JSON.stringify(s.special || []), (n) => {
       for (const a of s.special || []) {
         const li = row();
+        const art = specialIcon(a.name);
+        if (art) li.appendChild(art);
         li.appendChild(el("span", "name", a.name));
         li.appendChild(el("span", "val", String(a.value)));
         if (a.value !== a.base) li.appendChild(el("span", "tag", a.value > a.base ? "▲" : "▼"));
@@ -426,6 +450,8 @@ function renderInv(s) {
       const li = row(() => { selected.inv = item.id; renderInv(state); });
       li.classList.toggle("equipped", !!item.equipped);
       li.dataset.id = item.id;
+      const art = icon(item.icon);
+      if (art) li.appendChild(art);
       li.appendChild(el("span", "name", item.name));
       if (item.count > 1) li.appendChild(el("span", "tag", "(" + item.count + ")"));
       li.appendChild(el("span", "val", item.weight != null ? item.weight.toFixed(1) : ""));
@@ -453,6 +479,9 @@ function renderItemCard(s, item) {
   const card = document.getElementById("itemcard");
   card.textContent = "";
   if (!item) { card.appendChild(el("p", "hint", "Select an item.")); return; }
+
+  const art = icon(item.icon, "card-art");
+  if (art) card.appendChild(art);
 
   card.appendChild(el("h4", null, item.name));
 

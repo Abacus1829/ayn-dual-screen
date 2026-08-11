@@ -101,6 +101,19 @@ ITEMS = {
     ],
 }
 
+# One real vanilla texture path per bucket. The mock has no game data to read an item's own icon
+# from, so these stand in -- enough to exercise the /asset route and the <img> plumbing end to end.
+# They only resolve if the mod is running; against this server they 404 and the rows fall back to
+# text, which is exactly the behaviour worth testing.
+MOCK_ICONS = {
+    "weapons": r"interface\icons\pipboyimages\weapons\weapons_10mm_pistol.dds",
+    "apparel": r"interface\icons\pipboyimages\apparel\apparel_bennys_suit.dds",
+    "aid":     r"interface\icons\pipboyimages\items\items_stimpak.dds",
+    "mods":    r"interface\icons\pipboyimages\items\items_scrap_metal.dds",
+    "misc":    r"interface\icons\pipboyimages\items\items_scrap_metal.dds",
+    "ammo":    r"interface\icons\pipboyimages\items\items_ammo_box.dds",
+}
+
 # The load order, as the DATA > PLUGINS page shows it.
 PLUGINS = [
     ("00", "FalloutNV.esm", True), ("01", "DeadMoney.esm", True),
@@ -193,6 +206,10 @@ def snapshot():
         for it in items:
             copy = dict(it)
             copy["equipped"] = it["id"] in world["equipped"]
+            # The real mod reports each form's own icon path out of the game data. There is no
+            # game here, so point at a real vanilla texture per bucket: enough to prove the
+            # /asset route and the <img> plumbing, without pretending to know the item.
+            copy.setdefault("icon", MOCK_ICONS.get(bucket, ""))
             out.append(copy)
         inv[bucket] = out
 

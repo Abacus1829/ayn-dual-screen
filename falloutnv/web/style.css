@@ -261,8 +261,10 @@ html, body {
 }
 .subtab[aria-selected="true"] { color: var(--fg); }
 
+/* Gear and status dot both live top-right, gear outermost. Keeping the two bits of chrome
+   together leaves the tab strip centred and uncrowded. */
 .dot {
-  position: absolute; right: 0; top: 0;
+  position: absolute; right: 1.7rem; top: .35rem;
   width: .5rem; height: .5rem; border-radius: 50%;
   background: var(--bad);
   box-shadow: 0 0 5px currentColor;
@@ -276,7 +278,7 @@ html, body {
   cursor: pointer; padding: 0 .2rem; line-height: 1;
 }
 .icon:hover { color: var(--fg); }
-#gear { position: absolute; left: 0; top: 0; }
+#gear { position: absolute; right: 0; top: 0; }
 
 /* ── body ───────────────────────────────────────────────────────────────── */
 
@@ -289,15 +291,21 @@ html, body {
 .sub.on { display: flex; }
 
 /* STATUS lays the figure out with its side panel and footer around it. */
+/* Every track is minmax(0, ...) rather than 1fr. A bare 1fr is minmax(auto, 1fr), which floors at
+   the content's min-content size -- so the scrolling side panel pushed this grid to some 1500px
+   tall inside an 800px screen, and the figure was drawn enormous and almost entirely off-screen.
+   minmax(0, 1fr) lets the track actually shrink, which is what makes the panels scroll instead. */
 .sub[data-sub="status"].on {
   display: grid;
-  grid-template-columns: 1fr minmax(0, var(--split));
-  grid-template-rows: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, var(--split));
+  grid-template-rows: minmax(0, 1fr) auto;
   gap: .3rem .8rem;
+  min-height: 0;
+  overflow: hidden;
 }
-#figurewrap { position: relative; grid-row: 1; grid-column: 1; min-height: 0; }
-#statside    { grid-row: 1 / span 2; grid-column: 2; overflow-y: auto; min-height: 0; }
-#statfoot    { grid-row: 2; grid-column: 1; text-align: center; }
+#figurewrap { position: relative; grid-row: 1; grid-column: 1; min-height: 0; min-width: 0; }
+#statside    { grid-row: 1 / span 2; grid-column: 2; overflow-y: auto; min-height: 0; min-width: 0; }
+#statfoot    { grid-row: 2; grid-column: 1; min-width: 0; text-align: center; }
 
 h3 {
   margin: .6rem 0 .2rem;
@@ -384,6 +392,32 @@ h3:first-child { margin-top: .1rem; }
 .row.done .name { text-decoration: line-through; opacity: .55; }
 .list.plain .row { cursor: default; }
 .list.compact .row { padding: .08rem .4rem; font-size: .9em; }
+
+/* ── icons read from the game's own archives ────────────────────────────────
+   Served by the mod from your installed copy at runtime; nothing is bundled.
+   Every one of these can fail to load and the row still reads fine -- the <img>
+   removes itself and the text stays where it was. */
+
+.icon-img {
+  width: 1.5em;
+  height: 1.5em;
+  object-fit: contain;
+  flex: none;
+  filter: drop-shadow(0 0 2px var(--fg));
+}
+
+.icon-img.big { width: 2.1em; height: 2.1em; }
+
+.row[aria-selected="true"] .icon-img { filter: none; }
+
+.card-art {
+  display: block;
+  max-width: 100%;
+  max-height: 7rem;
+  height: auto;
+  margin: 0 auto .3rem;
+  object-fit: contain;
+}
 
 .grouphead {
   padding: .3rem .55rem .05rem;
@@ -585,7 +619,13 @@ h3:first-child { margin-top: .1rem; }
 @media (max-width: 46rem) {
   .card { display: none; }
   #mapside { display: none; }
-  .sub[data-sub="status"].on { grid-template-columns: 1fr; grid-template-rows: 1fr auto auto; }
+  /* Same minmax(0, ...) rule as the wide layout, and for the same reason: a bare 1fr here floors
+     at min-content, and the stacked side panel then pushes the figure off the bottom of a short
+     panel entirely. This is the layout a handheld actually gets, so it matters more here. */
+  .sub[data-sub="status"].on {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto auto;
+  }
   #statside { grid-row: 3; grid-column: 1; max-height: 34%; }
   #statfoot { grid-row: 2; }
   .tab { padding: .1rem .55rem; letter-spacing: .05em; }

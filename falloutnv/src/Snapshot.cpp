@@ -203,6 +203,7 @@ namespace
 	{
 		std::string id;
 		std::string name;
+		std::string icon;      // the form's own Pip-Boy icon path, for GET /asset/
 		int count = 1;
 		float weight = 0.f;
 		int value = 0;
@@ -211,6 +212,19 @@ namespace
 		float health = 1.f;
 		const char* bucket = "misc";
 	};
+
+	/// The Pip-Boy icon the game itself associates with a form. Taken from the form rather than
+	/// guessed from the item's name: a modded item has whatever icon its own plugin gave it, and
+	/// no naming convention would find that.
+	std::string IconPathFor(TESIcon& icon)
+	{
+		const char* path = icon.ddsPath.CStr();
+		if (!path || !*path)
+			return {};
+
+		// The stored path is relative to textures\, which is where Assets looks anyway.
+		return path;
+	}
 
 	/// Walk one EntryData's extend lists. An item with per-instance data -- a weapon at 44%
 	/// condition, or the one that is actually worn -- appears once per distinct instance, which
@@ -239,15 +253,21 @@ namespace
 		{
 			base.weight = weapon->weight.weight;
 			base.value = static_cast<int>(weapon->value.value);
+			base.icon = IconPathFor(weapon->icon);
 		}
 		else if (auto* armor = DYNAMIC_CAST(form, TESForm, TESObjectARMO))
 		{
 			base.weight = armor->weight.weight;
 			base.value = static_cast<int>(armor->value.value);
+			// Armour keeps its icon on the biped model, as a pair: [0] male, [1] female. The
+			// Pip-Boy shows one icon per item regardless, and the male entry is the one always
+			// filled in, so a female-only icon would be the odd case rather than the rule.
+			base.icon = IconPathFor(armor->bipedModel.icon[0]);
 		}
 		else if (auto* aid = DYNAMIC_CAST(form, TESForm, AlchemyItem))
 		{
 			base.value = static_cast<int>(aid->value);
+			base.icon = IconPathFor(aid->icon);
 		}
 		else if (auto* ammo = DYNAMIC_CAST(form, TESForm, TESAmmo))
 		{
@@ -668,6 +688,9 @@ namespace
 					.Num("weight", item.weight, 1)
 					.Int("value", item.value)
 					.Bool("equipped", item.equipped);
+
+				if (!item.icon.empty())
+					j.Str("icon", item.icon);
 
 				if (item.hasHealth)
 					j.Num("health", item.health, 3);
