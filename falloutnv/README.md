@@ -376,6 +376,37 @@ In dependency order, because two of these unblock others:
    them. `BAR_SPOTS` in `web/app.js`, and `tools/figure-align.html` emits that block.
 2. **Map markers**, from the cells' `ExtraMapMarker` data. The map already draws them — it is not
    being sent any. This is the prerequisite for fast travel.
+
+   The structure is fully mapped in the SDK (`GameExtraData.h`), so this does not need any
+   offset-hunting:
+
+   ```cpp
+   class ExtraMapMarker : BSExtraData {
+       struct MarkerData {
+           TESFullName fullName;   // not every marker has one
+           UInt16      flags;
+           UInt16      type;
+           TESForm*    reputation; // not every marker has one
+       };
+       MarkerData* data;
+   };
+   ```
+
+   `flags` carries `kFlag_Visible` (shown on the world map), `kFlag_CanTravel` (visited, and
+   therefore fast-travellable) and `kFlag_Hidden`. Those map exactly onto the `visited` and
+   `canFastTravel` fields the screen already expects, so the wire format needs no change.
+
+   `type` is an enum running `kType_None, City, Settlement, Encampment, NaturalLandmark, Cave,
+   Factory, Memorial, Military, Office, TownRuins, UrbanRuins, SewerRuins, Metro, Vault` — which
+   lines up with the glyph table in `web/app.js`.
+
+   The remaining unknown is **enumerating the marker refs**: they are persistent references in
+   the worldspace, so this needs a way to walk those. That is the only open question, and it is
+   the thing to solve first.
+
+   Once markers exist, fast travel is `player.MoveTo <marker ref>` through the console interface
+   that is already wired up — the screen sends a marker name, and the game thread looks the ref
+   back up rather than trusting anything the screen said.
 3. **Fast travel**, once markers exist, through the console interface.
 4. **Set the active quest** — through the game's own routine, not by writing `player->quest`
    behind its back.
