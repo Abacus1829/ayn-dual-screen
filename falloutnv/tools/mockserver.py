@@ -85,7 +85,31 @@ ITEMS = {
         dict(id="n3", name="5.56mm Round", count=340, weight=0.0, value=1),
         dict(id="n4", name="Energy Cell", count=88, weight=0.0, value=2),
     ],
+    # Weapon mods -- TESObjectIMOD in the game. The last two come from a fake third-party plugin,
+    # so the "From" line on the item card gets exercised.
+    "mods": [
+        dict(id="k1", name="10mm Pistol Laser Sight", count=1, weight=1.0, value=250,
+             effect="Improves accuracy", source="FalloutNV.esm"),
+        dict(id="k2", name="Varmint Rifle Night Scope", count=1, weight=2.0, value=600,
+             effect="Adds a night-vision scope", source="FalloutNV.esm"),
+        dict(id="k3", name="This Machine Extended Mag", count=2, weight=1.0, value=400,
+             effect="+4 magazine capacity", source="FalloutNV.esm"),
+        dict(id="k4", name="Plasma Caster Focus Lens", count=1, weight=3.0, value=1100,
+             effect="+15% damage", source="WastelandArsenal.esp"),
+        dict(id="k5", name="Rebar Club Serrated Edge", count=1, weight=2.0, value=180,
+             effect="Causes bleeding", source="WastelandArsenal.esp"),
+    ],
 }
+
+# The load order, as the DATA > PLUGINS page shows it.
+PLUGINS = [
+    ("00", "FalloutNV.esm", True), ("01", "DeadMoney.esm", True),
+    ("02", "HonestHearts.esm", True), ("03", "OldWorldBlues.esm", True),
+    ("04", "LonesomeRoad.esm", True), ("05", "GunRunnersArsenal.esm", True),
+    ("06", "TaleOfTwoWastelands.esm", True), ("07", "YUP - Base Game + All DLC.esm", True),
+    ("08", "WastelandArsenal.esp", False), ("09", "MojaveRaiders.esp", False),
+    ("0A", "AynDualScreenTest.esp", False),
+]
 
 QUESTS = [
     dict(id="q1", name="Ain't That a Kick in the Head", active=False, completed=True, objectives=[
@@ -174,14 +198,24 @@ def snapshot():
 
     total_weight = sum(i["weight"] * i["count"] for b in ITEMS.values() for i in b)
 
+    # The Pip-Boy's own date line. The Mojave campaign opens in October 2281.
+    day = 19 + int(t / 240) % 12
+    hour = int((t / 8) % 24)
+    minute = int((t / 8 * 60) % 60)
+    suffix = "AM" if hour < 12 else "PM"
+    clock = f"{(hour % 12) or 12}:{minute:02d} {suffix}"
+
     return {
         "ready": True,
         "tick": int(t * 10),
         "game": "FalloutNV",
+        "gameTime": f"10.{day}.2281   {clock}",
+        "plugins": [{"index": i, "name": n, "master": m, "items": (7 if not m else None)}
+                    for i, n, m in PLUGINS],
         "player": {
             "name": "Courier Six",
             "level": 14,
-            "xp": 24800, "xpNext": 28000,
+            "xp": 24800, "xpBase": 21000, "xpNext": 28000,
             "caps": world["caps"],
             "karma": 340, "karmaText": "Wanderer",
             "hp": round(hp), "hpMax": hp_max,

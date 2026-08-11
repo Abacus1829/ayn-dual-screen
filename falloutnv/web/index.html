@@ -21,32 +21,13 @@
 
   <div id="screen">
 
-    <!-- ── header: the Pip-Boy's own status line ─────────────────────────── -->
+    <!-- ── tab strip ─────────────────────────────────────────────────────── -->
     <header id="topbar">
-      <div class="hp">
-        <span class="lbl">HP</span>
-        <b id="hp">—</b><span id="hpmax" class="dim"></span>
-      </div>
-
-      <nav id="tabs" role="tablist">
-        <button class="tab" role="tab" data-tab="stat">STAT</button>
-        <button class="tab" role="tab" data-tab="inv">INV</button>
-        <button class="tab" role="tab" data-tab="data">DATA</button>
-        <button class="tab" role="tab" data-tab="map">MAP</button>
-        <button class="tab" role="tab" data-tab="radio">RADIO</button>
-      </nav>
-
-      <div class="right">
-        <span id="conn" class="dot" title="waiting for the game"></span>
-        <div class="ap">
-          <span class="lbl">AP</span>
-          <b id="ap">—</b><span id="apmax" class="dim"></span>
-        </div>
-        <button id="gear" class="icon" title="Screen settings" aria-label="Screen settings">&#9881;</button>
-      </div>
+      <nav id="tabs" role="tablist"></nav>
+      <button id="gear" class="icon" title="Screen settings" aria-label="Screen settings">&#9881;</button>
+      <span id="conn" class="dot" title="waiting for the game"></span>
     </header>
 
-    <!-- ── the sub-tab strip; contents swapped per page ──────────────────── -->
     <nav id="subtabs" role="tablist"></nav>
 
     <main id="body">
@@ -55,30 +36,39 @@
       <section class="page" data-page="stat">
 
         <div class="sub" data-sub="status">
-          <div class="statuswrap">
-            <div class="dollcol">
-              <!-- The vault boy is drawn, not extracted: the game ships him as a
-                   set of UI textures we have no licence to redistribute. -->
-              <svg id="doll" viewBox="0 0 120 200" aria-label="Limb condition">
-                <g id="limbs" fill="none" stroke-width="2.5" stroke-linejoin="round">
-                  <ellipse data-limb="head"     cx="60"  cy="26"  rx="18" ry="21"/>
-                  <path    data-limb="torso"    d="M42 50 L78 50 L82 112 L38 112 Z"/>
-                  <path    data-limb="rightArm" d="M40 52 L26 58 L18 108 L30 111 L40 66 Z"/>
-                  <path    data-limb="leftArm"  d="M80 52 L94 58 L102 108 L90 111 L80 66 Z"/>
-                  <path    data-limb="rightLeg" d="M40 114 L57 114 L56 186 L41 186 Z"/>
-                  <path    data-limb="leftLeg"  d="M63 114 L80 114 L79 186 L64 186 Z"/>
-                </g>
-              </svg>
-              <div id="dolllegend" class="legend"></div>
-            </div>
+          <div id="figurewrap">
+            <!-- The limb readout. Condition bars sit ON the figure, the way the app does it,
+                 rather than in a list beside it.
 
-            <div class="statuscol">
-              <div id="condbars" class="bars"></div>
-              <h3>Effects</h3>
-              <ul id="effects" class="list plain"></ul>
-              <h3>Survival</h3>
-              <div id="hardcore" class="bars"></div>
-            </div>
+                 The figure is anatomical rather than Vault Boy: he is a character design, and
+                 redrawing him would put Bethesda's artwork in this repository. Everything else
+                 here follows the app's layout closely. -->
+            <svg id="doll" viewBox="0 0 200 260" aria-label="Limb condition">
+              <g id="limbs" fill="none" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round">
+                <ellipse data-limb="head"     cx="100" cy="30"  rx="21" ry="24"/>
+                <path    data-limb="head"     d="M86 20 q14 -9 28 0" class="detail"/>
+                <path    data-limb="torso"    d="M78 58 h44 l7 78 h-58 Z"/>
+                <path    data-limb="rightArm" d="M76 60 L44 70 L26 140 L40 146 L60 82 L78 76 Z"/>
+                <path    data-limb="leftArm"  d="M124 60 L156 70 L174 140 L160 146 L140 82 L122 76 Z"/>
+                <path    data-limb="rightLeg" d="M72 138 h26 l-3 106 h-26 Z"/>
+                <path    data-limb="leftLeg"  d="M102 138 h26 l3 106 h-26 Z"/>
+              </g>
+            </svg>
+
+            <!-- Positioned over the figure by CSS, one per limb. -->
+            <div id="limbbars"></div>
+          </div>
+
+          <div id="statfoot">
+            <div id="equippedrow"></div>
+            <div id="playername"></div>
+          </div>
+
+          <div id="statside">
+            <h3>Effects</h3>
+            <ul id="effects" class="list plain"></ul>
+            <h3 id="survivalhead">Survival</h3>
+            <div id="hardcore" class="bars"></div>
           </div>
         </div>
 
@@ -113,6 +103,12 @@
           </div>
         </div>
         <div class="sub" data-sub="stats"><ul id="stats" class="list"></ul></div>
+        <div class="sub" data-sub="mods">
+          <div class="invwrap">
+            <ul id="loadorder" class="list"></ul>
+            <aside id="loadcard" class="card"><p class="hint">Select a plugin.</p></aside>
+          </div>
+        </div>
       </section>
 
       <!-- ══ MAP ═══════════════════════════════════════════════════════════ -->
@@ -150,12 +146,23 @@
 
     </main>
 
+    <!-- ── the bottom bar: HP | LEVEL + xp | AP, and the place/time line ──── -->
     <footer id="statusline">
-      <span id="loc" class="dim"></span>
+      <div class="seg" data-seg="hp"><span id="hpText">HP —</span></div>
+      <div class="seg grow" data-seg="level">
+        <span id="lvlText">LEVEL —</span>
+        <span class="track"><span id="xpfill" class="fill"></span></span>
+      </div>
+      <div class="seg" data-seg="ap"><span id="apText">AP —</span></div>
+    </footer>
+
+    <footer id="placeline">
+      <span id="gamedate" class="dim"></span>
       <span class="spacer"></span>
-      <span id="lvl" class="dim"></span>
       <span id="caps" class="dim"></span>
       <span id="wt" class="dim"></span>
+      <span class="spacer"></span>
+      <span id="loc" class="dim"></span>
     </footer>
 
   </div>
@@ -166,8 +173,13 @@
   <div class="panel">
     <h2>Screen settings <button id="closesettings" class="icon">&times;</button></h2>
     <p class="hint">Saved in this browser only — each screen can differ.</p>
+    <nav id="setnav"></nav>
     <div id="settingsbody"></div>
-    <button id="resetsettings" class="btn wide">Reset to defaults</button>
+    <div class="setfoot">
+      <button id="exportsettings" class="btn">Copy profile</button>
+      <button id="importsettings" class="btn">Paste profile</button>
+      <button id="resetsettings" class="btn danger">Reset</button>
+    </div>
   </div>
 </div>
 

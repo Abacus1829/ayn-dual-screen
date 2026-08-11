@@ -1,41 +1,44 @@
 /*
- * Pip-Boy 3000 styling for the second screen.
+ * Pip-Boy styling for the second screen.
  *
  * Everything is drawn in CSS. Nothing here is extracted from the game: Fallout's UI is a set of
- * textures and .xml menus we have no licence to redistribute, and the look is simple enough --
+ * textures and menu files there's no licence to redistribute, and the look is simple enough --
  * one phosphor colour, one font weight, scanlines -- that reproducing it beats shipping assets.
  *
- * The whole page scales off --ui, so the settings panel's size control is a single variable.
+ * EVERY visual knob is a custom property on :root, so the settings panel changes appearance by
+ * setting variables and never by toggling hand-written themes. If you want a new control, add the
+ * variable here and a row in buildSettings(); nothing else needs to know.
  */
 
 :root {
-  --ui: 16px;
+  /* ── the knobs the settings panel drives ──────────────────────────────── */
+  --fg: #3cff88;              /* the phosphor */
+  --bg: #0a1a0f;              /* the screen behind it */
+  --accent: #3cff88;          /* selection fill; usually the same as --fg */
 
-  /* The phosphor. Overridden wholesale by the colour presets below. */
-  --fg: #3cff88;
-  --fg-dim: #2aa85c;
-  --bg: #0a1a0f;
-  --bg-deep: #050d08;
+  --ui: 16px;                 /* the whole page scales off this */
+  --font: "Consolas", "DejaVu Sans Mono", "Menlo", monospace;
 
-  --glow: 0 0 6px rgba(60, 255, 136, .45);
-  --line: rgba(60, 255, 136, .28);
-  --fill: rgba(60, 255, 136, .12);
+  --glow-size: 6px;           /* phosphor bloom; 0 turns it off */
+  --scan-opacity: .20;        /* scanline darkness */
+  --scan-gap: 3px;            /* scanline period */
+  --vignette: .75;            /* corner darkening */
+  --radius: .6rem;            /* screen corner rounding */
+  --split: 38%;               /* width of the detail card beside a list */
+  --row-pad: .2rem;           /* list density */
+  --bracket: inline;          /* corner brackets on the active tab */
 
-  --ok: var(--fg);
+  /* ── derived; not set directly ────────────────────────────────────────── */
+  --fg-dim: color-mix(in srgb, var(--fg) 62%, var(--bg));
+  --fg-faint: color-mix(in srgb, var(--fg) 30%, var(--bg));
+  --bg-deep: color-mix(in srgb, var(--bg) 70%, #000);
+  --glow: 0 0 var(--glow-size) color-mix(in srgb, var(--fg) 45%, transparent);
+  --line: color-mix(in srgb, var(--fg) 28%, transparent);
+  --fill: color-mix(in srgb, var(--fg) 12%, transparent);
+
   --warn: #ffd23c;
   --bad: #ff5a3c;
 }
-
-/* Colour presets, applied to <html data-hue>. Fallout shipped amber and blue Pip-Boy
-   variants as well as the default green, so all three are here. */
-:root[data-hue="green"] { --fg:#3cff88; --fg-dim:#2aa85c; --bg:#0a1a0f; --bg-deep:#050d08;
-  --glow:0 0 6px rgba(60,255,136,.45); --line:rgba(60,255,136,.28); --fill:rgba(60,255,136,.12); }
-:root[data-hue="amber"] { --fg:#ffb642; --fg-dim:#b87c22; --bg:#1a1206; --bg-deep:#0d0903;
-  --glow:0 0 6px rgba(255,182,66,.45); --line:rgba(255,182,66,.28); --fill:rgba(255,182,66,.12); }
-:root[data-hue="blue"]  { --fg:#54d6ff; --fg-dim:#2f8fb0; --bg:#06141a; --bg-deep:#030a0d;
-  --glow:0 0 6px rgba(84,214,255,.45); --line:rgba(84,214,255,.28); --fill:rgba(84,214,255,.12); }
-:root[data-hue="white"] { --fg:#e8f4ec; --fg-dim:#93a89a; --bg:#101410; --bg-deep:#070907;
-  --glow:0 0 6px rgba(232,244,236,.35); --line:rgba(232,244,236,.28); --fill:rgba(232,244,236,.12); }
 
 * { box-sizing: border-box; }
 
@@ -44,7 +47,7 @@ html, body {
   margin: 0;
   background: var(--bg-deep);
   color: var(--fg);
-  font: var(--ui)/1.35 "Consolas", "DejaVu Sans Mono", "Menlo", monospace;
+  font: var(--ui)/1.35 var(--font);
   overflow: hidden;
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
@@ -59,20 +62,53 @@ html, body {
   display: flex;
   padding: .5rem;
   background:
-    radial-gradient(ellipse at 50% 45%, rgba(60,255,136,.06), transparent 70%),
+    radial-gradient(ellipse at 50% 45%, color-mix(in srgb, var(--fg) 6%, transparent), transparent 70%),
     var(--bg-deep);
 }
 
-/* ── the bezel: the casing the screen sits in ────────────────────────────────
-   Off by default on small panels, because on a handheld every pixel it eats is
-   a pixel of inventory. Toggled from settings. */
+#screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: .35rem .7rem .25rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  text-shadow: var(--glow);
+  overflow: hidden;
+}
+
+#screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,var(--scan-opacity)) 0px, rgba(0,0,0,var(--scan-opacity)) 1px,
+    transparent 1px, transparent var(--scan-gap));
+}
+
+#screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 39;
+  border-radius: var(--radius);
+  box-shadow: inset 0 0 6rem rgba(0,0,0,var(--vignette));
+}
+
+/* ── the casing ─────────────────────────────────────────────────────────── */
 
 #bezel { display: none; }
 
 :root[data-bezel="on"] #crt {
   padding: clamp(.6rem, 2.2vmin, 1.6rem) clamp(1.6rem, 5vmin, 4.5rem);
   background:
-    /* brushed metal: fine vertical grain over a warm steel gradient */
     repeating-linear-gradient(90deg,
       rgba(255,255,255,.030) 0px, rgba(255,255,255,.030) 1px,
       transparent 1px, transparent 3px),
@@ -82,7 +118,6 @@ html, body {
 :root[data-bezel="on"] #screen {
   border: 2px solid #0c0f0a;
   border-radius: 1.1rem;
-  /* The screen sits *in* the casing, so it is inset and shadowed, not raised. */
   box-shadow:
     inset 0 0 0 2px rgba(0,0,0,.85),
     inset 0 0 3rem rgba(0,0,0,.55),
@@ -99,7 +134,6 @@ html, body {
   z-index: 30;
 }
 
-/* Rivets down both sides of the casing. */
 :root[data-bezel="on"] #bezel .rivets {
   position: absolute;
   inset: 0;
@@ -112,8 +146,6 @@ html, body {
   opacity: .55;
 }
 
-/* The two dials. They do nothing -- a Pip-Boy has them, and the casing reads as
-   a casing because of them. */
 :root[data-bezel="on"] #bezel .knob {
   position: absolute;
   width: clamp(1.5rem, 3.6vmin, 2.6rem);
@@ -123,11 +155,8 @@ html, body {
   box-shadow: 0 .1rem .35rem rgba(0,0,0,.7), inset 0 0 0 2px rgba(0,0,0,.5);
 }
 :root[data-bezel="on"] #bezel .knob span {
-  position: absolute;
-  left: 50%;
-  top: 14%;
-  width: 2px;
-  height: 30%;
+  position: absolute; left: 50%; top: 14%;
+  width: 2px; height: 30%;
   background: #aeb5a4;
   transform: translateX(-50%);
 }
@@ -135,12 +164,9 @@ html, body {
 :root[data-bezel="on"] #bezel .knob[data-knob="right"] { right: clamp(.2rem, 1vmin, .8rem); bottom: 16%; }
 
 :root[data-bezel="on"] #bezel .brand {
-  position: absolute;
-  left: 50%;
-  bottom: .1rem;
+  position: absolute; left: 50%; bottom: .1rem;
   transform: translateX(-50%);
-  font-size: .6rem;
-  letter-spacing: .3em;
+  font-size: .6rem; letter-spacing: .3em;
   color: #7c8273;
   text-shadow: 0 1px 0 rgba(0,0,0,.8);
 }
@@ -148,9 +174,7 @@ html, body {
 /* ── boot sequence ──────────────────────────────────────────────────────── */
 
 #boot {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
+  position: fixed; inset: 0; z-index: 200;
   background: var(--bg-deep);
   color: var(--fg);
   text-shadow: var(--glow);
@@ -159,125 +183,100 @@ html, body {
   font-size: .95em;
 }
 #boot[hidden] { display: none; }
-
 #bootlog { margin: 0; white-space: pre-wrap; font: inherit; }
 
-/* The tube coming up to brightness, then collapsing to a line and away. */
-#boot.done {
-  animation: bootOff .5s ease-in forwards;
-}
+#boot.done { animation: bootOff .5s ease-in forwards; }
 @keyframes bootOff {
   60%  { transform: scaleY(.02); opacity: 1; }
   100% { transform: scaleY(.02) scaleX(0); opacity: 0; }
 }
+@media (prefers-reduced-motion: reduce) { #boot.done { animation: none; opacity: 0; } }
 
-@media (prefers-reduced-motion: reduce) {
-  #boot.done { animation: none; opacity: 0; }
-}
-
-#screen {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  padding: .4rem .7rem .3rem;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: .6rem;
-  text-shadow: var(--glow);
-  overflow: hidden;
-}
-
-/* Scanlines and a vignette, both purely decorative and both skippable from settings
-   because they cost fill-rate on a weak panel. */
-:root[data-scanlines="on"] #screen::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    to bottom,
-    rgba(0,0,0,.20) 0px, rgba(0,0,0,.20) 1px,
-    transparent 1px, transparent 3px);
-  z-index: 40;
-}
-
-:root[data-vignette="on"] #screen::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  box-shadow: inset 0 0 6rem rgba(0,0,0,.75);
-  border-radius: .6rem;
-  z-index: 39;
-}
-
-/* ── header ─────────────────────────────────────────────────────────────── */
+/* ── tab strip ──────────────────────────────────────────────────────────── */
 
 #topbar {
   display: flex;
   align-items: center;
-  gap: .8rem;
-  padding-bottom: .3rem;
-  border-bottom: 1px solid var(--line);
+  gap: .5rem;
   flex: none;
+  position: relative;
 }
 
-#topbar .hp, #topbar .ap { white-space: nowrap; font-size: .95em; }
-#topbar .lbl { color: var(--fg-dim); margin-right: .35em; }
-#topbar .right { display: flex; align-items: center; gap: .7rem; margin-left: auto; }
+#tabs { display: flex; gap: .2rem; margin: 0 auto; }
 
-#tabs { display: flex; gap: .15rem; margin: 0 auto; }
-
+/* The active tab wears corner brackets, as the app's does. They are pseudo-elements rather than
+   characters so they sit at the tab's own corners at any font size. */
 .tab {
+  position: relative;
   appearance: none;
   border: 0;
-  border-bottom: 2px solid transparent;
   background: none;
   color: var(--fg-dim);
   font: inherit;
-  letter-spacing: .12em;
-  padding: .15rem .85rem;
+  letter-spacing: .14em;
+  padding: .1rem 1.1rem;
   cursor: pointer;
 }
-.tab[aria-selected="true"] {
-  color: var(--bg);
-  background: var(--fg);
-  text-shadow: none;
+.tab[aria-selected="true"] { color: var(--fg); }
+
+.tab[aria-selected="true"]::before,
+.tab[aria-selected="true"]::after {
+  content: "";
+  display: var(--bracket);
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: .5rem;
+  border: 2px solid var(--fg);
 }
+.tab[aria-selected="true"]::before { left: 0;  border-right: 0; }
+.tab[aria-selected="true"]::after  { right: 0; border-left: 0; }
+
 .tab:focus-visible { outline: 2px solid var(--fg); outline-offset: 1px; }
+
+/* The rule under the tab strip, broken where the active tab sits. */
+#topbar::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  border-bottom: 2px solid var(--fg);
+  z-index: -1;
+}
 
 #subtabs {
   display: flex;
-  gap: .1rem;
+  justify-content: center;
+  gap: 1.6rem;
   flex: none;
-  min-height: 1.6rem;
-  border-bottom: 1px solid var(--line);
+  min-height: 1.5rem;
+  padding: .15rem 0 .25rem;
 }
 #subtabs:empty { display: none; }
 
 .subtab {
   appearance: none; border: 0; background: none;
-  color: var(--fg-dim); font: inherit; font-size: .9em;
-  padding: .1rem .8rem; cursor: pointer;
+  color: var(--fg-faint); font: inherit; font-size: .88em;
+  letter-spacing: .12em;
+  padding: 0 .3rem; cursor: pointer;
 }
-.subtab[aria-selected="true"] { color: var(--fg); background: var(--fill); }
+.subtab[aria-selected="true"] { color: var(--fg); }
 
 .dot {
-  width: .62rem; height: .62rem; border-radius: 50%;
-  background: var(--bad); display: inline-block;
+  position: absolute; right: 0; top: 0;
+  width: .5rem; height: .5rem; border-radius: 50%;
+  background: var(--bad);
   box-shadow: 0 0 5px currentColor;
 }
-.dot.live { background: var(--ok); }
+.dot.live { background: var(--fg); }
 .dot.stale { background: var(--warn); }
 
 .icon {
   appearance: none; border: 0; background: none;
-  color: var(--fg-dim); font: inherit; font-size: 1.15em;
+  color: var(--fg-dim); font: inherit; font-size: 1.1em;
   cursor: pointer; padding: 0 .2rem; line-height: 1;
 }
 .icon:hover { color: var(--fg); }
+#gear { position: absolute; left: 0; top: 0; }
 
 /* ── body ───────────────────────────────────────────────────────────────── */
 
@@ -289,101 +288,148 @@ html, body {
 .sub { display: none; flex: 1; min-height: 0; flex-direction: column; }
 .sub.on { display: flex; }
 
+/* STATUS lays the figure out with its side panel and footer around it. */
+.sub[data-sub="status"].on {
+  display: grid;
+  grid-template-columns: 1fr minmax(0, var(--split));
+  grid-template-rows: 1fr auto;
+  gap: .3rem .8rem;
+}
+#figurewrap { position: relative; grid-row: 1; grid-column: 1; min-height: 0; }
+#statside    { grid-row: 1 / span 2; grid-column: 2; overflow-y: auto; min-height: 0; }
+#statfoot    { grid-row: 2; grid-column: 1; text-align: center; }
+
 h3 {
-  margin: .7rem 0 .25rem;
-  font-size: .82em;
-  font-weight: normal;
+  margin: .6rem 0 .2rem;
+  font-size: .78em; font-weight: normal;
   letter-spacing: .16em;
   color: var(--fg-dim);
   text-transform: uppercase;
 }
-h3:first-child { margin-top: .2rem; }
+h3:first-child { margin-top: .1rem; }
 
-/* ── lists: the one repeated primitive ──────────────────────────────────── */
+/* ── the figure and its limb bars ───────────────────────────────────────── */
+
+#doll { position: absolute; inset: 0; width: 100%; height: 100%; }
+#doll [data-limb] { stroke: var(--fg); fill: none; }
+#doll [data-limb].detail { stroke-width: 1.6; }
+#doll [data-limb].warn { stroke: var(--warn); }
+#doll [data-limb].bad  { stroke: var(--bad); }
+#doll [data-limb].crippled { stroke: var(--bad); animation: pulse .8s infinite; }
+
+@keyframes pulse { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { #doll [data-limb] { animation: none !important; } }
+
+#limbbars { position: absolute; inset: 0; pointer-events: none; }
+
+/* One bar per limb, placed over the figure in percentages of the box so it tracks any size. */
+.limbbar {
+  position: absolute;
+  width: 13%;
+  height: .42rem;
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--fg);
+  background: var(--bg-deep);
+  overflow: hidden;
+}
+.limbbar .fill { position: absolute; inset: 0 auto 0 0; background: var(--fg); }
+.limbbar .fill.warn { background: var(--warn); }
+.limbbar .fill.bad  { background: var(--bad); }
+.limbbar[data-limb="head"]     { left: 50%; top: 4%; }
+.limbbar[data-limb="torso"]    { left: 50%; top: 40%; }
+.limbbar[data-limb="rightArm"] { left: 13%; top: 41%; }
+.limbbar[data-limb="leftArm"]  { left: 87%; top: 41%; }
+.limbbar[data-limb="rightLeg"] { left: 27%; top: 78%; }
+.limbbar[data-limb="leftLeg"]  { left: 73%; top: 78%; }
+
+#statfoot { font-size: .9em; }
+#equippedrow { display: flex; justify-content: center; gap: 2.2rem; min-height: 1.2rem; }
+#equippedrow .slot { color: var(--fg-dim); font-size: .85em; }
+#equippedrow .slot b { display: block; color: var(--fg); font-weight: normal; }
+#playername { letter-spacing: .1em; padding-top: .15rem; }
+
+/* ── lists ──────────────────────────────────────────────────────────────── */
 
 .list {
   list-style: none;
   margin: 0;
-  padding: .2rem 0;
+  padding: .1rem 0;
   overflow-y: auto;
   flex: 1;
   min-height: 0;
   scrollbar-width: thin;
   scrollbar-color: var(--fg-dim) transparent;
 }
-.list::-webkit-scrollbar { width: .45rem; }
-.list::-webkit-scrollbar-thumb { background: var(--fg-dim); border-radius: .3rem; }
+.list::-webkit-scrollbar { width: .4rem; }
+.list::-webkit-scrollbar-thumb { background: var(--fg-dim); }
 
 .row {
   display: flex;
   align-items: baseline;
   gap: .6rem;
-  padding: .2rem .55rem;
+  padding: var(--row-pad) .55rem;
   cursor: pointer;
-  border-left: 3px solid transparent;
 }
 .row .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row .val { color: var(--fg-dim); font-variant-numeric: tabular-nums; }
 .row .tag { color: var(--fg-dim); font-size: .8em; letter-spacing: .1em; }
 
-.row[aria-selected="true"] { background: var(--fg); color: var(--bg); text-shadow: none; }
+.row[aria-selected="true"] { background: var(--accent); color: var(--bg); text-shadow: none; }
 .row[aria-selected="true"] .val, .row[aria-selected="true"] .tag { color: var(--bg); opacity: .75; }
-.row.equipped .name::after { content: " \25CF"; color: var(--fg-dim); }
-.row[aria-selected="true"].equipped .name::after { color: var(--bg); }
-.row.done .name { text-decoration: line-through; opacity: .55; }
-.list.plain .row { cursor: default; border-left: 0; }
-.list.compact .row { padding: .1rem .4rem; font-size: .9em; }
 
-/* Group headings inside a list. */
+/* Equipped items carry a leading bullet, as the app marks them. */
+.row.equipped .name::before { content: "\25CF  "; color: var(--fg-dim); }
+.row[aria-selected="true"].equipped .name::before { color: var(--bg); }
+
+.row.done .name { text-decoration: line-through; opacity: .55; }
+.list.plain .row { cursor: default; }
+.list.compact .row { padding: .08rem .4rem; font-size: .9em; }
+
 .grouphead {
-  padding: .35rem .55rem .1rem;
+  padding: .3rem .55rem .05rem;
   color: var(--fg-dim);
-  font-size: .78em;
+  font-size: .76em;
   letter-spacing: .16em;
   text-transform: uppercase;
   border-top: 1px solid var(--line);
-  margin-top: .3rem;
+  margin-top: .25rem;
 }
 .grouphead:first-child { border-top: 0; margin-top: 0; }
 
-.empty { padding: 1.2rem .6rem; color: var(--fg-dim); font-style: italic; }
+.empty { padding: 1.1rem .6rem; color: var(--fg-dim); font-style: italic; }
 
-/* ── the detail card sitting beside a list ──────────────────────────────── */
+/* ── detail card ────────────────────────────────────────────────────────── */
 
-.invwrap, .radiowrap, .mapwrap {
-  display: flex;
-  gap: .6rem;
-  flex: 1;
-  min-height: 0;
-}
+.invwrap, .radiowrap, .mapwrap { display: flex; gap: .6rem; flex: 1; min-height: 0; }
 
 .card {
-  width: 38%;
-  min-width: 12rem;
+  width: var(--split);
+  min-width: 10rem;
   flex: none;
   overflow-y: auto;
-  padding: .4rem .6rem;
-  border-left: 1px solid var(--line);
+  padding: .3rem .6rem;
   font-size: .92em;
 }
 .card h4 { margin: 0 0 .3rem; font-size: 1.05em; font-weight: normal; letter-spacing: .04em; }
-.card dl { display: grid; grid-template-columns: auto 1fr; gap: .05rem .7rem; margin: .3rem 0; }
+.card dl { display: grid; grid-template-columns: auto 1fr; gap: .02rem .7rem; margin: .2rem 0; }
 .card dt { color: var(--fg-dim); }
 .card dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
-.card p { margin: .4rem 0; }
+.card p { margin: .35rem 0; }
 .hint { color: var(--fg-dim); font-style: italic; }
 
-/* Hide the side card when the panel is too narrow to carry two columns. */
+/* The app rates a stat against what you already have; these are those pips. */
+.pips { color: var(--fg-dim); letter-spacing: .1em; padding-left: .4rem; }
+
 :root[data-cards="off"] .card:not(#mapside) { display: none; }
 
 /* ── bars ───────────────────────────────────────────────────────────────── */
 
-.bars { display: flex; flex-direction: column; gap: .18rem; }
+.bars { display: flex; flex-direction: column; gap: .15rem; }
 
-.bar { display: flex; align-items: center; gap: .5rem; font-size: .9em; }
-.bar .k { width: 6.5rem; color: var(--fg-dim); flex: none; }
+.bar { display: flex; align-items: center; gap: .5rem; font-size: .88em; }
+.bar .k { width: 6rem; color: var(--fg-dim); flex: none; }
 .bar .track {
-  flex: 1; height: .6rem;
+  flex: 1; height: .55rem;
   border: 1px solid var(--line);
   background: var(--bg-deep);
   position: relative;
@@ -392,30 +438,13 @@ h3:first-child { margin-top: .2rem; }
 .bar .fill { position: absolute; inset: 0 auto 0 0; background: var(--fg); opacity: .85; }
 .bar .fill.warn { background: var(--warn); }
 .bar .fill.bad  { background: var(--bad); }
-.bar .v { width: 4.5rem; text-align: right; font-variant-numeric: tabular-nums; flex: none; }
-
-/* ── STAT / status ──────────────────────────────────────────────────────── */
-
-.statuswrap { display: flex; gap: 1rem; flex: 1; min-height: 0; }
-.dollcol { width: 34%; min-width: 9rem; flex: none; display: flex; flex-direction: column; align-items: center; }
-.statuscol { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-y: auto; }
-
-#doll { flex: 1; min-height: 0; width: 100%; max-height: 100%; }
-#doll [data-limb] { stroke: var(--fg); fill: var(--fill); }
-#doll [data-limb].warn { stroke: var(--warn); fill: rgba(255,210,60,.18); }
-#doll [data-limb].bad  { stroke: var(--bad);  fill: rgba(255,90,60,.20); animation: pulse 1.1s infinite; }
-#doll [data-limb].crippled { stroke: var(--bad); fill: rgba(255,90,60,.35); animation: pulse .7s infinite; }
-
-@keyframes pulse { 50% { opacity: .35; } }
-@media (prefers-reduced-motion: reduce) { #doll [data-limb] { animation: none !important; } }
-
-.legend { font-size: .78em; color: var(--fg-dim); text-align: center; padding-top: .2rem; }
+.bar .v { width: 4.2rem; text-align: right; font-variant-numeric: tabular-nums; flex: none; }
 
 /* ── MAP ────────────────────────────────────────────────────────────────── */
 
 #mapview { position: relative; flex: 1; min-width: 0; }
 #mapcanvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
-#mapside { width: 30%; }
+#mapside { width: 28%; }
 
 .tip {
   position: absolute;
@@ -428,17 +457,57 @@ h3:first-child { margin-top: .2rem; }
   z-index: 5;
 }
 
-/* ── footers ────────────────────────────────────────────────────────────── */
+/* ── the two bottom bars ────────────────────────────────────────────────── */
 
-.foot, #statusline {
+#statusline {
+  display: flex;
+  align-items: stretch;
+  gap: .35rem;
+  flex: none;
+  border-top: 2px solid var(--fg);
+  padding-top: .2rem;
+  font-size: .88em;
+}
+
+#statusline .seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  padding: .05rem .7rem;
+  border: 1px solid var(--line);
+  white-space: nowrap;
+}
+#statusline .seg.grow { flex: 1; }
+#statusline .track {
+  flex: 1;
+  min-width: 3rem;
+  height: .5rem;
+  border: 1px solid var(--line);
+  background: var(--bg-deep);
+  position: relative;
+  overflow: hidden;
+}
+#statusline .track .fill { position: absolute; inset: 0 auto 0 0; background: var(--fg); }
+
+#placeline {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  flex: none;
+  padding-top: .12rem;
+  font-size: .8em;
+  color: var(--fg-dim);
+}
+
+.foot {
   display: flex;
   align-items: center;
   gap: .4rem;
   flex: none;
-  padding-top: .25rem;
+  padding-top: .2rem;
   font-size: .85em;
 }
-#statusline { border-top: 1px solid var(--line); color: var(--fg-dim); gap: 1.1rem; }
 .spacer { flex: 1; }
 .dim { color: var(--fg-dim); }
 
@@ -450,20 +519,20 @@ h3:first-child { margin-top: .2rem; }
   font: inherit;
   font-size: .9em;
   letter-spacing: .08em;
-  padding: .12rem .7rem;
+  padding: .1rem .7rem;
   cursor: pointer;
 }
 .btn:hover:not(:disabled) { background: var(--fill); }
-.btn[aria-pressed="true"] { background: var(--fg); color: var(--bg); text-shadow: none; }
+.btn[aria-pressed="true"] { background: var(--accent); color: var(--bg); text-shadow: none; }
 .btn:disabled { opacity: .35; cursor: not-allowed; }
-.btn.wide { width: 100%; margin-top: .6rem; padding: .35rem; }
+.btn.wide { width: 100%; margin-top: .5rem; padding: .3rem; }
 .btn.danger { border-color: var(--bad); color: var(--bad); }
 
 /* ── settings ───────────────────────────────────────────────────────────── */
 
 #settings {
   position: fixed; inset: 0; z-index: 100;
-  background: rgba(0,0,0,.72);
+  background: rgba(0,0,0,.75);
   display: flex; align-items: center; justify-content: center;
   padding: 1rem;
 }
@@ -472,38 +541,53 @@ h3:first-child { margin-top: .2rem; }
 #settings .panel {
   background: var(--bg);
   border: 1px solid var(--fg-dim);
-  border-radius: .5rem;
-  padding: .8rem 1rem 1rem;
-  width: min(30rem, 100%);
+  border-radius: .4rem;
+  padding: .7rem 1rem 1rem;
+  width: min(34rem, 100%);
   max-height: 100%;
   overflow-y: auto;
   text-shadow: var(--glow);
 }
 #settings h2 {
   display: flex; align-items: center;
-  margin: 0 0 .2rem; font-size: 1.05em; font-weight: normal; letter-spacing: .1em;
+  margin: 0 0 .1rem; font-size: 1.05em; font-weight: normal; letter-spacing: .1em;
 }
 #settings h2 .icon { margin-left: auto; }
 
-.setrow { display: flex; align-items: center; gap: .5rem; margin: .45rem 0; }
-.setrow > label:first-child { flex: 1; color: var(--fg-dim); font-size: .9em; }
-.setrow .choices { display: flex; gap: .15rem; flex-wrap: wrap; }
-.setrow .choices .btn { padding: .1rem .5rem; }
+#setnav { display: flex; gap: .15rem; margin: .5rem 0 .6rem; flex-wrap: wrap; }
+#setnav .btn { flex: 1; }
 
-.swatch { width: 1.6rem; height: 1.3rem; border: 1px solid var(--line); cursor: pointer; }
-.swatch[aria-pressed="true"] { outline: 2px solid var(--fg); outline-offset: 1px; }
+.setrow { display: flex; align-items: center; gap: .5rem; margin: .4rem 0; }
+.setrow > label:first-child { flex: 1; color: var(--fg-dim); font-size: .88em; }
+.setrow .choices { display: flex; gap: .12rem; flex-wrap: wrap; }
+.setrow .choices .btn { padding: .08rem .5rem; }
+.setrow input[type="range"] { flex: 1.4; accent-color: var(--fg); min-width: 6rem; }
+.setrow input[type="color"] {
+  width: 2.6rem; height: 1.6rem; padding: 0;
+  background: none; border: 1px solid var(--line); cursor: pointer;
+}
+.setrow .num { width: 3.2rem; text-align: right; font-variant-numeric: tabular-nums; font-size: .85em; }
 
-.checkgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: .1rem .5rem; }
+.checkgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: .05rem .5rem; }
 .checkgrid label { display: flex; align-items: center; gap: .35rem; font-size: .88em; cursor: pointer; }
 .checkgrid input { accent-color: var(--fg); }
+
+/* Tab reordering: each row carries its own up/down. */
+.orderrow { display: flex; align-items: center; gap: .35rem; margin: .12rem 0; font-size: .9em; }
+.orderrow .name { flex: 1; }
+.orderrow .btn { padding: 0 .45rem; }
+
+.setfoot { display: flex; gap: .3rem; margin-top: .8rem; }
+.setfoot .btn { flex: 1; }
 
 /* ── narrow panels (a phone held upright) ───────────────────────────────── */
 
 @media (max-width: 46rem) {
   .card { display: none; }
   #mapside { display: none; }
-  .statuswrap { flex-direction: column; }
-  .dollcol { width: 100%; max-height: 38%; }
-  #tabs { margin: 0; }
-  .tab { padding: .15rem .5rem; letter-spacing: .05em; }
+  .sub[data-sub="status"].on { grid-template-columns: 1fr; grid-template-rows: 1fr auto auto; }
+  #statside { grid-row: 3; grid-column: 1; max-height: 34%; }
+  #statfoot { grid-row: 2; }
+  .tab { padding: .1rem .55rem; letter-spacing: .05em; }
+  #subtabs { gap: .9rem; }
 }

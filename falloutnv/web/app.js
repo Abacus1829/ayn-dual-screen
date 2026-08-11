@@ -6,29 +6,62 @@
  * setting rather than a broken page.
  *
  * The JSON shapes here must be kept in step with src/Dtos.h and with tools/mockserver.py.
+ *
+ * Appearance is never hand-themed: every visual choice is a CSS custom property that applySettings
+ * writes to :root. Adding a control means adding a variable in style.css and a row in the settings
+ * panel, and nothing in between needs to know about it.
  */
 
 "use strict";
 
-// ── settings, per screen, in this browser only ────────────────────────────
+// ── settings ──────────────────────────────────────────────────────────────
 
-const DEFAULTS = {
-  hue: "green",
-  size: 2,            // index into SIZES
-  rate: 10,           // polls per second
-  scanlines: "on",
-  vignette: "on",
-  cards: "on",
-  bezel: "off",       // off by default: on a handheld the casing eats real estate
-  sound: "on",
-  boot: "on",
-  autoQuestTab: true,
-  tabs: ["stat", "inv", "data", "map", "radio"],
+const SIZES = [12, 13, 14.5, 16, 18, 21, 24];
+
+const FONTS = {
+  mono: '"Consolas", "DejaVu Sans Mono", "Menlo", monospace',
+  courier: '"Courier New", Courier, monospace',
+  system: 'system-ui, -apple-system, "Segoe UI", sans-serif',
+  condensed: '"Arial Narrow", "Liberation Sans Narrow", sans-serif',
 };
 
-const SIZES = [13, 14.5, 16, 18, 21];
-const HUES = ["green", "amber", "blue", "white"];
-const RATES = [5, 10, 15, 20];
+// Presets are just bundles of the same variables the sliders write, so "custom" is not a special
+// case -- it is what you get the moment you move anything.
+const PRESETS = {
+  green:  { fg: "#3cff88", bg: "#0a1a0f" },
+  amber:  { fg: "#ffb642", bg: "#1a1206" },
+  blue:   { fg: "#54d6ff", bg: "#06141a" },
+  white:  { fg: "#e8f4ec", bg: "#101410" },
+  red:    { fg: "#ff5f5f", bg: "#1a0808" },
+  purple: { fg: "#c48cff", bg: "#12081a" },
+};
+
+const ALL_TABS = ["stat", "inv", "data", "map", "radio"];
+const TAB_LABELS = { stat: "STAT", inv: "INV", data: "DATA", map: "MAP", radio: "RADIO" };
+
+const DEFAULTS = {
+  fg: "#3cff88",
+  bg: "#0a1a0f",
+  accent: "",          // empty means "follow fg"
+  size: 3,             // index into SIZES
+  font: "mono",
+  glow: 6,
+  scan: 20,            // percent
+  scanGap: 3,          // px
+  vignette: 75,        // percent
+  radius: 10,          // px
+  split: 38,           // percent width of the detail card
+  density: 2,          // index into DENSITIES
+  brackets: true,
+  bezel: "off",
+  sound: "on",
+  boot: "on",
+  cards: "on",
+  rate: 10,
+  tabs: ALL_TABS.slice(),
+};
+
+const DENSITIES = [0.05, 0.12, 0.2, 0.32, 0.45];   // rem of vertical padding per row
 
 let settings = load();
 
@@ -47,16 +80,26 @@ function save() {
 
 function applySettings() {
   const r = document.documentElement;
-  r.dataset.hue = settings.hue;
-  r.dataset.scanlines = settings.scanlines;
-  r.dataset.vignette = settings.vignette;
-  r.dataset.cards = settings.cards;
+  const s = r.style;
+
+  s.setProperty("--fg", settings.fg);
+  s.setProperty("--bg", settings.bg);
+  s.setProperty("--accent", settings.accent || settings.fg);
+  s.setProperty("--ui", SIZES[settings.size] + "px");
+  s.setProperty("--font", FONTS[settings.font] || FONTS.mono);
+  s.setProperty("--glow-size", settings.glow + "px");
+  s.setProperty("--scan-opacity", (settings.scan / 100).toFixed(2));
+  s.setProperty("--scan-gap", settings.scanGap + "px");
+  s.setProperty("--vignette", (settings.vignette / 100).toFixed(2));
+  s.setProperty("--radius", settings.radius + "px");
+  s.setProperty("--split", settings.split + "%");
+  s.setProperty("--row-pad", DENSITIES[settings.density] + "rem");
+  s.setProperty("--bracket", settings.brackets ? "inline" : "none");
+
   r.dataset.bezel = settings.bezel;
-  r.style.setProperty("--ui", SIZES[settings.size] + "px");
+  r.dataset.cards = settings.cards;
 
-  for (const b of document.querySelectorAll("#tabs .tab"))
-    b.hidden = !settings.tabs.includes(b.dataset.tab);
-
+  buildTabs();
   if (!settings.tabs.includes(page)) setPage(settings.tabs[0] || "stat");
   restartPolling();
 }
@@ -65,19 +108,32 @@ function applySettings() {
 
 const SUBTABS = {
   stat: [["status", "STATUS"], ["special", "S.P.E.C.I.A.L."], ["skills", "SKILLS"], ["perks", "PERKS"]],
-  inv:  [["weapons", "WEAPONS"], ["apparel", "APPAREL"], ["aid", "AID"], ["misc", "MISC"], ["ammo", "AMMO"]],
-  data: [["quests", "QUESTS"], ["notes", "NOTES"], ["stats", "STATS"]],
+  inv:  [["weapons", "WEAPONS"], ["apparel", "APPAREL"], ["aid", "AID"], ["mods", "MODS"],
+         ["misc", "MISC"], ["ammo", "AMMO"]],
+  data: [["quests", "QUESTS"], ["notes", "NOTES"], ["stats", "STATS"], ["mods", "PLUGINS"]],
   map:  [],
   radio: [],
 };
 
 let page = settings.tabs[0] || "stat";
 let sub = { stat: "status", inv: "weapons", data: "quests" };
-let selected = { inv: null, quests: null, notes: null };
+let selected = { inv: null, quests: null, notes: null, loadorder: null };
+
+function buildTabs() {
+  const host = document.getElementById("tabs");
+  host.textContent = "";
+  for (const key of settings.tabs) {
+    const b = el("button", "tab", TAB_LABELS[key]);
+    b.dataset.tab = key;
+    b.setAttribute("role", "tab");
+    b.setAttribute("aria-selected", String(key === page));
+    host.appendChild(b);
+  }
+}
 
 function setPage(next) {
   page = next;
-  for (const el of document.querySelectorAll(".page")) el.classList.toggle("on", el.dataset.page === next);
+  for (const p of document.querySelectorAll(".page")) p.classList.toggle("on", p.dataset.page === next);
   for (const b of document.querySelectorAll("#tabs .tab")) b.setAttribute("aria-selected", String(b.dataset.tab === next));
   buildSubtabs();
   if (state) render(state);
@@ -87,17 +143,15 @@ function buildSubtabs() {
   const host = document.getElementById("subtabs");
   host.textContent = "";
   for (const [key, label] of SUBTABS[page] || []) {
-    const b = document.createElement("button");
-    b.className = "subtab";
-    b.textContent = label;
+    const b = el("button", "subtab", label);
     b.dataset.sub = key;
     b.setAttribute("role", "tab");
     b.setAttribute("aria-selected", String(sub[page] === key));
     b.onclick = () => { sub[page] = key; buildSubtabs(); if (state) render(state); };
     host.appendChild(b);
   }
-  for (const el of document.querySelectorAll(`.page[data-page="${page}"] .sub`))
-    el.classList.toggle("on", el.dataset.sub === sub[page]);
+  for (const p of document.querySelectorAll(`.page[data-page="${page}"] .sub`))
+    p.classList.toggle("on", p.dataset.sub === sub[page]);
 }
 
 document.getElementById("tabs").addEventListener("click", (e) => {
@@ -105,16 +159,14 @@ document.getElementById("tabs").addEventListener("click", (e) => {
   if (b) { click(); setPage(b.dataset.tab); }
 });
 
-// Every row and button gets the same tactile click, without each one asking for it.
 document.addEventListener("click", (e) => {
   if (e.target.closest(".row, .btn, .subtab, .icon")) click(0.10, 0.03);
 }, true);
 
-// Number keys pick a tab; handy on a screen with a keyboard attached.
 addEventListener("keydown", (e) => {
   if (e.target.tagName === "INPUT") return;
   const n = parseInt(e.key, 10);
-  if (n >= 1 && n <= 5 && settings.tabs[n - 1]) setPage(settings.tabs[n - 1]);
+  if (n >= 1 && n <= settings.tabs.length) setPage(settings.tabs[n - 1]);
 });
 
 // ── polling ───────────────────────────────────────────────────────────────
@@ -157,25 +209,22 @@ async function act(action, payload) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(Object.assign({ action }, payload || {})),
     });
-    poll();  // don't wait a whole interval to see the result
+    poll();
   } catch (e) {}
 }
 
-// ── small helpers ─────────────────────────────────────────────────────────
+// ── helpers ───────────────────────────────────────────────────────────────
 
-const el = (tag, cls, text) => {
+function el(tag, cls, text) {
   const n = document.createElement(tag);
   if (cls) n.className = cls;
   if (text != null) n.textContent = text;
   return n;
-};
+}
 
 const pct = (v, max) => (max > 0 ? Math.max(0, Math.min(1, v / max)) : 0);
 const num = (v) => (v == null ? "—" : Math.round(v).toLocaleString());
-
-function severity(fraction) {
-  return fraction > 0.6 ? "" : fraction > 0.25 ? "warn" : "bad";
-}
+const severity = (f) => (f > 0.6 ? "" : f > 0.25 ? "warn" : "bad");
 
 function row(onclick) {
   const li = el("li", "row");
@@ -184,7 +233,7 @@ function row(onclick) {
   return li;
 }
 
-/** Fill a <ul> only when its contents changed, so scroll position and taps survive a redraw. */
+/** Rebuild a list only when its contents changed, so scroll position survives a redraw. */
 function fill(node, key, build) {
   if (node.dataset.key === key) return false;
   node.dataset.key = key;
@@ -215,15 +264,17 @@ function render(s) {
 
   const p = s.player || {};
 
-  document.getElementById("hp").textContent = num(p.hp);
-  document.getElementById("hpmax").textContent = "/" + num(p.hpMax);
-  document.getElementById("ap").textContent = num(p.ap);
-  document.getElementById("apmax").textContent = "/" + num(p.apMax);
+  document.getElementById("hpText").textContent = `HP ${num(p.hp)}/${num(p.hpMax)}`;
+  document.getElementById("apText").textContent = `AP ${num(p.ap)}/${num(p.apMax)}`;
+  document.getElementById("lvlText").textContent = `LEVEL ${num(p.level)}`;
+  document.getElementById("xpfill").style.width =
+    (pct((p.xp || 0) - (p.xpBase || 0), (p.xpNext || 0) - (p.xpBase || 0)) * 100).toFixed(1) + "%";
 
-  document.getElementById("loc").textContent = [s.map && s.map.cell, s.map && s.map.world].filter(Boolean).join(" — ");
-  document.getElementById("lvl").textContent = `LVL ${num(p.level)}`;
+  document.getElementById("gamedate").textContent = s.gameTime || "";
   document.getElementById("caps").textContent = `${num(p.caps)} caps`;
   document.getElementById("wt").textContent = `${num(p.weight)}/${num(p.weightMax)} wg`;
+  document.getElementById("loc").textContent =
+    [s.map && s.map.cell, s.map && s.map.world].filter(Boolean).join(" — ");
 
   if (page === "stat") renderStat(s);
   else if (page === "inv") renderInv(s);
@@ -245,30 +296,55 @@ function renderStat(s) {
 
   if (sub.stat === "status") {
     const cond = p.condition || {};
+
     for (const [key] of LIMBS) {
-      const node = document.querySelector(`#doll [data-limb="${key}"]`);
-      if (!node) continue;
-      const v = cond[key] == null ? 1 : cond[key];
-      node.classList.toggle("warn", v <= 0.6 && v > 0.25);
-      node.classList.toggle("bad", v <= 0.25 && v > 0);
-      node.classList.toggle("crippled", v <= 0);
+      for (const node of document.querySelectorAll(`#doll [data-limb="${key}"]`)) {
+        const v = cond[key] == null ? 1 : cond[key];
+        node.classList.toggle("warn", v <= 0.6 && v > 0.25);
+        node.classList.toggle("bad", v <= 0.25 && v > 0);
+        node.classList.toggle("crippled", v <= 0);
+      }
     }
 
-    const crippled = LIMBS.filter(([k]) => (cond[k] != null && cond[k] <= 0)).map(([, n]) => n);
-    document.getElementById("dolllegend").textContent =
-      crippled.length ? "Crippled: " + crippled.join(", ") : "All limbs intact";
+    // The condition bars sit on the figure rather than beside it.
+    const host = document.getElementById("limbbars");
+    if (!host.childElementCount) {
+      for (const [key] of LIMBS) {
+        const b = el("div", "limbbar");
+        b.dataset.limb = key;
+        b.appendChild(el("div", "fill"));
+        host.appendChild(b);
+      }
+    }
+    for (const [key, name] of LIMBS) {
+      const b = host.querySelector(`[data-limb="${key}"]`);
+      const v = cond[key] == null ? 1 : cond[key];
+      const f = b.firstElementChild;
+      f.style.width = (Math.max(0, v) * 100).toFixed(0) + "%";
+      f.className = "fill " + severity(v);
+      b.title = `${name}: ${Math.round(v * 100)}%`;
+    }
 
-    const bars = document.getElementById("condbars");
-    bars.textContent = "";
-    bars.appendChild(bar("Health", p.hp, p.hpMax));
-    bars.appendChild(bar("Action Pts", p.ap, p.apMax));
-    if (p.radsMax) bars.appendChild(bar("Rads", p.radsMax - (p.rads || 0), p.radsMax, `${num(p.rads)} (${p.radsText || "Minor"})`));
-    for (const [key, name] of LIMBS)
-      bars.appendChild(bar(name, (cond[key] || 0) * 100, 100, Math.round((cond[key] || 0) * 100) + "%"));
+    // Equipped weapon and armour, under the figure, as the app shows them.
+    const equipped = document.getElementById("equippedrow");
+    const weapon = ((s.inventory || {}).weapons || []).find((i) => i.equipped);
+    const armour = ((s.inventory || {}).apparel || []).find((i) => i.equipped);
+    const key = `${weapon ? weapon.name : ""}|${armour ? armour.name : ""}`;
+    fill(equipped, key, (n) => {
+      const slot = (label, item) => {
+        const d = el("div", "slot", label);
+        d.appendChild(el("b", null, item ? item.name : "—"));
+        n.appendChild(d);
+      };
+      slot("WEAPON", weapon);
+      slot("ARMOUR", armour);
+    });
+
+    document.getElementById("playername").textContent = p.name || "";
 
     const fx = document.getElementById("effects");
     fill(fx, JSON.stringify(s.effects || []), (n) => {
-      if (!s.effects || !s.effects.length) { n.appendChild(el("li", "empty", "No active effects.")); return; }
+      if (!(s.effects || []).length) { n.appendChild(el("li", "empty", "No active effects.")); return; }
       for (const e of s.effects) {
         const li = row();
         li.appendChild(el("span", "name", e.name));
@@ -279,6 +355,7 @@ function renderStat(s) {
 
     const hc = document.getElementById("hardcore");
     hc.textContent = "";
+    document.getElementById("survivalhead").hidden = false;
     if (p.hardcore) {
       // Hardcore counts up towards death, so the bar shows headroom remaining.
       hc.appendChild(bar("Dehydration", p.h2oMax - p.h2o, p.h2oMax, `${num(p.h2o)}/${num(p.h2oMax)}`));
@@ -287,6 +364,8 @@ function renderStat(s) {
     } else {
       hc.appendChild(el("p", "hint", "Hardcore mode is off."));
     }
+    if (p.radsMax)
+      hc.appendChild(bar("Rads", p.radsMax - (p.rads || 0), p.radsMax, `${num(p.rads)}`));
   }
 
   if (sub.stat === "special") {
@@ -338,7 +417,9 @@ function renderInv(s) {
   const bucket = (s.inventory || {})[sub.inv] || [];
   const list = document.getElementById("items");
 
-  const key = sub.inv + "|" + bucket.map((i) => `${i.id}:${i.count}:${i.equipped ? 1 : 0}:${Math.round((i.health || 0) * 100)}`).join(",");
+  const key = sub.inv + "|" + bucket.map((i) =>
+    `${i.id}:${i.count}:${i.equipped ? 1 : 0}:${Math.round((i.health || 0) * 100)}`).join(",");
+
   fill(list, key, (n) => {
     if (!bucket.length) { n.appendChild(el("li", "empty", "Nothing here.")); return; }
     for (const item of bucket) {
@@ -360,6 +441,14 @@ function renderInv(s) {
   renderInvFoot(s, item);
 }
 
+/** The app rates a stat against the rest of your kit; without that comparison the honest version
+ *  is a magnitude, so these pips scale off the value itself rather than inventing a ranking. */
+function pipsFor(value, ceiling) {
+  if (value == null || !ceiling) return "";
+  const n = Math.max(0, Math.min(5, Math.round((value / ceiling) * 5)));
+  return "+".repeat(n);
+}
+
 function renderItemCard(s, item) {
   const card = document.getElementById("itemcard");
   card.textContent = "";
@@ -368,19 +457,26 @@ function renderItemCard(s, item) {
   card.appendChild(el("h4", null, item.name));
 
   const dl = el("dl");
-  const put = (k, v) => { if (v == null || v === "") return; dl.appendChild(el("dt", null, k)); dl.appendChild(el("dd", null, String(v))); };
+  const put = (k, v, pips) => {
+    if (v == null || v === "") return;
+    dl.appendChild(el("dt", null, k));
+    const dd = el("dd", null, String(v));
+    if (pips) dd.appendChild(el("span", "pips", pips));
+    dl.appendChild(dd);
+  };
 
-  put("Weight", item.weight != null ? item.weight.toFixed(1) : null);
-  put("Value", item.value != null ? num(item.value) : null);
-  if (item.health != null) put("Condition", Math.round(item.health * 100) + "%");
-  put("DAM", item.damage);
-  put("DPS", item.dps);
+  put("Damage", item.damage, pipsFor(item.damage, 120));
+  put("DPS", item.dps, pipsFor(item.dps, 200));
   put("Clip", item.clip);
   put("Ammo", item.ammoName);
   put("Spread", item.spread);
-  put("DT", item.dt);
+  put("DT", item.dt, pipsFor(item.dt, 30));
   put("Effect", item.effect);
+  if (item.health != null) put("Condition", Math.round(item.health * 100) + "%");
+  put("Weight", item.weight != null ? item.weight.toFixed(1) : null);
+  put("Value", item.value != null ? num(item.value) : null);
   put("Count", item.count > 1 ? item.count : null);
+  put("From", item.source);
   card.appendChild(dl);
 
   if (item.desc) card.appendChild(el("p", null, item.desc));
@@ -397,12 +493,10 @@ function renderInvFoot(s, item) {
     if (item && !allowed) b.title = why;
     b.onclick = fn;
     foot.appendChild(b);
-    return b;
   };
 
-  const equippable = item && (sub.inv === "weapons" || sub.inv === "apparel");
-  if (equippable)
-    add(item && item.equipped ? "UNEQUIP" : "EQUIP", perms.equip, "Equipping is off in the mod's config",
+  if (item && (sub.inv === "weapons" || sub.inv === "apparel"))
+    add(item.equipped ? "UNEQUIP" : "EQUIP", perms.equip, "Equipping is off in the mod's config",
         () => act("equip", { id: item.id }));
 
   if (sub.inv === "aid")
@@ -412,9 +506,7 @@ function renderInvFoot(s, item) {
       () => confirmThen(foot, () => act("drop", { id: item.id, count: 1 })), "danger");
 
   foot.appendChild(el("span", "spacer"));
-
-  const totals = (s.inventory || {})[sub.inv] || [];
-  foot.appendChild(el("span", "dim", `${totals.length} entries`));
+  foot.appendChild(el("span", "dim", `${((s.inventory || {})[sub.inv] || []).length} entries`));
 }
 
 /** Two-tap confirmation, so a stray touch never throws a weapon on the ground. */
@@ -431,100 +523,142 @@ function confirmThen(foot, fn) {
 // ── DATA ──────────────────────────────────────────────────────────────────
 
 function renderData(s) {
-  if (sub.data === "quests") {
-    const quests = s.quests || [];
-    const list = document.getElementById("quests");
-    const key = quests.map((q) => `${q.id}:${q.active ? 1 : 0}:${q.completed ? 1 : 0}:${(q.objectives || []).length}`).join(",");
+  if (sub.data === "quests") renderQuests(s);
+  else if (sub.data === "notes") renderNotes(s);
+  else if (sub.data === "stats") renderStats(s);
+  else if (sub.data === "mods") renderLoadOrder(s);
+}
 
-    fill(list, key, (n) => {
-      if (!quests.length) { n.appendChild(el("li", "empty", "No quests yet.")); return; }
-      const groups = [["Active", quests.filter((q) => !q.completed)], ["Completed", quests.filter((q) => q.completed)]];
-      for (const [label, items] of groups) {
-        if (!items.length) continue;
-        n.appendChild(el("li", "grouphead", label));
-        for (const q of items) {
-          const li = row(() => { selected.quests = q.id; renderData(state); });
-          li.dataset.id = q.id;
-          li.classList.toggle("done", !!q.completed);
-          li.appendChild(el("span", "name", q.name));
-          if (q.active) li.appendChild(el("span", "tag", "◆"));
-          n.appendChild(li);
-        }
-      }
-    });
+function renderQuests(s) {
+  const quests = s.quests || [];
+  const list = document.getElementById("quests");
+  const key = quests.map((q) => `${q.id}:${q.active ? 1 : 0}:${q.completed ? 1 : 0}:${(q.objectives || []).length}`).join(",");
 
-    for (const li of list.querySelectorAll(".row"))
-      li.setAttribute("aria-selected", String(li.dataset.id === selected.quests));
-
-    const q = quests.find((x) => x.id === selected.quests);
-    const card = document.getElementById("questcard");
-    card.textContent = "";
-    if (!q) { card.appendChild(el("p", "hint", "Select a quest.")); return; }
-
-    card.appendChild(el("h4", null, q.name));
-    if (q.completed) card.appendChild(el("p", "hint", "Completed."));
-    for (const o of q.objectives || []) {
-      const p = el("p", o.done ? "dim" : null, (o.done ? "☑ " : "☐ ") + o.text);
-      card.appendChild(p);
-    }
-    if (!(q.objectives || []).length) card.appendChild(el("p", "hint", "No objectives recorded."));
-
-    if ((s.perms || {}).setQuest && !q.completed) {
-      const b = el("button", "btn wide", q.active ? "ACTIVE" : "SET ACTIVE");
-      b.disabled = !!q.active;
-      b.onclick = () => act("setQuest", { id: q.id });
-      card.appendChild(b);
-    }
-  }
-
-  if (sub.data === "notes") {
-    const notes = s.notes || [];
-    const list = document.getElementById("notes");
-    fill(list, notes.map((n) => n.id).join(","), (n) => {
-      if (!notes.length) { n.appendChild(el("li", "empty", "No notes.")); return; }
-      for (const note of notes) {
-        const li = row(() => { selected.notes = note.id; renderData(state); });
-        li.dataset.id = note.id;
-        li.appendChild(el("span", "name", note.name));
-        li.appendChild(el("span", "tag", (note.type || "").toUpperCase()));
+  fill(list, key, (n) => {
+    if (!quests.length) { n.appendChild(el("li", "empty", "No quests yet.")); return; }
+    for (const [label, items] of [["Active", quests.filter((q) => !q.completed)],
+                                  ["Completed", quests.filter((q) => q.completed)]]) {
+      if (!items.length) continue;
+      n.appendChild(el("li", "grouphead", label));
+      for (const q of items) {
+        const li = row(() => { selected.quests = q.id; renderData(state); });
+        li.dataset.id = q.id;
+        li.classList.toggle("done", !!q.completed);
+        li.appendChild(el("span", "name", q.name));
+        if (q.active) li.appendChild(el("span", "tag", "◆"));
         n.appendChild(li);
       }
-    });
+    }
+  });
 
-    for (const li of list.querySelectorAll(".row"))
-      li.setAttribute("aria-selected", String(li.dataset.id === selected.notes));
+  for (const li of list.querySelectorAll(".row"))
+    li.setAttribute("aria-selected", String(li.dataset.id === selected.quests));
 
-    const note = notes.find((x) => x.id === selected.notes);
-    const card = document.getElementById("notecard");
-    card.textContent = "";
-    if (!note) { card.appendChild(el("p", "hint", "Select a note.")); return; }
-    card.appendChild(el("h4", null, note.name));
-    card.appendChild(el("p", "hint", note.type === "holotape" ? "Holotape" : "Note"));
-    if (note.text) for (const para of note.text.split("\n")) card.appendChild(el("p", null, para));
+  const q = quests.find((x) => x.id === selected.quests);
+  const card = document.getElementById("questcard");
+  card.textContent = "";
+  if (!q) { card.appendChild(el("p", "hint", "Select a quest.")); return; }
+
+  card.appendChild(el("h4", null, q.name));
+  if (q.completed) card.appendChild(el("p", "hint", "Completed."));
+  for (const o of q.objectives || [])
+    card.appendChild(el("p", o.done ? "dim" : null, (o.done ? "☑ " : "☐ ") + o.text));
+  if (!(q.objectives || []).length) card.appendChild(el("p", "hint", "No objectives recorded."));
+
+  if ((s.perms || {}).setQuest && !q.completed) {
+    const b = el("button", "btn wide", q.active ? "ACTIVE" : "SET ACTIVE");
+    b.disabled = !!q.active;
+    b.onclick = () => act("setQuest", { id: q.id });
+    card.appendChild(b);
   }
+}
 
-  if (sub.data === "stats") {
-    const stats = s.stats || [];
-    const list = document.getElementById("stats");
-    fill(list, stats.map((x) => x.name + "=" + x.value).join(","), (n) => {
-      if (!stats.length) { n.appendChild(el("li", "empty", "No data.")); return; }
-      let group = null;
-      for (const st of stats) {
-        if (st.group !== group) { group = st.group; n.appendChild(el("li", "grouphead", group)); }
-        const li = el("li", "row");
-        li.appendChild(el("span", "name", st.name));
-        li.appendChild(el("span", "val", String(st.value)));
-        n.appendChild(li);
-      }
-    });
+function renderNotes(s) {
+  const notes = s.notes || [];
+  const list = document.getElementById("notes");
+  fill(list, notes.map((n) => n.id).join(","), (n) => {
+    if (!notes.length) { n.appendChild(el("li", "empty", "No notes.")); return; }
+    for (const note of notes) {
+      const li = row(() => { selected.notes = note.id; renderData(state); });
+      li.dataset.id = note.id;
+      li.appendChild(el("span", "name", note.name));
+      li.appendChild(el("span", "tag", (note.type || "").toUpperCase()));
+      n.appendChild(li);
+    }
+  });
+
+  for (const li of list.querySelectorAll(".row"))
+    li.setAttribute("aria-selected", String(li.dataset.id === selected.notes));
+
+  const note = notes.find((x) => x.id === selected.notes);
+  const card = document.getElementById("notecard");
+  card.textContent = "";
+  if (!note) { card.appendChild(el("p", "hint", "Select a note.")); return; }
+  card.appendChild(el("h4", null, note.name));
+  card.appendChild(el("p", "hint", note.type === "holotape" ? "Holotape" : "Note"));
+  if (note.text) for (const para of note.text.split("\n")) card.appendChild(el("p", null, para));
+}
+
+function renderStats(s) {
+  const stats = s.stats || [];
+  const list = document.getElementById("stats");
+  fill(list, stats.map((x) => x.name + "=" + x.value).join(","), (n) => {
+    if (!stats.length) { n.appendChild(el("li", "empty", "No data.")); return; }
+    let group = null;
+    for (const st of stats) {
+      if (st.group !== group) { group = st.group; n.appendChild(el("li", "grouphead", group)); }
+      const li = el("li", "row");
+      li.appendChild(el("span", "name", st.name));
+      li.appendChild(el("span", "val", String(st.value)));
+      n.appendChild(li);
+    }
+  });
+}
+
+/** The load order. Useful on its own, and it is what makes a bug report legible when a modded
+ *  item shows up looking wrong. */
+function renderLoadOrder(s) {
+  const plugins = s.plugins || [];
+  const list = document.getElementById("loadorder");
+
+  fill(list, plugins.map((p) => p.name).join(","), (n) => {
+    if (!plugins.length) { n.appendChild(el("li", "empty", "No load order reported.")); return; }
+    for (const p of plugins) {
+      const li = row(() => { selected.loadorder = p.name; renderData(state); });
+      li.dataset.id = p.name;
+      li.appendChild(el("span", "tag", p.index));
+      li.appendChild(el("span", "name", p.name));
+      if (p.master) li.appendChild(el("span", "tag", "ESM"));
+      n.appendChild(li);
+    }
+  });
+
+  for (const li of list.querySelectorAll(".row"))
+    li.setAttribute("aria-selected", String(li.dataset.id === selected.loadorder));
+
+  const plugin = plugins.find((x) => x.name === selected.loadorder);
+  const card = document.getElementById("loadcard");
+  card.textContent = "";
+  if (!plugin) { card.appendChild(el("p", "hint", "Select a plugin.")); return; }
+
+  card.appendChild(el("h4", null, plugin.name));
+  const dl = el("dl");
+  dl.appendChild(el("dt", null, "Load index"));
+  dl.appendChild(el("dd", null, plugin.index));
+  dl.appendChild(el("dt", null, "Type"));
+  dl.appendChild(el("dd", null, plugin.master ? "Master (ESM)" : "Plugin (ESP)"));
+  if (plugin.items != null) {
+    dl.appendChild(el("dt", null, "Items carried"));
+    dl.appendChild(el("dd", null, String(plugin.items)));
   }
+  card.appendChild(dl);
 }
 
 // ── MAP ───────────────────────────────────────────────────────────────────
 
 let mapMode = "local";
 let mapZoom = 1;
-let mapHit = [];      // marker hit-boxes in canvas pixels, rebuilt each frame
+let mapHit = [];
 
 const MARKER_GLYPH = {
   Vault: "V", Town: "⌂", Settlement: "⌂", Cave: "◓", Factory: "⚙", Ruin: "⌗",
@@ -537,16 +671,15 @@ function renderMap(s) {
   const canvas = document.getElementById("mapcanvas");
   const view = document.getElementById("mapview");
 
-  // Match the backing store to the CSS box so nothing is blurry on a hidpi panel.
   const dpr = Math.min(devicePixelRatio || 1, 2);
   const w = Math.max(1, Math.round(view.clientWidth * dpr));
   const h = Math.max(1, Math.round(view.clientHeight * dpr));
   if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
 
   const ctx = canvas.getContext("2d");
-  const style = getComputedStyle(document.documentElement);
-  const fg = style.getPropertyValue("--fg").trim() || "#3cff88";
-  const dim = style.getPropertyValue("--fg-dim").trim() || "#2aa85c";
+  const css = getComputedStyle(document.documentElement);
+  const fg = css.getPropertyValue("--fg").trim() || "#3cff88";
+  const dim = css.getPropertyValue("--fg-dim").trim() || fg;
 
   ctx.clearRect(0, 0, w, h);
 
@@ -560,7 +693,6 @@ function renderMap(s) {
     return;
   }
 
-  // Fit the region to the canvas, preserving aspect, then apply the zoom about the player.
   const bw = bounds.maxX - bounds.minX || 1;
   const bh = bounds.maxY - bounds.minY || 1;
   const scale = Math.min(w / bw, h / bh) * mapZoom;
@@ -568,13 +700,11 @@ function renderMap(s) {
   const cx = mapZoom > 1 && m.x != null ? m.x : (bounds.minX + bounds.maxX) / 2;
   const cy = mapZoom > 1 && m.y != null ? m.y : (bounds.minY + bounds.maxY) / 2;
 
-  // World Y grows north; screen Y grows down.
   const px = (wx) => w / 2 + (wx - cx) * scale;
   const py = (wy) => h / 2 - (wy - cy) * scale;
 
-  // Grid.
   ctx.strokeStyle = dim;
-  ctx.globalAlpha = 0.18;
+  ctx.globalAlpha = 0.16;
   ctx.lineWidth = 1;
   const step = niceStep(bw / 8);
   ctx.beginPath();
@@ -587,13 +717,11 @@ function renderMap(s) {
   ctx.stroke();
   ctx.globalAlpha = 1;
 
-  // Border of the mapped region.
   ctx.strokeStyle = dim;
-  ctx.globalAlpha = 0.5;
+  ctx.globalAlpha = 0.45;
   ctx.strokeRect(px(bounds.minX), py(bounds.maxY), bw * scale, bh * scale);
   ctx.globalAlpha = 1;
 
-  // Markers.
   mapHit = [];
   ctx.font = `${12 * dpr}px monospace`;
   ctx.textAlign = "center";
@@ -603,7 +731,7 @@ function renderMap(s) {
     const x = px(mk.x), y = py(mk.y);
     if (x < -20 || y < -20 || x > w + 20 || y > h + 20) continue;
 
-    ctx.globalAlpha = mk.visited ? 1 : 0.45;
+    ctx.globalAlpha = mk.visited ? 1 : 0.4;
     ctx.fillStyle = fg;
     ctx.strokeStyle = fg;
 
@@ -611,7 +739,7 @@ function renderMap(s) {
     ctx.arc(x, y, 5 * dpr, 0, Math.PI * 2);
     mk.visited ? ctx.fill() : ctx.stroke();
 
-    ctx.fillStyle = mk.visited ? "#000" : fg;
+    ctx.fillStyle = mk.visited ? css.getPropertyValue("--bg").trim() || "#000" : fg;
     ctx.fillText(MARKER_GLYPH[mk.type] || "•", x, y + 0.5 * dpr);
 
     if (mapZoom >= 1.5 || (m.markers || []).length < 24) {
@@ -624,13 +752,11 @@ function renderMap(s) {
     mapHit.push({ x, y, r: 12 * dpr, marker: mk });
   }
 
-  // The player: a triangle pointing where they face.
   if (m.x != null) {
     const x = px(m.x), y = py(m.y);
-    const a = ((m.angle || 0) * Math.PI) / 180;
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(a);
+    ctx.rotate(((m.angle || 0) * Math.PI) / 180);
     ctx.fillStyle = fg;
     ctx.beginPath();
     ctx.moveTo(0, -9 * dpr);
@@ -642,9 +768,8 @@ function renderMap(s) {
     ctx.restore();
   }
 
-  // Side panel.
-  document.getElementById("mapwhere").textContent = "";
   const where = document.getElementById("mapwhere");
+  where.textContent = "";
   where.appendChild(el("h4", null, m.cell || m.world || "Unknown"));
   if (m.x != null) where.appendChild(el("p", "hint", `${Math.round(m.x)}, ${Math.round(m.y)}`));
 
@@ -675,12 +800,11 @@ let pendingTravel = null;
 
 function tryFastTravel(mk) {
   if (!(state && state.perms && state.perms.fastTravel)) {
-    showTip(`Fast travel is off in the mod's config.`);
+    showTip("Fast travel is off in the mod's config.");
     return;
   }
   if (!mk.canFastTravel) { showTip(`${mk.name} can't be fast travelled to.`); return; }
 
-  // Fast travel moves the character and burns hours; two taps, always.
   if (pendingTravel === mk.name) {
     pendingTravel = null;
     act("fastTravel", { marker: mk.name });
@@ -723,9 +847,7 @@ document.getElementById("mapfoot").addEventListener("click", (e) => {
   const b = e.target.closest("button");
   if (!b) return;
   if (b.dataset.mapmode) { mapMode = b.dataset.mapmode; mapZoom = 1; }
-  if (b.dataset.mapzoom) {
-    mapZoom = Math.max(1, Math.min(6, mapZoom + Number(b.dataset.mapzoom) * 0.5));
-  }
+  if (b.dataset.mapzoom) mapZoom = Math.max(1, Math.min(6, mapZoom + Number(b.dataset.mapzoom) * 0.5));
   if (state) renderMap(state);
 });
 
@@ -741,7 +863,7 @@ function renderRadio(s) {
     for (const st of stations) {
       const li = row(() => {
         if (!(s.perms || {}).radio) return;
-        act("radio", { id: st.active ? "" : st.id });   // tapping the active one turns it off
+        act("radio", { id: st.active ? "" : st.id });
       });
       li.dataset.id = st.id;
       li.setAttribute("aria-selected", String(!!st.active));
@@ -780,97 +902,17 @@ function drawWave(on) {
   const t = Date.now() / 220;
   for (let x = 0; x <= w; x++) {
     const u = x / w;
-    // Off-air is a flat line with a little noise; on-air is a rolling carrier.
     const amp = on ? (h / 2 - 4 * dpr) * (0.35 + 0.65 * Math.abs(Math.sin(u * 3 + t * 0.35))) : 1.5 * dpr;
-    const y = h / 2 + Math.sin(u * 42 + t) * amp * (on ? 1 : 1) * (on ? Math.sin(u * Math.PI) : 1);
+    const y = h / 2 + Math.sin(u * 42 + t) * amp * (on ? Math.sin(u * Math.PI) : 1);
     x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
   }
   ctx.stroke();
 }
 
-// ── settings panel ────────────────────────────────────────────────────────
-
-const TAB_LABELS = { stat: "STAT", inv: "INV", data: "DATA", map: "MAP", radio: "RADIO" };
-
-function buildSettings() {
-  const host = document.getElementById("settingsbody");
-  host.textContent = "";
-
-  const addRow = (label, node) => {
-    const r = el("div", "setrow");
-    r.appendChild(el("label", null, label));
-    r.appendChild(node);
-    host.appendChild(r);
-    return r;
-  };
-
-  const choices = (values, current, labelFor, onPick) => {
-    const box = el("div", "choices");
-    for (const v of values) {
-      const b = el("button", "btn", labelFor(v));
-      b.setAttribute("aria-pressed", String(v === current));
-      b.onclick = () => { onPick(v); save(); buildSettings(); if (state) render(state); };
-      box.appendChild(b);
-    }
-    return box;
-  };
-
-  addRow("Colour", choices(HUES, settings.hue, (v) => v[0].toUpperCase() + v.slice(1), (v) => { settings.hue = v; }));
-  addRow("Size", choices([0, 1, 2, 3, 4], settings.size, (v) => ["XS", "S", "M", "L", "XL"][v], (v) => { settings.size = v; }));
-  addRow("Updates / sec", choices(RATES, settings.rate, String, (v) => { settings.rate = v; }));
-  addRow("Scanlines", choices(["on", "off"], settings.scanlines, (v) => v.toUpperCase(), (v) => { settings.scanlines = v; }));
-  addRow("Vignette", choices(["on", "off"], settings.vignette, (v) => v.toUpperCase(), (v) => { settings.vignette = v; }));
-  addRow("Detail panel", choices(["on", "off"], settings.cards, (v) => v.toUpperCase(), (v) => { settings.cards = v; }));
-  addRow("Casing", choices(["on", "off"], settings.bezel, (v) => v.toUpperCase(), (v) => { settings.bezel = v; }));
-  addRow("Sound", choices(["on", "off"], settings.sound, (v) => v.toUpperCase(), (v) => {
-    settings.sound = v;
-    if (v === "off") stopHum(); else startHum();
-  }));
-  addRow("Boot sequence", choices(["on", "off"], settings.boot, (v) => v.toUpperCase(), (v) => { settings.boot = v; }));
-
-  const grid = el("div", "checkgrid");
-  for (const [key, label] of Object.entries(TAB_LABELS)) {
-    const lab = el("label");
-    const cb = el("input");
-    cb.type = "checkbox";
-    cb.checked = settings.tabs.includes(key);
-    cb.onchange = () => {
-      settings.tabs = Object.keys(TAB_LABELS).filter((k) =>
-        k === key ? cb.checked : settings.tabs.includes(k));
-      if (!settings.tabs.length) { settings.tabs = [key]; cb.checked = true; }
-      save();
-      buildSettings();
-    };
-    lab.appendChild(cb);
-    lab.appendChild(document.createTextNode(label));
-    grid.appendChild(lab);
-  }
-  host.appendChild(el("h3", null, "Tabs"));
-  host.appendChild(grid);
-}
-
-document.getElementById("gear").onclick = () => {
-  buildSettings();
-  document.getElementById("settings").hidden = false;
-};
-document.getElementById("closesettings").onclick = () => { document.getElementById("settings").hidden = true; };
-document.getElementById("settings").onclick = (e) => {
-  if (e.target.id === "settings") e.currentTarget.hidden = true;
-};
-document.getElementById("resetsettings").onclick = () => {
-  settings = Object.assign({}, DEFAULTS);
-  save();
-  buildSettings();
-  setPage(settings.tabs[0]);
-};
-
 // ── sound ─────────────────────────────────────────────────────────────────
 //
-// Synthesised, not sampled. The Pip-Boy's clicks and hum are Bethesda's audio; these are a few
-// oscillators and a burst of noise, which costs nothing to ship and nothing to licence.
-//
-// Browsers refuse to start audio until the user has interacted with the page, so the context is
-// created lazily on the first tap and the hum starts then.
+// Synthesised, not sampled. A few oscillators and a burst of noise, which costs nothing to ship
+// and nothing to licence.
 
 let audio = null;
 let hum = null;
@@ -885,7 +927,6 @@ function sound() {
   return audio;
 }
 
-/** A short filtered noise burst — the tactile click under a tab change. */
 function click(level = 0.18, duration = 0.045) {
   const ctx = sound();
   if (!ctx) return;
@@ -893,10 +934,8 @@ function click(level = 0.18, duration = 0.045) {
   const frames = Math.floor(ctx.sampleRate * duration);
   const buffer = ctx.createBuffer(1, frames, ctx.sampleRate);
   const data = buffer.getChannelData(0);
-  for (let i = 0; i < frames; i++) {
-    // Decaying noise: loud at the strike, gone almost immediately.
+  for (let i = 0; i < frames; i++)
     data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / frames, 3);
-  }
 
   const src = ctx.createBufferSource();
   src.buffer = buffer;
@@ -913,7 +952,6 @@ function click(level = 0.18, duration = 0.045) {
   src.start();
 }
 
-/** The valve hum that sits under everything while the screen is on. */
 function startHum() {
   const ctx = sound();
   if (!ctx || hum) return;
@@ -927,7 +965,7 @@ function startHum() {
   harmonic.frequency.value = 120;
 
   const gain = ctx.createGain();
-  gain.gain.value = 0.012;          // felt more than heard
+  gain.gain.value = 0.012;
 
   osc.connect(gain);
   harmonic.connect(gain);
@@ -935,7 +973,7 @@ function startHum() {
   osc.start();
   harmonic.start();
 
-  hum = { osc, harmonic, gain };
+  hum = { osc, harmonic };
 }
 
 function stopHum() {
@@ -944,7 +982,6 @@ function stopHum() {
   hum = null;
 }
 
-// Any tap anywhere is the interaction browsers wait for.
 addEventListener("pointerdown", () => { startHum(); }, { once: true });
 
 // ── boot sequence ─────────────────────────────────────────────────────────
@@ -966,7 +1003,7 @@ const BOOT_LINES = [
   "LOADING MAP MODULE................[ OK ]",
   "LOADING RADIO MODULE..............[ OK ]",
   "",
-  "AYN DUAL SCREEN — READY",
+  "READY",
 ];
 
 function runBoot() {
@@ -994,6 +1031,229 @@ function runBoot() {
     };
     next();
   });
+}
+
+// ── settings panel ────────────────────────────────────────────────────────
+
+let setSection = "colour";
+
+const SECTIONS = [["colour", "COLOUR"], ["layout", "LAYOUT"], ["screen", "SCREEN"], ["tabs", "TABS"]];
+
+function buildSetNav() {
+  const nav = document.getElementById("setnav");
+  nav.textContent = "";
+  for (const [key, label] of SECTIONS) {
+    const b = el("button", "btn", label);
+    b.setAttribute("aria-pressed", String(key === setSection));
+    b.onclick = () => { setSection = key; buildSetNav(); buildSettings(); };
+    nav.appendChild(b);
+  }
+}
+
+function buildSettings() {
+  const host = document.getElementById("settingsbody");
+  host.textContent = "";
+
+  const addRow = (label, node) => {
+    const r = el("div", "setrow");
+    r.appendChild(el("label", null, label));
+    r.appendChild(node);
+    host.appendChild(r);
+  };
+
+  const choices = (values, current, labelFor, onPick) => {
+    const box = el("div", "choices");
+    for (const v of values) {
+      const b = el("button", "btn", labelFor(v));
+      b.setAttribute("aria-pressed", String(v === current));
+      b.onclick = () => { onPick(v); save(); buildSettings(); if (state) render(state); };
+      box.appendChild(b);
+    }
+    return box;
+  };
+
+  /** A slider plus its number, both writing the same setting. */
+  const slider = (key, min, max, step, suffix) => {
+    const wrap = el("div", "setrow");
+    wrap.style.flex = "1";
+    wrap.style.margin = "0";
+    const input = el("input");
+    input.type = "range";
+    input.min = min; input.max = max; input.step = step;
+    input.value = settings[key];
+    const out = el("span", "num", settings[key] + (suffix || ""));
+    input.oninput = () => {
+      settings[key] = Number(input.value);
+      out.textContent = settings[key] + (suffix || "");
+      applySettings();          // live, without rebuilding the panel under the finger
+    };
+    input.onchange = () => save();
+    wrap.appendChild(input);
+    wrap.appendChild(out);
+    return wrap;
+  };
+
+  const colour = (key, fallback) => {
+    const input = el("input");
+    input.type = "color";
+    input.value = settings[key] || fallback;
+    input.oninput = () => { settings[key] = input.value; applySettings(); };
+    input.onchange = () => save();
+    return input;
+  };
+
+  if (setSection === "colour") {
+    addRow("Preset", choices(Object.keys(PRESETS), null,
+      (v) => v[0].toUpperCase() + v.slice(1),
+      (v) => { Object.assign(settings, PRESETS[v]); settings.accent = ""; }));
+
+    addRow("Phosphor", colour("fg", "#3cff88"));
+    addRow("Background", colour("bg", "#0a1a0f"));
+
+    const acc = el("div", "choices");
+    acc.appendChild(colour("accent", settings.accent || settings.fg));
+    const same = el("button", "btn", "MATCH");
+    same.setAttribute("aria-pressed", String(!settings.accent));
+    same.onclick = () => { settings.accent = ""; save(); buildSettings(); };
+    acc.appendChild(same);
+    addRow("Selection", acc);
+
+    addRow("Glow", slider("glow", 0, 20, 1, "px"));
+    addRow("Scanlines", slider("scan", 0, 60, 1, "%"));
+    addRow("Scanline gap", slider("scanGap", 2, 8, 1, "px"));
+    addRow("Vignette", slider("vignette", 0, 100, 5, "%"));
+  }
+
+  if (setSection === "layout") {
+    addRow("Text size", choices([0, 1, 2, 3, 4, 5, 6], settings.size,
+      (v) => ["XXS", "XS", "S", "M", "L", "XL", "XXL"][v], (v) => { settings.size = v; }));
+
+    addRow("Font", choices(Object.keys(FONTS), settings.font,
+      (v) => v[0].toUpperCase() + v.slice(1), (v) => { settings.font = v; }));
+
+    addRow("Row spacing", choices([0, 1, 2, 3, 4], settings.density,
+      (v) => ["TIGHT", "SNUG", "NORMAL", "AIRY", "WIDE"][v], (v) => { settings.density = v; }));
+
+    addRow("Detail panel", choices(["on", "off"], settings.cards,
+      (v) => v.toUpperCase(), (v) => { settings.cards = v; }));
+
+    addRow("Panel width", slider("split", 20, 60, 1, "%"));
+    addRow("Corner radius", slider("radius", 0, 32, 1, "px"));
+    addRow("Tab brackets", choices([true, false], settings.brackets,
+      (v) => (v ? "ON" : "OFF"), (v) => { settings.brackets = v; }));
+  }
+
+  if (setSection === "screen") {
+    addRow("Casing", choices(["on", "off"], settings.bezel, (v) => v.toUpperCase(), (v) => { settings.bezel = v; }));
+    addRow("Boot sequence", choices(["on", "off"], settings.boot, (v) => v.toUpperCase(), (v) => { settings.boot = v; }));
+    addRow("Sound", choices(["on", "off"], settings.sound, (v) => v.toUpperCase(), (v) => {
+      settings.sound = v;
+      if (v === "off") stopHum(); else startHum();
+    }));
+    addRow("Updates / sec", choices([5, 10, 15, 20, 30], settings.rate, String, (v) => { settings.rate = v; }));
+    const replay = el("button", "btn", "REPLAY BOOT");
+    replay.onclick = () => { document.getElementById("settings").hidden = true; runBoot(); };
+    addRow("", replay);
+  }
+
+  if (setSection === "tabs") {
+    host.appendChild(el("p", "hint", "Which tabs appear, and in what order."));
+
+    for (let i = 0; i < settings.tabs.length; i++) {
+      const key = settings.tabs[i];
+      const r = el("div", "orderrow");
+      r.appendChild(el("span", "name", TAB_LABELS[key]));
+
+      const up = el("button", "btn", "▲");
+      up.disabled = i === 0;
+      up.onclick = () => {
+        [settings.tabs[i - 1], settings.tabs[i]] = [settings.tabs[i], settings.tabs[i - 1]];
+        save(); buildSettings();
+      };
+
+      const down = el("button", "btn", "▼");
+      down.disabled = i === settings.tabs.length - 1;
+      down.onclick = () => {
+        [settings.tabs[i + 1], settings.tabs[i]] = [settings.tabs[i], settings.tabs[i + 1]];
+        save(); buildSettings();
+      };
+
+      const off = el("button", "btn", "HIDE");
+      off.disabled = settings.tabs.length === 1;
+      off.onclick = () => {
+        settings.tabs = settings.tabs.filter((t) => t !== key);
+        save(); buildSettings();
+      };
+
+      r.append(up, down, off);
+      host.appendChild(r);
+    }
+
+    const hidden = ALL_TABS.filter((t) => !settings.tabs.includes(t));
+    if (hidden.length) {
+      host.appendChild(el("h3", null, "Hidden"));
+      for (const key of hidden) {
+        const r = el("div", "orderrow");
+        r.appendChild(el("span", "name", TAB_LABELS[key]));
+        const on = el("button", "btn", "SHOW");
+        on.onclick = () => { settings.tabs.push(key); save(); buildSettings(); };
+        r.appendChild(on);
+        host.appendChild(r);
+      }
+    }
+  }
+}
+
+document.getElementById("gear").onclick = () => {
+  buildSetNav();
+  buildSettings();
+  document.getElementById("settings").hidden = false;
+};
+document.getElementById("closesettings").onclick = () => { document.getElementById("settings").hidden = true; };
+document.getElementById("settings").onclick = (e) => {
+  if (e.target.id === "settings") e.currentTarget.hidden = true;
+};
+
+document.getElementById("resetsettings").onclick = () => {
+  settings = Object.assign({}, DEFAULTS);
+  settings.tabs = ALL_TABS.slice();
+  save();
+  buildSettings();
+  setPage(settings.tabs[0]);
+};
+
+// A profile is just the settings object as JSON, so it can be carried between screens by hand.
+document.getElementById("exportsettings").onclick = async () => {
+  const text = JSON.stringify(settings);
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast("Profile copied to the clipboard.");
+  } catch (e) {
+    prompt("Copy this profile:", text);
+  }
+};
+
+document.getElementById("importsettings").onclick = () => {
+  const text = prompt("Paste a profile:");
+  if (!text) return;
+  try {
+    const incoming = JSON.parse(text);
+    if (!incoming || typeof incoming !== "object") throw new Error("not an object");
+    settings = Object.assign({}, DEFAULTS, incoming);
+    if (!Array.isArray(settings.tabs) || !settings.tabs.length) settings.tabs = ALL_TABS.slice();
+    save();
+    buildSettings();
+    setPage(settings.tabs[0]);
+  } catch (e) {
+    showToast("That wasn't a profile.");
+  }
+};
+
+function showToast(text) {
+  const host = document.getElementById("settingsbody");
+  const p = el("p", "hint", text);
+  host.prepend(p);
+  setTimeout(() => p.remove(), 2200);
 }
 
 // ── go ────────────────────────────────────────────────────────────────────
