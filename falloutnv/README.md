@@ -19,25 +19,50 @@ the first one in this repository that isn't a managed mod — see *Why this one 
 
 ## Status
 
-**The screen is finished and works. The plugin is written but has not been compiled or run in-game
-yet**, because the machine it was written on has no 32-bit C++ toolchain installed. Everything you
-need to build it is here and [`build.ps1`](build.ps1) checks for the missing pieces and names them.
-
-What that means in practice:
+**The screen is finished and works. The plugin compiles and installs. Neither has been run against
+a live game yet**, because xNVSE itself isn't installed here — `build.ps1` says so when it can't
+find `nvse_loader.exe`.
 
 | Part | State |
 | --- | --- |
 | The second-screen UI (`web/`) | Done, and verified end to end against the mock server. |
 | The mock backend (`tools/mockserver.py`) | Done. Run it and the whole UI is usable now. |
-| The plugin (`src/`) | Written against the xNVSE SDK's own structure definitions. **Never compiled.** |
+| The plugin (`src/`) | **Builds**: `AynDualScreen.dll`, 98.5 KB, i386, exporting both NVSE entry points. Never yet loaded by the game. |
+| Player, SPECIAL, skills, limbs, hardcore | Written and compiling. |
+| Inventory, including weapon mods | Written and compiling. |
+| Quests and objectives | Written and compiling. |
+| Load order (DATA → PLUGINS) | Written and compiling. |
 | Equip, use and drop | Written. Applied on the game thread through the game's own routines. |
 | Fast travel, radio, set active quest | **Not applied.** The buttons grey out regardless of the ini. |
 | Perks, notes, misc stats, active effects, map markers | Sent as empty arrays. Readers not written. |
+| Game assets (icons, the real Pip-Boy textures) | Not extracted yet. See *Assets* below. |
+
+"Compiles" is not "works". Every number above is read from a structure offset that xNVSE
+reverse-engineered, and until the game has actually loaded this DLL, the honest claim is that it
+builds and is laid out correctly — not that it reports the right health.
 
 Nothing in the snapshot is invented: a reader that doesn't exist yet sends an empty list, and the
 screen renders an empty tab, rather than showing a plausible lie about your character.
 
 ---
+
+## Assets
+
+Nothing is redistributed here. The screen is drawn in CSS: one phosphor colour, scanlines, a
+casing, and an anatomical limb figure. The sound is synthesised — a filtered noise burst for the
+click, two sines for the hum — rather than sampled. The boot text is written for this project
+rather than taken from the games.
+
+The **planned** next step is the same trick the Terraria mod already uses: read the real textures
+out of *your own installed copy* at runtime and serve them to *your own screen*, never committing
+an extracted file to this repository. That needs three pieces which aren't written yet:
+
+1. A **BSA reader** — the textures live inside `Fallout - Textures.bsa`.
+2. A **DXT decoder** — they're DDS, which no browser will display.
+3. A **PNG encoder** — the same job `Png.cs` does in the Terraria mod.
+
+Until then the drawn versions stand in, and they are meant to: a mod that ships Bethesda's artwork
+is a mod that can't be hosted anywhere.
 
 ## Why this one is a DLL
 

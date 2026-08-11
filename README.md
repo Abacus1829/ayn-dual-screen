@@ -23,7 +23,7 @@ from here:
 | **Stardew Valley** (SMAPI) | [`.zip`](https://github.com/Abacus1829/ayn-dual-screen/releases/latest/download/AynDualScreen-Stardew.zip) | [Nexus Mods](https://www.nexusmods.com/stardewvalley/mods/49903) | [`stardew/`](stardew) | 27301 |
 | **Terraria** (tModLoader) | [`.tmod`](https://github.com/Abacus1829/ayn-dual-screen/releases/latest/download/AynDualScreen-Terraria.tmod) | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3778092427) | [`terraria/`](terraria) | 27301 |
 | **Minecraft** (Forge 1.21.1) | [`.jar`](https://github.com/Abacus1829/ayn-dual-screen/releases/latest/download/AynDualScreen-Minecraft-mc1.21.1.jar) | — | [`minecraft/`](minecraft) | 27302 |
-| **Fallout: New Vegas** (xNVSE) | *not yet built* | — | [`falloutnv/`](falloutnv) | 27303 |
+| **Fallout: New Vegas** (xNVSE) | *build it yourself* | — | [`falloutnv/`](falloutnv) | 27303 |
 | The Android app *(optional)* | [`.apk`](https://github.com/Abacus1829/ayn-dual-screen/releases/latest/download/AynDualScreen-App.apk) | — | [`android/`](android) | — |
 
 Install steps for each are in the [release notes](https://github.com/Abacus1829/ayn-dual-screen/releases/latest).
@@ -36,8 +36,8 @@ Minecraft uses 27302 and New Vegas 27303 rather than all sharing 27301 deliberat
 to be installed on the same PC, and two mods fighting over one port fails in a way that looks like
 the app's fault.
 
-The **Fallout: New Vegas** mod is source-only for now — the second screen and its mock backend are
-finished and working, but the plugin itself has not been compiled yet. See
+The **Fallout: New Vegas** mod is source-only for now: it builds into a loadable plugin, but it has
+never been run against a live game, so there is no release worth linking. See
 [`falloutnv/README.md`](falloutnv/README.md) for exactly what is and isn't done.
 
 ---

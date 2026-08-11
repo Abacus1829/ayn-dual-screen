@@ -193,6 +193,7 @@ namespace
 		case kFormType_TESObjectARMO: return "apparel";
 		case kFormType_TESAmmo:       return "ammo";
 		case kFormType_AlchemyItem:   return "aid";
+		case kFormType_TESObjectIMOD: return "mods";   // weapon mods, as the app's MODS tab
 		case kFormType_BGSNote:       return "misc";
 		default:                      return "misc";
 		}
@@ -382,6 +383,57 @@ namespace
 	}
 }
 
+// ── the load order ──────────────────────────────────────────────────────────
+
+namespace
+{
+	/// The active plugins, in load order.
+	///
+	/// Worth having on its own -- but the real reason it is here is that when a modded item looks
+	/// wrong on the screen, the first question is always "which plugin added it", and this is the
+	/// page that answers it without leaving the game.
+	void WritePlugins(Json& j)
+	{
+		j.BeginArray("plugins");
+
+		DataHandler* data = DataHandler::Get();
+		if (!data)
+		{
+			j.EndArray();
+			return;
+		}
+
+		UInt32 count = data->modList.loadedModCount;
+		if (count > 0xFF)
+			count = 0xFF;                       // the array is fixed at 255; trust the bound, not the field
+
+		for (UInt32 i = 0; i < count; ++i)
+		{
+			ModInfo* mod = data->modList.loadedMods[i];
+			if (!mod || !mod->name[0])
+				continue;
+
+			// The load index is the position in this array, which is exactly what a load order is
+			// and what every other tool shows in the left-hand column.
+			char index[4];
+			std::snprintf(index, sizeof index, "%02X", i);
+
+			// Masters end in .esm. Reading the flag out of the header would be better, but the
+			// extension is what the game itself sorts on and what the user sees everywhere else.
+			size_t length = strnlen(mod->name, sizeof mod->name);
+			bool master = length > 4 && _stricmp(mod->name + length - 4, ".esm") == 0;
+
+			j.BeginObject()
+				.Str("index", index)
+				.Str("name", mod->name)
+				.Bool("master", master)
+				.EndObject();
+		}
+
+		j.EndArray();
+	}
+}
+
 // ── the snapshot ────────────────────────────────────────────────────────────
 
 namespace
@@ -534,7 +586,7 @@ namespace
 		ReadInventory(player, items, config.maxInventoryItems);
 
 		j.BeginObject("inventory");
-		for (const char* bucket : { "weapons", "apparel", "aid", "misc", "ammo" })
+		for (const char* bucket : { "weapons", "apparel", "aid", "mods", "misc", "ammo" })
 		{
 			j.BeginArray(bucket);
 			for (const ItemRow& item : items)
@@ -561,6 +613,7 @@ namespace
 
 		WriteQuests(j, player);
 		WriteLocation(j, player);
+		WritePlugins(j);
 
 		// Notes, stats, perks, effects and radio are stubbed until their readers land; the screen
 		// already renders an empty tab correctly, so shipping them empty beats shipping fiction.
