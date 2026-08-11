@@ -99,7 +99,9 @@ html, body {
   background-image: var(--tex-scanlines);
   background-repeat: repeat;
   background-size: auto calc(var(--scan-gap) * 2);
-  opacity: calc(var(--scan-opacity) * 2.6);
+  /* Was 2.6x, which stacked on top of the tile's own darkness and turned the whole panel to
+     mud. The slider value is the intended darkness; the texture should not multiply it. */
+  opacity: var(--scan-opacity);
   mix-blend-mode: multiply;
 }
 
@@ -108,12 +110,14 @@ html, body {
 /* The screen surface itself, from the device's own background map. Tinted by the phosphor colour
    underneath rather than replacing it, so a custom colour scheme still wins -- the texture
    contributes grain and unevenness, not hue. */
-:root[data-device-textures="on"] #screen {
-  background-image: var(--tex-screen);
-  background-size: 12rem 12rem;
-  background-repeat: repeat;
-  background-blend-mode: overlay;
-}
+/* NO screen-surface texture.
+ *
+ * greenscreen.dds looked like it would be a flat background map from the name. It is not -- it is
+ * a pre-rendered picture of an entire Pip-Boy screen, Vault Boy and tab strip included. Tiling it
+ * behind the UI wallpapered the panel with dozens of little Pip-Boy screenshots.
+ *
+ * Left here as a comment rather than deleted quietly, because the name is a trap and the next
+ * person to read this file will otherwise reach for it too. */
 
 /* Hidden unless the device textures actually loaded, so it never occupies a row in the flex
    column on a page that has no glare to draw. */

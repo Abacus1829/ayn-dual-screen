@@ -1,0 +1,150 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Ayn Dual Screen — texture viewer</title>
+
+<!--
+  A dev tool for looking at what the mod can actually serve.
+
+  It renders textures live out of the RUNNING game, through the mod's own /asset route. Nothing is
+  extracted to disk and nothing is copied anywhere: each tile below is an <img> pointed at
+  http://localhost:27303/asset/..., which the mod decodes out of your installed archives on demand.
+  Close the game and this page goes blank, which is exactly the intent.
+
+  Open it straight off disk - file:// is fine, the mod sends Access-Control-Allow-Origin: *.
+-->
+
+<style>
+  :root { --fg:#3cff88; --bg:#0a1a0f; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1rem 1.2rem;
+    background: #06100a; color: var(--fg);
+    font: 14px/1.4 Consolas, "DejaVu Sans Mono", monospace;
+  }
+  h1 { font-size: 1.1rem; font-weight: normal; letter-spacing: .18em; margin: 0 0 .2rem; }
+  .hint { color: #2aa85c; margin: 0 0 .9rem; }
+  #bar { display: flex; gap: .5rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+  input, button {
+    background: #0a1a0f; color: var(--fg); border: 1px solid #2aa85c;
+    font: inherit; padding: .25rem .6rem;
+  }
+  input { min-width: 26rem; flex: 1; }
+  button { cursor: pointer; }
+  button:hover { background: #12301c; }
+  #status { color: #2aa85c; }
+
+  #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: .8rem; }
+  figure { margin: 0; border: 1px solid #1c5c34; padding: .4rem; background: #081409; }
+  /* Chequerboard, so transparent regions are obvious rather than reading as black. */
+  .shot {
+    display: flex; align-items: center; justify-content: center;
+    height: 150px; overflow: hidden;
+    background-image:
+      linear-gradient(45deg, #101c14 25%, transparent 25%, transparent 75%, #101c14 75%),
+      linear-gradient(45deg, #101c14 25%, transparent 25%, transparent 75%, #101c14 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 8px 8px;
+  }
+  .shot img { max-width: 100%; max-height: 100%; object-fit: contain; image-rendering: pixelated; }
+  figcaption { font-size: 11px; color: #2aa85c; word-break: break-all; margin-top: .3rem; }
+  figure.dead { opacity: .3; }
+  figure.dead figcaption::after { content: " — 404"; color: #ff5a3c; }
+</style>
+
+<h1>TEXTURE VIEWER</h1>
+<p class="hint">
+  Served live from the running game via the mod's <code>/asset</code> route. Nothing is written to
+  disk. If the tiles are empty, the game is not running or icons are disabled in the ini.
+</p>
+
+<div id="bar">
+  <input id="path" placeholder="add a path, e.g. interface/icons/pipboyimages/weapons/weapons_10mm_pistol.dds">
+  <button id="add">ADD</button>
+  <button id="reload">RELOAD ALL</button>
+  <span id="status"></span>
+</div>
+
+<div id="grid"></div>
+
+<script>
+const HOST = "http://localhost:27303";
+
+// The device's own textures, plus a sample of the Pip-Boy image set. These are the ones worth
+// eyeballing when deciding what the UI should actually use.
+const PATHS = [
+  "pipboy3000/pipboy.dds",
+  "pipboy3000/pipboyscanlines.dds",
+  "pipboy3000/screenglare.dds",
+  "pipboy3000/greenscreen.dds",
+  "pipboy3000/screen.dds",
+  "pipboy3000/screen_n.dds",
+  "pipboy3000/pipboydistorteffectmap.dds",
+  "pipboy3000/pipboybtnglow01.dds",
+  "pipboy3000/pipboyarm01.dds",
+  "pipboy3000/pipboyglove01.dds",
+
+  "interface/icons/pipboyimages/s.p.e.c.i.a.l/special_strength.dds",
+  "interface/icons/pipboyimages/s.p.e.c.i.a.l/special_luck.dds",
+  "interface/icons/pipboyimages/karma icons/karma_good.dds",
+  "interface/icons/pipboyimages/karma icons/karma_neutral.dds",
+
+  "interface/icons/pipboyimages/weapons/weapons_10mm_pistol.dds",
+  "interface/icons/pipboyimages/weapons/weapons_varmint_rifle.dds",
+  "interface/icons/pipboyimages/apparel/apparel_bennys_suit.dds",
+
+  "interface/icons/stats/special_strength.dds",
+  "interface/icons/stats/skills_guns.dds",
+
+  // Candidates for the animated status figure. These are Fallout 3 / TTW asset names; on a plain
+  // New Vegas install they are expected to 404, which is the point of listing them.
+  "interface/icons/stats/pc_body.dds",
+  "interface/icons/stats/pc_head_good.dds",
+  "interface/icons/stats/pc_larm_good.dds",
+  "interface/icons/stats/pc_lleg_good.dds",
+];
+
+const grid = document.getElementById("grid");
+const status = document.getElementById("status");
+let alive = 0, dead = 0;
+
+function tile(path) {
+  const fig = document.createElement("figure");
+  const shot = document.createElement("div");
+  shot.className = "shot";
+
+  const img = document.createElement("img");
+  img.src = HOST + "/asset/" + path.replace(/\.dds$/i, ".png").split("/").map(encodeURIComponent).join("/");
+  img.onload = () => {
+    alive++;
+    cap.textContent = path + `  (${img.naturalWidth}x${img.naturalHeight})`;
+    tally();
+  };
+  img.onerror = () => { dead++; fig.classList.add("dead"); tally(); };
+
+  const cap = document.createElement("figcaption");
+  cap.textContent = path;
+
+  shot.appendChild(img);
+  fig.append(shot, cap);
+  grid.appendChild(fig);
+}
+
+function tally() { status.textContent = `${alive} loaded, ${dead} missing`; }
+
+function render(list) {
+  grid.textContent = "";
+  alive = dead = 0;
+  list.forEach(tile);
+}
+
+document.getElementById("add").onclick = () => {
+  const v = document.getElementById("path").value.trim();
+  if (v) { PATHS.push(v); tile(v); }
+};
+document.getElementById("path").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") document.getElementById("add").click();
+});
+document.getElementById("reload").onclick = () => render(PATHS);
+
+render(PATHS);
+</script>

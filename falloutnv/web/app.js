@@ -54,6 +54,9 @@ const DEFAULTS = {
   density: 2,          // index into DENSITIES
   brackets: true,
   bezel: "off",
+  // The device's own textures laid over the screen. OFF by default: they are a material for a 3D
+  // model, and flattened onto a UI they muddy the text badly. Kept as an option, not a default.
+  deviceTex: "off",
   sound: "on",
   boot: "on",
   cards: "on",
@@ -267,10 +270,15 @@ const DEVICE_TEXTURES = {
   "--tex-casing":    "pipboy3000/pipboy.dds",
   "--tex-scanlines": "pipboy3000/pipboyscanlines.dds",
   "--tex-glare":     "pipboy3000/screenglare.dds",
-  "--tex-screen":    "pipboy3000/greenscreen.dds",
+  // Deliberately NOT greenscreen.dds. Despite the name it is a picture of a whole Pip-Boy screen,
+  // not a background map, and tiling it wallpapers the panel with little screenshots.
 };
 
 function loadDeviceTextures() {
+  if (settings.deviceTex !== "on") {
+    document.documentElement.dataset.deviceTextures = "off";
+    return;
+  }
   for (const [variable, path] of Object.entries(DEVICE_TEXTURES)) {
     const url = "asset/" + path.replace(/\.dds$/i, ".png");
     const probe = new Image();
@@ -505,6 +513,16 @@ function pipsFor(value, ceiling) {
 
 function renderItemCard(s, item) {
   const card = document.getElementById("itemcard");
+
+  // Rebuild only when the card's contents actually change. It used to be wiped and rebuilt on
+  // every poll -- ten times a second -- which recreated the <img> each frame, so the icon
+  // re-fetched and the card resized under the pointer. That was the shake.
+  const key = item
+    ? [item.id, item.count, item.equipped, item.health, item.icon].join("|")
+    : "none";
+  if (card.dataset.key === key) return;
+  card.dataset.key = key;
+
   card.textContent = "";
   if (!item) { card.appendChild(el("p", "hint", "Select an item.")); return; }
 
@@ -541,8 +559,19 @@ function renderItemCard(s, item) {
 
 function renderInvFoot(s, item) {
   const foot = document.getElementById("invfoot");
-  foot.textContent = "";
   const perms = s.perms || {};
+
+  // Same reasoning as the card: rebuilding this every poll threw away the DROP button's armed
+  // state mid-confirmation, so "SURE?" could reset itself before you could tap it.
+  const key = [
+    item ? item.id : "none", item ? item.equipped : "", sub.inv,
+    perms.equip, perms.use, perms.drop,
+    ((s.inventory || {})[sub.inv] || []).length,
+  ].join("|");
+  if (foot.dataset.key === key) return;
+  foot.dataset.key = key;
+
+  foot.textContent = "";
 
   const add = (label, allowed, why, fn, cls) => {
     const b = el("button", "btn" + (cls ? " " + cls : ""), label);
@@ -1202,6 +1231,11 @@ function buildSettings() {
 
   if (setSection === "screen") {
     addRow("Casing", choices(["on", "off"], settings.bezel, (v) => v.toUpperCase(), (v) => { settings.bezel = v; }));
+    addRow("Device textures", choices(["on", "off"], settings.deviceTex, (v) => v.toUpperCase(), (v) => {
+      settings.deviceTex = v;
+      if (v === "on") loadDeviceTextures();
+      else document.documentElement.dataset.deviceTextures = "off";
+    }));
     addRow("Boot sequence", choices(["on", "off"], settings.boot, (v) => v.toUpperCase(), (v) => { settings.boot = v; }));
     addRow("Sound", choices(["on", "off"], settings.sound, (v) => v.toUpperCase(), (v) => {
       settings.sound = v;
