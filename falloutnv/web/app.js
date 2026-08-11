@@ -274,6 +274,82 @@ const DEVICE_TEXTURES = {
   // not a background map, and tiling it wallpapers the panel with little screenshots.
 };
 
+// ── the status figure ─────────────────────────────────────────────────────
+//
+// The game builds this out of one texture per limb, with a "_broken" variant swapped in when a
+// limb is crippled. Same idea here: the layers are stacked absolutely, and the src flips between
+// the two variants as condition changes.
+//
+// The layout is hand-placed because these are UI sprites the game positions itself; the numbers
+// below are percentages of the figure box, chosen so the pieces meet at the joints.
+
+const FIGURE_LAYERS = [
+  // key        file          left    top     width   z
+  ["torso",    "torso",       50,     44,     34,     2],
+  ["head",     "head",        50,     14,     26,     3],
+  ["rightArm", "right_arm",   26,     42,     26,     1],
+  ["leftArm",  "left_arm",    74,     42,     26,     1],
+  ["rightLeg", "right_leg",   40,     76,     22,     1],
+  ["leftLeg",  "left_leg",    60,     76,     22,     1],
+];
+
+let figureReady = false;
+
+function buildFigure() {
+  const host = document.getElementById("figurelayers");
+  if (host.childElementCount) return;
+
+  for (const [key, file, left, top, width, z] of FIGURE_LAYERS) {
+    const img = el("img", "limb-layer");
+    img.dataset.limb = key;
+    img.dataset.file = file;
+    img.alt = "";
+    img.style.left = left + "%";
+    img.style.top = top + "%";
+    img.style.width = width + "%";
+    img.style.zIndex = String(z);
+    host.appendChild(img);
+  }
+
+  // If even the torso can't be fetched the mod isn't serving assets, so the drawn SVG stays and
+  // this whole layer is left hidden.
+  const probe = new Image();
+  probe.onload = () => {
+    figureReady = true;
+    host.hidden = false;
+    document.getElementById("doll").hidden = true;
+    if (state) renderStat(state);
+  };
+  probe.onerror = () => { figureReady = false; };
+  probe.src = statsAsset("torso");
+}
+
+/** textures\interface\stats\<file>.dds -- the mod prepends "textures\" itself. */
+function statsAsset(file) {
+  return "asset/interface/stats/" + file + ".png";
+}
+
+/** Point each layer at its good or broken variant, following the live condition values. */
+function updateFigure(condition) {
+  if (!figureReady) return;
+
+  for (const img of document.querySelectorAll("#figurelayers .limb-layer")) {
+    const value = condition[img.dataset.limb];
+    const broken = value != null && value <= 0;
+    const wanted = statsAsset(img.dataset.file + (broken ? "_broken" : ""));
+
+    // Only touch src when it actually changes, or the browser re-decodes every frame.
+    if (img.dataset.current !== wanted) {
+      img.dataset.current = wanted;
+      img.src = wanted;
+    }
+
+    // Below a quarter condition the game tints the limb; mirror that with a filter so a hurt
+    // limb reads at a glance without needing the bar.
+    img.classList.toggle("hurt", value != null && value <= 0.25 && value > 0);
+  }
+}
+
 function loadDeviceTextures() {
   if (settings.deviceTex !== "on") {
     document.documentElement.dataset.deviceTextures = "off";
@@ -354,6 +430,9 @@ function renderStat(s) {
 
   if (sub.stat === "status") {
     const cond = p.condition || {};
+
+    buildFigure();
+    updateFigure(cond);
 
     for (const [key] of LIMBS) {
       for (const node of document.querySelectorAll(`#doll [data-limb="${key}"]`)) {

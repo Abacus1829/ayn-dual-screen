@@ -54,13 +54,16 @@ int main(int argc, char** argv)
 		for (char& c : filter)
 			c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
 
+		// Prints every match. This used to stop at forty, which quietly hid whole folders and led
+		// to at least two wrong "it isn't in the archives" conclusions. If the output is long,
+		// redirect it -- a truncating search tool is worse than no search tool.
 		size_t shown = 0;
 		for (const std::string& path : bsa.AllPaths())
 		{
 			if (!filter.empty() && path.find(filter) == std::string::npos)
 				continue;
-			if (shown++ < 40)
-				std::printf("  %s\n", path.c_str());
+			std::printf("  %s\n", path.c_str());
+			++shown;
 		}
 		std::printf("%zu matching\n", shown);
 		return 0;

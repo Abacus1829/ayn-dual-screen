@@ -40,12 +40,16 @@
 
         <div class="sub" data-sub="status">
           <div id="figurewrap">
-            <!-- The limb readout. Condition bars sit ON the figure, the way the app does it,
-                 rather than in a list beside it.
+            <!-- The status figure.
+                 The game composites this from one texture per limb, with a separate "_broken"
+                 variant swapped in when a limb is crippled. Those layers are read out of the
+                 player's own install at runtime (textures\interface\stats\) and assembled here
+                 the same way -- so a crippled arm shows the game's own crippled arm.
 
-                 The figure is anatomical rather than Vault Boy: he is a character design, and
-                 redrawing him would put Bethesda's artwork in this repository. Everything else
-                 here follows the app's layout closely. -->
+                 Nothing is bundled. If the mod isn't serving assets, the drawn SVG underneath
+                 stays visible instead, which is why both exist. -->
+            <div id="figurelayers" hidden></div>
+
             <svg id="doll" viewBox="0 0 200 260" aria-label="Limb condition">
               <g id="limbs" fill="none" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round">
                 <ellipse data-limb="head"     cx="100" cy="30"  rx="21" ry="24"/>
