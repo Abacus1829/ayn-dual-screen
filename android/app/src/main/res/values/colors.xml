@@ -1,10 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bg">#FF14100E</color>
-    <color name="panel">#FF221B16</color>
-    <color name="edge">#FF3D3128</color>
-    <color name="text">#FFF2E6D5</color>
-    <color name="text_dim">#FFA3927C</color>
-    <color name="accent">#FFC8A066</color>
-    <color name="ic_launcher_background">#FF221B16</color>
+
+    <!-- App chrome: deliberately neutral, so neither game's palette owns the picker. -->
+    <color name="bg">#FF07080F</color>
+    <color name="card">#FF11141F</color>
+    <color name="card_hi">#FF181C2B</color>
+    <color name="panel">#FF171A26</color>
+    <color name="edge">#FF262C40</color>
+    <color name="edge_hi">#FF3A4260</color>
+    <color name="text">#FFEDF0F8</color>
+    <color name="text_dim">#FF8E97B4</color>
+    <color name="text_faint">#FF5C6480</color>
+    <color name="accent">#FF6EC1FF</color>
+
+    <!-- Status pill states. -->
+    <color name="state_idle">#FF5C6480</color>
+    <color name="state_busy">#FFFFC24D</color>
+    <color name="state_ok">#FF4BE08B</color>
+    <color name="state_bad">#FFFF6B6B</color>
+
+    <!-- Per-game accents, matching each mod's own second-screen page. -->
+    <color name="stardew_accent">#FFE0AE68</color>
+    <color name="stardew_bg">#FF241C15</color>
+    <color name="terraria_accent">#FF7C95FF</color>
+    <color name="terraria_bg">#FF161A47</color>
+    <color name="minecraft_accent">#FF7BC96F</color>
+    <color name="minecraft_bg">#FF0E1410</color>
+    <!-- Pip-Boy green phosphor on near-black, matching the plugin's own default screen colour -->
+    <color name="fallout_accent">#FF3BF74B</color>
+    <color name="fallout_bg">#FF0A140C</color>
+
+    <color name="ic_launcher_background">#FF11141F</color>
+
 </resources>

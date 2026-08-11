@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "AynSecondScreen"
+rootProject.name = "AbacusDualScreenInterface"
 include(":app")

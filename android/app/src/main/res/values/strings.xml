@@ -1,29 +1,221 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Stardew Second Screen</string>
+    <string name="app_name">Abacus\'s Dual Screen Interface</string>
+    <string name="app_tagline">Second screen for the AYN Thor</string>
 
-    <string name="setup_title">Stardew Second Screen</string>
-    <string name="setup_intro">Enter the address of the PC running Stardew Valley with the Ayn Dual Screen mod. The mod prints this address in the SMAPI console when the game starts.</string>
+    <string name="mode_simple">Simple</string>
+    <string name="mode_advanced">Advanced</string>
 
+    <string name="simple_blurb">One tap: finds the PC on your network, works out which game it\'s running, and opens the second screen.</string>
+    <string name="advanced_blurb">Set the address by hand, choose the display, and control how the screen behaves.</string>
+
+    <string name="label_game">Game</string>
+    <string name="label_address">Address</string>
     <string name="label_host">PC address</string>
     <string name="hint_host">192.168.1.20</string>
     <string name="label_port">Port</string>
     <string name="label_display">Show on</string>
+    <string name="label_behaviour">Behaviour</string>
+    <string name="label_found">Found on your network</string>
+
+    <string name="game_stardew">Stardew Valley</string>
+    <string name="game_terraria">Terraria</string>
+
+    <string name="hint_stardew">Needs the Ayn Dual Screen SMAPI mod. Network access is on by default; if it was turned off, set \"AllowLanAccess\": true in its config.json.</string>
+    <string name="hint_terraria">Needs the Ayn Dual Screen tModLoader mod. Network access is on by default; if it was turned off, re-enable AllowLanAccess in its mod config.</string>
+    <string name="game_minecraft">Minecraft</string>
+    <string name="hint_minecraft">Needs the Ayn Dual Screen Forge mod for Minecraft 1.21.1. It uses port 27302 so it doesn\'t clash with the other two. Network access is on by default; if it was turned off, set allowLanAccess = true in config/ayndualscreen-client.toml.</string>
+
+    <string name="opt_reconnect">Reconnect automatically</string>
+    <string name="opt_reconnect_detail">Keep retrying when the game restarts. Off: drop straight back to the menu when the session ends.</string>
+    <string name="opt_remember_display">Remember this display</string>
+    <string name="opt_remember_display_detail">Reopen on the same panel next time without asking.</string>
+    <string name="opt_keep_awake">Never sleep while open</string>
+    <string name="opt_keep_awake_detail">Hold the screen on. Turning this off lets the panel dim normally.</string>
 
     <string name="action_open">Open second screen</string>
-    <string name="action_test">Test connection</string>
+    <string name="action_connect">Find &amp; connect</string>
+    <string name="action_test">Test</string>
+    <string name="action_find">Find my PC</string>
     <string name="action_retry">Retry</string>
     <string name="action_back">Change address</string>
 
+    <string name="status_idle">Ready.</string>
     <string name="status_testing">Checking…</string>
-    <string name="status_ok">Connected. The game is reachable.</string>
-    <string name="status_bad_code">Reached the PC, but it answered with code %1$d. Is the mod running?</string>
-    <string name="status_unreachable">Couldn\'t reach it: %1$s</string>
-    <string name="status_need_host">Enter the PC\'s address first.</string>
+    <string name="status_scanning">Scanning your network… %1$d%%</string>
+    <string name="status_scan_done">Found %1$d. Tap one to use it.</string>
+    <string name="status_scan_none">Nothing found on port %1$d. Check the game is running with LAN access on, and that a VPN isn\'t in the way.</string>
+    <string name="status_picked">Using %1$s.</string>
+    <string name="status_ok_in_game">Connected to %1$s — %2$s is loaded.</string>
+    <string name="status_ok_menu">Connected to %1$s, but it\'s at the main menu. Load a save and the screen will fill in.</string>
+    <string name="status_wrong_game">That address is running %1$s, not %2$s. Switch the game above, or check the address.</string>
+    <string name="status_no_mod">Something answered there, but it isn\'t one of the mods. %1$s</string>
+    <string name="status_refused">The PC is there, but nothing is listening on that port. %1$s is either not running, or the mod is still on localhost only — enable LAN access in the mod and restart the game.</string>
+    <string name="status_unknown_host">That address doesn\'t resolve. Try the PC\'s numeric IP from \"ipconfig\" instead of its name.</string>
+    <string name="status_timeout">No answer. The address may be on a different network, or Windows Firewall may be blocking the port — allow it for Private networks.</string>
+    <string name="status_unreachable">Couldn\'t reach it. %1$s</string>
+    <string name="status_localhost">\"localhost\" means this device, not your PC — that\'s why it fails here. The mod prints that address for use on the PC itself. Enter the PC\'s network address instead, from \"ipconfig\" (it looks like 192.168.x.x).</string>
+    <string name="status_need_host">Enter the PC\'s address first, or tap Find my PC.</string>
     <string name="status_bad_port">Port must be between 1 and 65535.</string>
+    <string name="status_opening">Opening %1$s…</string>
+    <string name="status_opening_at">Opening %1$s at %2$s…</string>
 
-    <string name="hint_lan">On the PC, set \"AllowLanAccess\": true in the mod\'s config.json and restart the game, or this phone won\'t be allowed to connect.</string>
+    <string name="found_in_game">%1$s · %2$s · %3$s</string>
+    <string name="found_menu">%1$s · %2$s · at the menu</string>
+    <string name="found_unknown">%1$s · answered, but not a mod</string>
 
-    <string name="error_title">Can\'t reach the game</string>
+    <string name="error_title">Can\'t reach %1$s</string>
+    <string name="error_retrying">Retrying… attempt %1$d</string>
     <string name="display_builtin">This screen</string>
+    <string name="screen_menu_title">Second screen</string>
+    <string name="action_quit_to_menu">Quit to menu</string>
+    <string name="action_reload">Reload page</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="session_ended">The game session closed — back to the menu.</string>
+    <string name="session_lost">Lost the session. Retrying… attempt %1$d</string>
+    <string name="session_gave_up">Couldn\'t get the session back — back to the menu.</string>
+    <string name="action_back_to_screen">Back to second screen</string>
+    <string name="wiki_failed">Couldn\'t load the wiki. It needs an internet connection.</string>
+    <string name="game_fallout">Fallout: New Vegas</string>
+    <string name="hint_fallout">Needs the Ayn Dual Screen xNVSE plugin, and the game started through nvse_loader.exe rather than FalloutNV.exe — launched directly, the plugin never loads. It uses port 27303. Network access is on by default; if it was turned off, set AllowLanAccess=1 in Data\\NVSE\\Plugins\\AynDualScreen.ini. Tale of Two Wastelands works with the same plugin.</string>
+    <string name="game_custom">Other address</string>
+    <string name="hint_custom">Any web page, opened full-screen with no browser chrome. Handy for a dashboard, a stream, or a wiki parked on the second display.</string>
+
+    <string name="label_connect_to">Connect to</string>
+    <string name="label_tools">Tools</string>
+    <string name="action_detect">Detect</string>
+    <string name="status_detecting">Looking for a game on your network…</string>
+    <string name="status_detected">Found %1$s. Selected it for you.</string>
+    <string name="status_detect_none">No game found. Pick one and enter its address.</string>
+    <string name="opt_autodetect">Detect the running game</string>
+    <string name="opt_autodetect_detail">On launch, check the saved address and switch to whatever is actually running.</string>
+
+    <string name="tool_second_screen">Second Screen</string>
+    <string name="tool_notes">Notes</string>
+    <string name="tool_volume">Volume</string>
+    <string name="tool_brightness">Brightness</string>
+    <string name="tool_appearance">Appearance</string>
+    <string name="tool_keyboard">Keyboard</string>
+    <string name="tool_macros">Macros</string>
+    <string name="tool_mirror">Mirror</string>
+    <string name="blocked_needs_agent">Needs a companion program on the PC — not built yet.</string>
+    <string name="blocked_toast">%1$s: %2$s</string>
+
+    <string name="notes_title">Notes</string>
+    <string name="notes_hint">Anything worth keeping to hand: seed numbers, boss order, a shopping list.</string>
+    <string name="notes_saved">Saved</string>
+
+    <string name="controls_title">Quick controls</string>
+    <string name="controls_volume">Volume</string>
+    <string name="controls_brightness">Brightness</string>
+    <string name="vol_media">Media</string>
+    <string name="vol_ring">Ring</string>
+    <string name="vol_alarm">Alarm</string>
+    <string name="vol_notification">Notification</string>
+    <string name="bright_app">This app</string>
+    <string name="bright_app_detail">Applies while the app is open, and needs no permission.</string>
+    <string name="bright_system">System</string>
+    <string name="bright_system_detail">Changes device brightness for everything. Needs the Modify System Settings permission.</string>
+    <string name="bright_grant">Grant permission</string>
+    <string name="bright_no_per_display">Android has no public way to set two panels separately, so this moves both.</string>
+
+    <string name="appearance_title">Appearance</string>
+    <string name="appearance_accent">Accent colour</string>
+    <string name="appearance_background">Background image</string>
+    <string name="appearance_pick">Choose image</string>
+    <string name="appearance_clear">Remove</string>
+    <string name="appearance_dim">Background dim</string>
+    <string name="appearance_font">Font</string>
+    <string name="appearance_size">Text size</string>
+    <string name="appearance_corners">Corner rounding</string>
+    <string name="appearance_reset">Reset appearance</string>
+    <string name="appearance_preview">Preview</string>
+    <string name="appearance_preview_sub">Every change lands here as you make it</string>
+    <string name="appearance_presets">Presets</string>
+    <string name="appearance_presets_detail">A whole look in one tap. Everything below still works afterwards.</string>
+    <string name="appearance_mix">Mix your own</string>
+    <string name="appearance_opacity">Card solidity</string>
+    <string name="appearance_layout">Home layout</string>
+    <string name="appearance_columns">Tools per row</string>
+    <string name="appearance_icons">Icon style</string>
+    <string name="appearance_visible">Tools shown</string>
+    <string name="appearance_visible_detail">Hide the ones you never use. They stay off the home grid until you turn them back on.</string>
+    <string name="bg_none">Solid</string>
+    <string name="bg_gradient">Glow</string>
+    <string name="bg_image">Image</string>
+    <string name="action_done">Done</string>
+    <string name="hide_tool">Hide it</string>
+    <string name="hide_tool_message">Take this off the home grid? You can bring it back under Appearance → Tools shown.</string>
+
+    <string name="keyboard_title">Thor Keyboard</string>
+    <string name="keyboard_setup">Setup</string>
+    <string name="keyboard_state_off">Not enabled yet. Turn it on in the system keyboard list, then come back and switch to it.</string>
+    <string name="keyboard_state_enabled">Enabled, but not the one in use. Tap Switch to it and pick Thor Keyboard.</string>
+    <string name="keyboard_state_active">Active. It\'s the keyboard everything on this device now types with.</string>
+    <string name="keyboard_enable">Open keyboard settings</string>
+    <string name="keyboard_switch">Switch to it</string>
+    <string name="keyboard_shape">Shape</string>
+    <string name="keyboard_split">Split</string>
+    <string name="keyboard_full">Full width</string>
+    <string name="keyboard_shape_detail">Split pushes the keys out to the edges, under your thumbs, the way a handheld wants them. Full width uses the whole row.</string>
+    <string name="keyboard_size">Key height</string>
+    <string name="keyboard_haptics">Buzz on each key</string>
+    <string name="keyboard_try">Try it</string>
+    <string name="keyboard_try_hint">Type here with the keys below</string>
+
+    <string name="mirror_title">Screen mirror</string>
+    <string name="mirror_blurb">Copies this device\'s main screen onto its second panel, and keeps going while you use other apps. It shows the Thor\'s own screen — not the PC\'s.</string>
+    <string name="mirror_onto">Mirror onto</string>
+    <string name="mirror_start">Start mirroring</string>
+    <string name="mirror_stop">Stop</string>
+    <string name="mirror_grant">Allow drawing over other apps</string>
+    <string name="mirror_on">Mirroring. The second panel is showing this screen; stop it here or from the notification.</string>
+    <string name="mirror_off">Ready. Android will ask you to confirm screen capture before it starts.</string>
+    <string name="mirror_denied">Screen capture was declined, so nothing is being mirrored.</string>
+    <string name="mirror_no_display">No second display found. Plug one in, or open the Thor\'s second panel, then come back.</string>
+    <string name="mirror_need_overlay">Needs permission to draw over other apps — that\'s what puts the picture on the second panel while you\'re in a game.</string>
+    <string name="mirror_channel">Screen mirror</string>
+    <string name="mirror_running">Mirroring to the second screen</string>
+    <string name="mirror_running_detail">Tap Stop to end it.</string>
+
+    <string name="macros_title">Macro pad</string>
+    <string name="macros_blurb">Floating buttons that stay on screen while you use other apps. Text and key macros go through the Thor Keyboard, so they land wherever you\'re typing — they can\'t reach a game\'s own controls.</string>
+    <string name="macros_profile">Profile</string>
+    <string name="macros_profile_hint">Name this set</string>
+    <string name="macros_new_profile">New profile</string>
+    <string name="macros_delete_profile">Delete profile</string>
+    <string name="macros_delete_confirm">Delete \"%1$s\" and every button in it?</string>
+    <string name="macros_last_profile">This is the only profile left. Make another one first.</string>
+    <string name="macros_untitled">Untitled</string>
+    <string name="macros_buttons">Buttons</string>
+    <string name="macros_empty">No buttons in this profile yet.</string>
+    <string name="macros_add">Add a button</string>
+    <string name="macros_edit">Edit button</string>
+    <string name="macros_save">Save</string>
+    <string name="macros_delete">Delete</string>
+    <string name="macros_label_hint">What it says on the button</string>
+    <string name="macros_payload_hint">What it does</string>
+    <string name="macros_size">Button size</string>
+    <string name="macros_kind_text_name">Type text</string>
+    <string name="macros_kind_key_name">Press a key</string>
+    <string name="macros_kind_app_name">Open an app</string>
+    <string name="macros_kind_tool_name">Open a tool</string>
+    <string name="macros_kind_text">Types: %1$s</string>
+    <string name="macros_kind_key">Presses: %1$s</string>
+    <string name="macros_kind_app">Opens app: %1$s</string>
+    <string name="macros_kind_tool">Opens: %1$s</string>
+    <string name="macros_show">Show the pad</string>
+    <string name="macros_hide">Hide the pad</string>
+    <string name="macros_move">Move buttons</string>
+    <string name="macros_move_done">Done moving</string>
+    <string name="macros_state_down">Hidden. Show it and the buttons stay put while you use anything else.</string>
+    <string name="macros_state_up">On screen. Tap a button to fire it.</string>
+    <string name="macros_state_moving">Moving. Drag the buttons where you want them — they save as you drop them.</string>
+    <string name="macros_need_overlay">Needs permission to draw over other apps, which is what keeps the buttons on screen outside this app.</string>
+    <string name="macros_needs_keyboard">Switch to the Thor Keyboard first — that\'s what puts the text in.</string>
+    <string name="macro_no_app">Couldn\'t find an app with package %1$s.</string>
+    <string name="macro_channel">Macro pad</string>
+    <string name="macro_running">Macro pad on screen</string>
+    <string name="macro_running_detail">Tap Hide to put it away.</string>
+    <string name="macro_hide">Hide</string>
 </resources>

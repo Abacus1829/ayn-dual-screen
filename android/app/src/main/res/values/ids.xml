@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Remembers a TextView's original size so the font-scale setting can be re-applied
+         repeatedly without compounding. -->
+    <item name="tag_base_size" type="id" />
+</resources>

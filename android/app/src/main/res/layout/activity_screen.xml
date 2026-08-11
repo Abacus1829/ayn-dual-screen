@@ -10,6 +10,80 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <!--
+        Top-LEFT deliberately: the mod's own page puts its settings cog top-right, so this sits opposite
+        rather than on top of it. Low opacity so it doesn't compete with the game UI underneath.
+    -->
+    <ImageButton
+        android:id="@+id/menuButton"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
+        android:layout_gravity="top|start"
+        android:layout_margin="8dp"
+        android:alpha="0.45"
+        android:background="@drawable/bg_round"
+        android:contentDescription="@string/screen_menu_title"
+        android:padding="7dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_menu_dots" />
+
+    <LinearLayout
+        android:id="@+id/menuPanel"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#E6070810"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="18dp"
+            android:text="@string/screen_menu_title"
+            android:textColor="@color/text"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/backToScreenButton"
+            style="@style/Action"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:minWidth="240dp"
+            android:text="@string/action_back_to_screen"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/quitButton"
+            style="@style/Action"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="240dp"
+            android:text="@string/action_quit_to_menu" />
+
+        <Button
+            android:id="@+id/reloadButton"
+            style="@style/Action"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minWidth="240dp"
+            android:text="@string/action_reload" />
+
+        <Button
+            android:id="@+id/cancelButton"
+            style="@style/Action"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minWidth="240dp"
+            android:text="@string/action_cancel" />
+
+    </LinearLayout>
+
     <LinearLayout
         android:id="@+id/errorPanel"
         android:layout_width="match_parent"
@@ -21,9 +95,9 @@
         android:visibility="gone">
 
         <TextView
+            android:id="@+id/errorTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/error_title"
             android:textColor="@color/text"
             android:textSize="20sp"
             android:textStyle="bold" />
@@ -39,7 +113,7 @@
 
         <Button
             android:id="@+id/retryButton"
-            style="@style/Widget.SecondScreen.Button"
+            style="@style/Action"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
@@ -48,12 +122,26 @@
 
         <Button
             android:id="@+id/backButton"
-            style="@style/Widget.SecondScreen.Button"
+            style="@style/Action"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:minWidth="200dp"
             android:text="@string/action_back" />
+
+        <!--
+            An unambiguous way out while it is retrying. "Change address" also returns to the menu, but
+            it reads as a detour rather than an exit, so someone sitting through a retry that is never
+            going to succeed has nothing that plainly says stop.
+        -->
+        <Button
+            android:id="@+id/errorQuitButton"
+            style="@style/Action"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minWidth="200dp"
+            android:text="@string/action_quit_to_menu" />
 
     </LinearLayout>
 
