@@ -550,12 +550,86 @@ namespace
 				continue;
 
 			j.BeginObject()
+				// The ref's own form ID, which is what fast travel moves you to. The screen only
+				// ever echoes this back; the game thread looks it up again and checks it is
+				// really a map marker before going anywhere.
+				.Str("id", FormIdText(ref->refID))
 				.Str("name", name)
 				.Str("type", MarkerTypeName(marker->data->type))
 				.Num("x", ref->posX, 0)
 				.Num("y", ref->posY, 0)
 				.Bool("visited", visible)
 				.Bool("canFastTravel", canTravel)
+				.EndObject();
+
+			++written;
+		}
+
+		j.EndArray();
+	}
+}
+
+// ── the local map ───────────────────────────────────────────────────────────
+
+namespace
+{
+	/// What the current cell contains, as points the screen can sketch a floor plan from.
+	///
+	/// THIS IS NOT THE GAME'S LOCAL MAP. The real one is rendered by the engine from the cell's
+	/// geometry into a render target -- there is no texture to extract and no structure to read.
+	/// What this does instead is plot the things in the room that you actually navigate by: doors,
+	/// containers, and whoever is standing around. The shape they make is a rough footprint.
+	///
+	/// Same walk as the marker reader, which is already proven, and capped for the same reason.
+	void WriteLocalRefs(Json& j, PlayerCharacter* player, const Config& config)
+	{
+		j.BeginArray("localRefs");
+
+		TESObjectCELL* cell = player->parentCell;
+		if (!cell || !config.enableLocalMap)
+		{
+			j.EndArray();
+			return;
+		}
+
+		int written = 0;
+		for (auto iter = cell->objectList.Begin(); !iter.End(); ++iter)
+		{
+			if (written >= config.maxLocalRefs)
+				break;
+
+			TESObjectREFR* ref = iter.Get();
+			if (!ref || !ref->baseForm)
+				continue;
+
+			// Skip deleted refs; they are still in the list but not in the room. There is no
+			// IsDisabled() on TESForm in this SDK, so a disabled ref may still be plotted --
+			// which is a stray dot, not a crash.
+			if (ref->IsDeleted())
+				continue;
+
+			const char* kind = nullptr;
+			switch (ref->baseForm->typeID)
+			{
+			case kFormType_TESObjectDOOR: kind = "door"; break;
+			case kFormType_TESObjectCONT: kind = "container"; break;
+			case kFormType_Character:     kind = "actor"; break;
+			case kFormType_Creature:      kind = "actor"; break;
+			case kFormType_TESFurniture:  kind = "furniture"; break;
+			default: continue;
+			}
+
+			// The player is in this list too, and is already drawn as the arrow.
+			if (ref == static_cast<TESObjectREFR*>(player))
+				continue;
+
+			const char* name = ref->baseForm->GetTheName();
+
+			j.BeginObject()
+				.Str("kind", kind)
+				.Str("name", name ? name : "")
+				.Num("x", ref->posX, 0)
+				.Num("y", ref->posY, 0)
 				.EndObject();
 
 			++written;
@@ -805,6 +879,7 @@ namespace
 			.EndObject();
 
 		WriteMarkers(j, player, config);
+		WriteLocalRefs(j, player, config);
 
 		j.EndObject();
 	}
@@ -882,10 +957,12 @@ namespace
 			.Bool("equip", config.allowEquip)
 			.Bool("use", config.allowUse)
 			.Bool("drop", config.allowDrop)
-			// These three are gated by the config AND by whether the game-thread side exists
-			// yet. Both have to be true, so a config that permits something unimplemented still
-			// greys the button out instead of offering a button that does nothing.
-			.Bool("fastTravel", config.allowFastTravel && false)
+			// Fast travel is real now, so it follows the config -- but it also needs the console
+			// interface, since that is how it reaches the game. Without it the button greys out
+			// rather than pretending.
+			.Bool("fastTravel", config.allowFastTravel && g_runScriptLine != nullptr)
+			// Still unimplemented. Gated to false regardless of config, so the button greys out
+			// instead of offering something that does nothing.
 			.Bool("radio", config.allowRadio && false)
 			.Bool("setQuest", config.allowSetQuest && false)
 			.EndObject();
@@ -988,7 +1065,33 @@ void Snapshot::DrainCommands(const Config& config)
 				// a bare std::max( would be eaten by the macro.
 				player->RemoveItem(form, nullptr, (std::max)(1, cmd.count), 0, 0, nullptr, 0, 0, 1, 0);
 		}
-		// setQuest, fastTravel and radio are accepted and queued, but not applied yet.
+		else if (cmd.action == "fastTravel" && config.allowFastTravel && g_runScriptLine)
+		{
+			// The screen sends a form ID, and it is not trusted. Look it up, confirm it is a real
+			// reference that actually carries a map marker, and confirm the marker is one you have
+			// discovered and may travel to. Only then move. Anything else is ignored -- a screen
+			// on the LAN must not be able to teleport you into a wall by inventing an ID.
+			TESForm* form = LookupFormByID(ParseFormId(cmd.id));
+			TESObjectREFR* ref = form ? DYNAMIC_CAST(form, TESForm, TESObjectREFR) : nullptr;
+			if (!ref)
+				continue;
+
+			auto* marker = static_cast<ExtraMapMarker*>(ref->extraDataList.GetByType(kExtraData_MapMarker));
+			if (!marker || !marker->data)
+				continue;
+
+			UInt16 flags = marker->data->flags;
+			if (!(flags & ExtraMapMarker::kFlag_Visible) || !(flags & ExtraMapMarker::kFlag_CanTravel))
+				continue;
+
+			// Through the game's own console rather than moving the player by hand: fast travel
+			// has consequences -- time passes, companions follow, encounters roll -- and the
+			// engine owns all of that.
+			char line[64];
+			std::snprintf(line, sizeof line, "player.MoveTo %08X", ref->refID);
+			g_runScriptLine(line, nullptr);
+		}
+		// setQuest and radio are accepted and queued, but not applied yet.
 		//
 		// setQuest is deliberately NOT done by writing player->quest directly: the active quest
 		// has bookkeeping around it -- the objective list, the map target, the Pip-Boy's own

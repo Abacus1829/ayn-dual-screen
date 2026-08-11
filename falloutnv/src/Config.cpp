@@ -36,6 +36,9 @@ Config Config::Load(const std::string& path)
 
 	c.enableIcons = ReadBool("Assets", "EnableIcons", c.enableIcons, p);
 
+	c.enableLocalMap = ReadBool("Map", "EnableLocalMap", c.enableLocalMap, p);
+	c.maxLocalRefs = GetPrivateProfileIntA("Map", "MaxLocalRefs", c.maxLocalRefs, p);
+
 	char buf[MAX_PATH]{};
 	GetPrivateProfileStringA("Paths", "WebRootOverride", "", buf, sizeof buf, p);
 	c.webRootOverride = buf;
@@ -100,6 +103,13 @@ std::string Config::ToJson() const
 	intRow("MaxInventoryItems", maxInventoryItems, 20, 2000, "Max inventory items",
 		"Ceiling on inventory entries per snapshot.", false);
 
+	boolRow("EnableLocalMap", enableLocalMap, "Local map (approximate)",
+		"Sketches a floor plan indoors from the doors, containers and people in the room. It is "
+		"NOT the game's own local map, which the engine renders from cell geometry and cannot be "
+		"read. Off by default.", false);
+	intRow("MaxLocalRefs", maxLocalRefs, 20, 500, "Max local map points",
+		"Ceiling on how many things the local map sketch plots.", false);
+
 	out += "]}";
 	return out;
 }
@@ -124,9 +134,11 @@ bool Config::Set(const std::string& key, const std::string& value)
 	if (key == "AllowSetQuest")    { allowSetQuest = asBool(); return true; }
 	if (key == "AllowRadio")       { allowRadio = asBool(); return true; }
 	if (key == "EnableIcons")      { enableIcons = asBool(); return true; }
+	if (key == "EnableLocalMap")   { enableLocalMap = asBool(); return true; }
 
 	if (key == "UpdatesPerSecond")  return asInt(1, 30, updatesPerSecond);
 	if (key == "MaxMapMarkers")     return asInt(10, 1000, maxMapMarkers);
+	if (key == "MaxLocalRefs")      return asInt(20, 500, maxLocalRefs);
 	if (key == "MaxInventoryItems") return asInt(20, 2000, maxInventoryItems);
 
 	if (key == "Port")
@@ -179,6 +191,14 @@ void Config::WriteDefaults(const std::string& path) const
 		"MaxMapMarkers=%d\n"
 		"MaxInventoryItems=%d\n"
 		"\n"
+		"[Map]\n"
+		"; Sketch a local map indoors from the doors, containers, actors and furniture in the\n"
+		"; cell. This is NOT the game's own local map -- that one is rendered by the engine from\n"
+		"; the cell's geometry, and there is no texture to extract or structure to read. This is\n"
+		"; an approximation built from the things you navigate by. Off by default.\n"
+		"EnableLocalMap=%d\n"
+		"MaxLocalRefs=%d\n"
+		"\n"
 		"[Assets]\n"
 		"; Read item and perk icons out of the game's own texture archives and serve them to your\n"
 		"; screen. Nothing is copied or written anywhere -- the images are decoded in memory from\n"
@@ -191,7 +211,9 @@ void Config::WriteDefaults(const std::string& path) const
 		static_cast<unsigned>(port), allowLan ? 1 : 0, updatesPerSecond,
 		allowEquip ? 1 : 0, allowUse ? 1 : 0, allowSetQuest ? 1 : 0, allowRadio ? 1 : 0,
 		allowDrop ? 1 : 0, allowFastTravel ? 1 : 0,
-		maxMapMarkers, maxInventoryItems, enableIcons ? 1 : 0);
+		maxMapMarkers, maxInventoryItems,
+		enableLocalMap ? 1 : 0, maxLocalRefs,
+		enableIcons ? 1 : 0);
 
 	std::fclose(f);
 }

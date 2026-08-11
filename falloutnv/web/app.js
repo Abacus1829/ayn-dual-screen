@@ -982,6 +982,33 @@ function renderMap(s) {
   ctx.strokeRect(px(bounds.minX), py(bounds.maxY), bw * scale, bh * scale);
   ctx.globalAlpha = 1;
 
+  // The local sketch, drawn under the markers. Doors and containers are what you navigate by, so
+  // they carry a glyph; furniture is just dots, enough to imply the shape of the room.
+  const localRefs = m.localRefs || [];
+  if (mapMode === "local" && localRefs.length) {
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `${10 * dpr}px monospace`;
+
+    for (const ref of localRefs) {
+      const x = px(ref.x), y = py(ref.y);
+      if (x < 0 || y < 0 || x > w || y > h) continue;
+
+      if (ref.kind === "furniture") {
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = dim;
+        ctx.fillRect(x - 1.5 * dpr, y - 1.5 * dpr, 3 * dpr, 3 * dpr);
+        continue;
+      }
+
+      ctx.globalAlpha = ref.kind === "actor" ? 0.85 : 0.6;
+      ctx.fillStyle = fg;
+      ctx.fillText(ref.kind === "door" ? "▯" : ref.kind === "actor" ? "●" : "□", x, y);
+    }
+    ctx.restore();
+  }
+
   mapHit = [];
   ctx.font = `${12 * dpr}px monospace`;
   ctx.textAlign = "center";
@@ -1063,6 +1090,15 @@ function renderMap(s) {
     ctx.fillText(mapMode === "world"
       ? "No world map indoors — " + (m.cell || "interior")
       : (m.cell || "Interior"), w / 2, 18 * dpr);
+
+    // Say what this is. It is a sketch from the objects in the room, not the game's own local
+    // map, and it should never be mistaken for one.
+    ctx.font = `${10 * dpr}px monospace`;
+    ctx.globalAlpha = 0.65;
+    ctx.fillText(localRefs.length
+      ? "approximate — plotted from objects in the cell, not the game's local map"
+      : "no local map — enable it in the gear under MOD", w / 2, h - 10 * dpr);
+    ctx.globalAlpha = 1;
   }
 
   for (const b of document.querySelectorAll("[data-mapmode]")) {
@@ -1090,7 +1126,9 @@ function tryFastTravel(mk) {
 
   if (pendingTravel === mk.name) {
     pendingTravel = null;
-    act("fastTravel", { marker: mk.name });
+    // The mod re-checks this ID against the real marker before moving anywhere, so sending it is
+    // not the same as being trusted with it.
+    act("fastTravel", { id: mk.id, marker: mk.name });
     return;
   }
   pendingTravel = mk.name;
