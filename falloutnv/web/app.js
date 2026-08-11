@@ -19,6 +19,9 @@ const DEFAULTS = {
   scanlines: "on",
   vignette: "on",
   cards: "on",
+  bezel: "off",       // off by default: on a handheld the casing eats real estate
+  sound: "on",
+  boot: "on",
   autoQuestTab: true,
   tabs: ["stat", "inv", "data", "map", "radio"],
 };
@@ -48,6 +51,7 @@ function applySettings() {
   r.dataset.scanlines = settings.scanlines;
   r.dataset.vignette = settings.vignette;
   r.dataset.cards = settings.cards;
+  r.dataset.bezel = settings.bezel;
   r.style.setProperty("--ui", SIZES[settings.size] + "px");
 
   for (const b of document.querySelectorAll("#tabs .tab"))
@@ -98,8 +102,13 @@ function buildSubtabs() {
 
 document.getElementById("tabs").addEventListener("click", (e) => {
   const b = e.target.closest(".tab");
-  if (b) setPage(b.dataset.tab);
+  if (b) { click(); setPage(b.dataset.tab); }
 });
+
+// Every row and button gets the same tactile click, without each one asking for it.
+document.addEventListener("click", (e) => {
+  if (e.target.closest(".row, .btn, .subtab, .icon")) click(0.10, 0.03);
+}, true);
 
 // Number keys pick a tab; handy on a screen with a keyboard attached.
 addEventListener("keydown", (e) => {
@@ -812,6 +821,12 @@ function buildSettings() {
   addRow("Scanlines", choices(["on", "off"], settings.scanlines, (v) => v.toUpperCase(), (v) => { settings.scanlines = v; }));
   addRow("Vignette", choices(["on", "off"], settings.vignette, (v) => v.toUpperCase(), (v) => { settings.vignette = v; }));
   addRow("Detail panel", choices(["on", "off"], settings.cards, (v) => v.toUpperCase(), (v) => { settings.cards = v; }));
+  addRow("Casing", choices(["on", "off"], settings.bezel, (v) => v.toUpperCase(), (v) => { settings.bezel = v; }));
+  addRow("Sound", choices(["on", "off"], settings.sound, (v) => v.toUpperCase(), (v) => {
+    settings.sound = v;
+    if (v === "off") stopHum(); else startHum();
+  }));
+  addRow("Boot sequence", choices(["on", "off"], settings.boot, (v) => v.toUpperCase(), (v) => { settings.boot = v; }));
 
   const grid = el("div", "checkgrid");
   for (const [key, label] of Object.entries(TAB_LABELS)) {
@@ -849,10 +864,143 @@ document.getElementById("resetsettings").onclick = () => {
   setPage(settings.tabs[0]);
 };
 
+// ── sound ─────────────────────────────────────────────────────────────────
+//
+// Synthesised, not sampled. The Pip-Boy's clicks and hum are Bethesda's audio; these are a few
+// oscillators and a burst of noise, which costs nothing to ship and nothing to licence.
+//
+// Browsers refuse to start audio until the user has interacted with the page, so the context is
+// created lazily on the first tap and the hum starts then.
+
+let audio = null;
+let hum = null;
+
+function sound() {
+  if (settings.sound !== "on") return null;
+  if (!audio) {
+    try { audio = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch (e) { return null; }
+  }
+  if (audio.state === "suspended") audio.resume();
+  return audio;
+}
+
+/** A short filtered noise burst — the tactile click under a tab change. */
+function click(level = 0.18, duration = 0.045) {
+  const ctx = sound();
+  if (!ctx) return;
+
+  const frames = Math.floor(ctx.sampleRate * duration);
+  const buffer = ctx.createBuffer(1, frames, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < frames; i++) {
+    // Decaying noise: loud at the strike, gone almost immediately.
+    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / frames, 3);
+  }
+
+  const src = ctx.createBufferSource();
+  src.buffer = buffer;
+
+  const band = ctx.createBiquadFilter();
+  band.type = "bandpass";
+  band.frequency.value = 1600;
+  band.Q.value = 0.9;
+
+  const gain = ctx.createGain();
+  gain.gain.value = level;
+
+  src.connect(band).connect(gain).connect(ctx.destination);
+  src.start();
+}
+
+/** The valve hum that sits under everything while the screen is on. */
+function startHum() {
+  const ctx = sound();
+  if (!ctx || hum) return;
+
+  const osc = ctx.createOscillator();
+  osc.type = "sine";
+  osc.frequency.value = 60;
+
+  const harmonic = ctx.createOscillator();
+  harmonic.type = "sine";
+  harmonic.frequency.value = 120;
+
+  const gain = ctx.createGain();
+  gain.gain.value = 0.012;          // felt more than heard
+
+  osc.connect(gain);
+  harmonic.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  harmonic.start();
+
+  hum = { osc, harmonic, gain };
+}
+
+function stopHum() {
+  if (!hum) return;
+  try { hum.osc.stop(); hum.harmonic.stop(); } catch (e) {}
+  hum = null;
+}
+
+// Any tap anywhere is the interaction browsers wait for.
+addEventListener("pointerdown", () => { startHum(); }, { once: true });
+
+// ── boot sequence ─────────────────────────────────────────────────────────
+
+// Deliberately NOT the game's own terminal boot text, which is Bethesda's writing. This says the
+// same kind of thing in its own words, so nothing copyrighted ships in the page.
+const BOOT_LINES = [
+  "************ AYN DUAL SCREEN ************",
+  "",
+  "SECOND-SCREEN TERMINAL",
+  "UNIFIED DISPLAY LINK — BUILD 0.1",
+  "",
+  "INITIALISING SECOND SCREEN LINK...",
+  "SCANNING FOR HOST.....................",
+  "",
+  "LOADING STAT MODULE...............[ OK ]",
+  "LOADING INV MODULE................[ OK ]",
+  "LOADING DATA MODULE...............[ OK ]",
+  "LOADING MAP MODULE................[ OK ]",
+  "LOADING RADIO MODULE..............[ OK ]",
+  "",
+  "AYN DUAL SCREEN — READY",
+];
+
+function runBoot() {
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (settings.boot !== "on" || reduced) return Promise.resolve();
+
+  const host = document.getElementById("boot");
+  const log = document.getElementById("bootlog");
+  host.hidden = false;
+  log.textContent = "";
+
+  return new Promise((done) => {
+    let line = 0;
+    const next = () => {
+      if (line >= BOOT_LINES.length) {
+        setTimeout(() => {
+          host.classList.add("done");
+          setTimeout(() => { host.hidden = true; host.classList.remove("done"); done(); }, 500);
+        }, 260);
+        return;
+      }
+      log.textContent += BOOT_LINES[line++] + "\n";
+      if (BOOT_LINES[line - 1]) click(0.05, 0.02);
+      setTimeout(next, 55 + Math.random() * 45);
+    };
+    next();
+  });
+}
+
 // ── go ────────────────────────────────────────────────────────────────────
 
 applySettings();
 setPage(page);
+runBoot();
 poll();
 setInterval(updateDot, 500);
 setInterval(() => { if (page === "radio" && state) drawWave(!!(state.radio || []).find((r) => r.active)); }, 90);

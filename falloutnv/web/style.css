@@ -63,6 +63,118 @@ html, body {
     var(--bg-deep);
 }
 
+/* ── the bezel: the casing the screen sits in ────────────────────────────────
+   Off by default on small panels, because on a handheld every pixel it eats is
+   a pixel of inventory. Toggled from settings. */
+
+#bezel { display: none; }
+
+:root[data-bezel="on"] #crt {
+  padding: clamp(.6rem, 2.2vmin, 1.6rem) clamp(1.6rem, 5vmin, 4.5rem);
+  background:
+    /* brushed metal: fine vertical grain over a warm steel gradient */
+    repeating-linear-gradient(90deg,
+      rgba(255,255,255,.030) 0px, rgba(255,255,255,.030) 1px,
+      transparent 1px, transparent 3px),
+    linear-gradient(160deg, #3b3f39 0%, #23261f 38%, #191b16 62%, #2c2f28 100%);
+}
+
+:root[data-bezel="on"] #screen {
+  border: 2px solid #0c0f0a;
+  border-radius: 1.1rem;
+  /* The screen sits *in* the casing, so it is inset and shadowed, not raised. */
+  box-shadow:
+    inset 0 0 0 2px rgba(0,0,0,.85),
+    inset 0 0 3rem rgba(0,0,0,.55),
+    0 0 0 3px #454a41,
+    0 0 0 4px #16180f,
+    0 .35rem 1.4rem rgba(0,0,0,.6);
+}
+
+:root[data-bezel="on"] #bezel {
+  display: block;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 30;
+}
+
+/* Rivets down both sides of the casing. */
+:root[data-bezel="on"] #bezel .rivets {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 50% 50%, #6a7062 0 38%, #2a2d25 42%, transparent 60%),
+    radial-gradient(circle at 50% 50%, #6a7062 0 38%, #2a2d25 42%, transparent 60%);
+  background-size: 14px 14px, 14px 14px;
+  background-position: left .55rem top 12%, right .55rem top 12%;
+  background-repeat: repeat-y, repeat-y;
+  opacity: .55;
+}
+
+/* The two dials. They do nothing -- a Pip-Boy has them, and the casing reads as
+   a casing because of them. */
+:root[data-bezel="on"] #bezel .knob {
+  position: absolute;
+  width: clamp(1.5rem, 3.6vmin, 2.6rem);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #6e7466, #33362d 62%, #14160f);
+  box-shadow: 0 .1rem .35rem rgba(0,0,0,.7), inset 0 0 0 2px rgba(0,0,0,.5);
+}
+:root[data-bezel="on"] #bezel .knob span {
+  position: absolute;
+  left: 50%;
+  top: 14%;
+  width: 2px;
+  height: 30%;
+  background: #aeb5a4;
+  transform: translateX(-50%);
+}
+:root[data-bezel="on"] #bezel .knob[data-knob="left"]  { left: clamp(.2rem, 1vmin, .8rem); bottom: 16%; }
+:root[data-bezel="on"] #bezel .knob[data-knob="right"] { right: clamp(.2rem, 1vmin, .8rem); bottom: 16%; }
+
+:root[data-bezel="on"] #bezel .brand {
+  position: absolute;
+  left: 50%;
+  bottom: .1rem;
+  transform: translateX(-50%);
+  font-size: .6rem;
+  letter-spacing: .3em;
+  color: #7c8273;
+  text-shadow: 0 1px 0 rgba(0,0,0,.8);
+}
+
+/* ── boot sequence ──────────────────────────────────────────────────────── */
+
+#boot {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--bg-deep);
+  color: var(--fg);
+  text-shadow: var(--glow);
+  padding: 2rem clamp(1rem, 6vw, 6rem);
+  overflow: hidden;
+  font-size: .95em;
+}
+#boot[hidden] { display: none; }
+
+#bootlog { margin: 0; white-space: pre-wrap; font: inherit; }
+
+/* The tube coming up to brightness, then collapsing to a line and away. */
+#boot.done {
+  animation: bootOff .5s ease-in forwards;
+}
+@keyframes bootOff {
+  60%  { transform: scaleY(.02); opacity: 1; }
+  100% { transform: scaleY(.02) scaleX(0); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #boot.done { animation: none; opacity: 0; }
+}
+
 #screen {
   position: relative;
   display: flex;

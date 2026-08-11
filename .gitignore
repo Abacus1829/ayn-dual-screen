@@ -33,3 +33,4 @@ minecraft/run/
 *.user
 __pycache__/
 .claude/
+falloutnv/preview.html

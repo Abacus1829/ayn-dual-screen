@@ -4,7 +4,21 @@
 <title>Pip-Boy — Ayn Dual Screen</title>
 <link rel="stylesheet" href="style.css">
 
+<!-- The boot sequence. A real Pip-Boy takes a moment to warm up, and the app opens on it.
+     Skipped entirely if the screen's settings turn it off, or if reduced motion is asked for. -->
+<div id="boot" hidden>
+  <pre id="bootlog"></pre>
+</div>
+
 <div id="crt">
+  <!-- The bezel: the physical casing the screen sits in. Drawn, not extracted. -->
+  <div id="bezel">
+    <div class="rivets" aria-hidden="true"></div>
+    <div class="knob" data-knob="left" aria-hidden="true"><span></span></div>
+    <div class="knob" data-knob="right" aria-hidden="true"><span></span></div>
+    <div class="brand" aria-hidden="true">PIP-BOY 3000</div>
+  </div>
+
   <div id="screen">
 
     <!-- ── header: the Pip-Boy's own status line ─────────────────────────── -->
