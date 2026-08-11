@@ -383,6 +383,73 @@ namespace
 	}
 }
 
+// ── perks ───────────────────────────────────────────────────────────────────
+
+namespace
+{
+	/// The player's perks and traits.
+	///
+	/// Read by asking the game, not by walking the player's perk list. That list lives at an
+	/// offset the SDK has not mapped -- it is inside an unk block, known only from a comment --
+	/// and dereferencing a guess there is how you crash somebody's save. Actor::GetPerkRank is a
+	/// mapped virtual, so this iterates every perk form and asks the game about each one instead.
+	///
+	/// That is a few hundred virtual calls per rebuild, which is nothing next to being wrong, and
+	/// it is why the result is cached: perks change on level-up, not per frame.
+	void WritePerks(Json& j, PlayerCharacter* player)
+	{
+		j.BeginArray("perks");
+
+		DataHandler* data = DataHandler::Get();
+		if (!data)
+		{
+			j.EndArray();
+			return;
+		}
+
+		for (auto iter = data->perkList.Begin(); !iter.End(); ++iter)
+		{
+			BGSPerk* perk = iter.Get();
+			if (!perk)
+				continue;
+
+			// Hidden perks are the engine's own bookkeeping -- quest rewards, difficulty
+			// modifiers -- and the Pip-Boy does not show them either.
+			if (perk->data.isHidden)
+				continue;
+
+			const char* name = perk->GetTheName();
+			if (!name || !*name)
+				continue;
+
+			UInt8 rank = player->GetPerkRank(perk, false);
+			bool alternate = false;
+
+			if (!rank)
+			{
+				rank = player->GetPerkRank(perk, true);
+				alternate = rank != 0;
+			}
+
+			if (!rank)
+				continue;
+
+			// No description. TESDescription holds a file offset rather than a string -- the text
+			// is fetched by a virtual that reads out of the source plugin -- so pulling it would
+			// mean a disk read per perk per rebuild. The screen only uses it for a tooltip, and
+			// an empty one beats ten disk seeks a second.
+			j.BeginObject()
+				.Str("name", name)
+				.Int("rank", rank)
+				.Bool("trait", perk->data.isTrait != 0)
+				.Bool("alt", alternate)
+				.EndObject();
+		}
+
+		j.EndArray();
+	}
+}
+
 // ── the load order ──────────────────────────────────────────────────────────
 
 namespace
@@ -614,12 +681,12 @@ namespace
 		WriteQuests(j, player);
 		WriteLocation(j, player);
 		WritePlugins(j);
+		WritePerks(j, player);
 
-		// Notes, stats, perks, effects and radio are stubbed until their readers land; the screen
-		// already renders an empty tab correctly, so shipping them empty beats shipping fiction.
+		// Notes, stats, effects and radio are stubbed until their readers land; the screen already
+		// renders an empty tab correctly, so shipping them empty beats shipping fiction.
 		j.BeginArray("notes").EndArray();
 		j.BeginArray("stats").EndArray();
-		j.BeginArray("perks").EndArray();
 		j.BeginArray("effects").EndArray();
 		j.BeginArray("radio").EndArray();
 
