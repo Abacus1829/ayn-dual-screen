@@ -55,8 +55,9 @@ This machine is missing part of the C++ toolchain:
   32-bit MSVC toolset : $(if ($hasX86) { 'present' } else { 'MISSING' })
   Windows 10/11 SDK   : $(if ($hasSdk) { 'present' } else { 'MISSING' })
 
-Open the Visual Studio Installer, Modify your 2022 install, and under Individual Components tick
-'MSVC v143 - VS 2022 C++ x64/x86 build tools' and a 'Windows 11 SDK'. Then run this again.
+Fix it with:   .\install-toolchain.ps1
+(or by hand: Visual Studio Installer -> Modify -> Individual Components -> tick
+ 'MSVC v143 - VS 2022 C++ x64/x86 build tools' and a 'Windows 11 SDK'.)
 "@
 }
 

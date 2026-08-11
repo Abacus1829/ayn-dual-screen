@@ -139,9 +139,15 @@ Two smaller rules that follow from it:
   The game does not have to be installed to compile.
 
 ```powershell
+.\install-toolchain.ps1   # only if build.ps1 says the toolchain is incomplete
 .\fetch-nvse.ps1
 .\build.ps1
 ```
+
+[`install-toolchain.ps1`](install-toolchain.ps1) adds the 32-bit MSVC toolset and a Windows SDK to
+an existing Visual Studio 2022 install — the two components a default install leaves out. It asks
+for administrator rights, because modifying a Visual Studio install needs them, and it does nothing
+else. If you'd rather not run it, it prints exactly which boxes to tick by hand.
 
 `build.ps1` builds `Release|Win32`, lays the mod out the way it installs, finds New Vegas across
 your drives, and copies it into `Data\NVSE\Plugins`. `-NoInstall` skips the last step, and
