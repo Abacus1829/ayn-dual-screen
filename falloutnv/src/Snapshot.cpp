@@ -221,6 +221,9 @@ namespace
 		bool hasHealth = false;
 		float health = 1.f;
 		const char* bucket = "misc";
+
+		bool isNote = false;    // also listed on DATA -> NOTES
+		bool read = false;
 	};
 
 	/// The Pip-Boy icon the game itself associates with a form. Taken from the form rather than
@@ -282,6 +285,12 @@ namespace
 		else if (auto* ammo = DYNAMIC_CAST(form, TESForm, TESAmmo))
 		{
 			base.value = static_cast<int>(ammo->value.value);
+		}
+		else if (auto* note = DYNAMIC_CAST(form, TESForm, BGSNote))
+		{
+			// Notes stay in MISC where the Pip-Boy puts them, and are listed again on DATA.
+			base.isNote = true;
+			base.read = note->read != 0;
 		}
 
 		int stack = entry->countDelta;
@@ -1019,8 +1028,82 @@ namespace
 
 		WriteRadio(j, player, g_tunedStation);
 
-		j.BeginArray("notes").EndArray();
-		j.BeginArray("stats").EndArray();
+		// Notes and holotapes, pulled back out of the inventory walk above.
+		j.BeginArray("notes");
+		for (const ItemRow& item : items)
+		{
+			if (!item.isNote)
+				continue;
+
+			j.BeginObject()
+				.Str("id", item.id)
+				.Str("name", item.name)
+				.Str("type", "note")
+				// No body text. BGSNote keeps it as a file offset resolved on demand, the same
+				// arrangement as perk descriptions, so reading it means a disk seek per note per
+				// rebuild. The name is what the list needs.
+				.Bool("read", item.read)
+				.EndObject();
+		}
+		j.EndArray();
+
+		// Misc stats.
+		//
+		// The game's own stat tracker is not exposed by this SDK -- there is no GetGameStat to
+		// call -- so rather than an empty tab these are counted from what the snapshot already
+		// reads. Fewer entries than the Pip-Boy's page, but every one of them is real.
+		{
+			int discovered = 0;
+			int questsDone = 0;
+			int questsActive = 0;
+
+			DataHandler* data = DataHandler::Get();
+			if (data)
+			{
+				for (auto qi = data->questList.Begin(); !qi.End(); ++qi)
+				{
+					TESQuest* quest = qi.Get();
+					if (!quest || quest->currentStage == 0)
+						continue;
+					const char* qn = quest->GetTheName();
+					if (!qn || !*qn)
+						continue;
+					(quest->flags & 1) ? ++questsActive : ++questsDone;
+				}
+			}
+
+			TESObjectCELL* cell = player->parentCell;
+			TESWorldSpace* world = cell ? cell->worldSpace : nullptr;
+			if (TESObjectCELL* persistent = world ? world->cell : nullptr)
+			{
+				for (auto ri = persistent->objectList.Begin(); !ri.End(); ++ri)
+				{
+					TESObjectREFR* ref = ri.Get();
+					if (!ref)
+						continue;
+					auto* mk = static_cast<ExtraMapMarker*>(ref->extraDataList.GetByType(kExtraData_MapMarker));
+					if (mk && mk->data && (mk->data->flags & ExtraMapMarker::kFlag_Visible))
+						++discovered;
+				}
+			}
+
+			int carried = static_cast<int>(items.size());
+
+			j.BeginArray("stats");
+			auto stat = [&](const char* group, const char* name, long long value) {
+				j.BeginObject().Str("group", group).Str("name", name)
+					.Str("value", std::to_string(value)).EndObject();
+			};
+
+			stat("General", "Level", static_cast<long long>(player->avOwner.Fn_0A()));
+			stat("General", "Locations Discovered", discovered);
+			stat("General", "Quests Active", questsActive);
+			stat("General", "Quests Completed", questsDone);
+			stat("Inventory", "Items Carried", carried);
+			stat("Inventory", "Carry Weight Used", static_cast<long long>(AV(player, eActorVal_InventoryWeight)));
+			stat("Inventory", "Carry Weight Max", static_cast<long long>(AV(player, eActorVal_CarryWeight)));
+			j.EndArray();
+		}
 
 		j.BeginObject("perms")
 			.Bool("equip", config.allowEquip)
@@ -1031,9 +1114,7 @@ namespace
 			// rather than pretending.
 			.Bool("fastTravel", config.allowFastTravel && g_runScriptLine != nullptr)
 			.Bool("radio", config.allowRadio && g_runScriptLine != nullptr)
-			// Still unimplemented. Gated to false regardless of config, so the button greys out
-			// instead of offering something that does nothing.
-			.Bool("setQuest", config.allowSetQuest && false)
+			.Bool("setQuest", config.allowSetQuest && g_runScriptLine != nullptr)
 			.EndObject();
 
 		j.EndObject();
@@ -1190,7 +1271,22 @@ void Snapshot::DrainCommands(const Config& config)
 			g_runScriptLine(line, nullptr);
 			g_tunedStation = FormIdText(ref->refID);
 		}
-		// setQuest is accepted and queued, but not applied yet.
+		else if (cmd.action == "setQuest" && config.allowSetQuest && g_runScriptLine)
+		{
+			// Through SetCurrentQuest, which is xNVSE's own command for this.
+			//
+			// The obvious shortcut -- assigning player->quest directly -- was refused earlier and
+			// still is: the active quest has bookkeeping around it (the objective list, the map
+			// target, the Pip-Boy's own state) and setting the pointer behind the game's back
+			// leaves those stale. This lets the game do it.
+			TESForm* form = LookupFormByID(ParseFormId(cmd.id));
+			if (!form || !DYNAMIC_CAST(form, TESForm, TESQuest))
+				continue;
+
+			char line[64];
+			std::snprintf(line, sizeof line, "SetCurrentQuest %08X", form->refID);
+			g_runScriptLine(line, nullptr);
+		}
 		//
 		// setQuest is deliberately NOT done by writing player->quest directly: the active quest
 		// has bookkeeping around it -- the objective list, the map target, the Pip-Boy's own

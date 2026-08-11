@@ -92,9 +92,9 @@ std::string Config::ToJson() const
 	boolRow("AllowFastTravel", allowFastTravel, "Allow fast travel",
 		"Moves your character and burns game hours.", false);
 	boolRow("AllowSetQuest", allowSetQuest, "Allow set quest",
-		"Change the active quest. Not implemented yet.", false);
+		"Make a quest the active one from the DATA tab.", false);
 	boolRow("AllowRadio", allowRadio, "Allow radio",
-		"Change the radio station. Not implemented yet.", false);
+		"Tune stations from the RADIO tab.", false);
 
 	boolRow("EnableIcons", enableIcons, "Icons",
 		"Read icons out of your own game archives. Off skips opening them entirely.", true);
