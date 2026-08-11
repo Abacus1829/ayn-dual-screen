@@ -23,6 +23,7 @@ from here:
 | **Stardew Valley** (SMAPI) | [`.zip`](https://github.com/Abacus1829/ayn-dual-screen/releases/latest/download/AynDualScreen-Stardew.zip) | [Nexus Mods](https://www.nexusmods.com/stardewvalley/mods/49903) | [`stardew/`](stardew) | 27301 |
 | **Terraria** (tModLoader) | [`.tmod`](https://github.com/Abacus1829/ayn-dual-screen/releases/latest/download/AynDualScreen-Terraria.tmod) | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3778092427) | [`terraria/`](terraria) | 27301 |
 | **Minecraft** (Forge 1.21.1) | [`.jar`](https://github.com/Abacus1829/ayn-dual-screen/releases/latest/download/AynDualScreen-Minecraft-mc1.21.1.jar) | — | [`minecraft/`](minecraft) | 27302 |
+| **Fallout: New Vegas** (xNVSE) | *not yet built* | — | [`falloutnv/`](falloutnv) | 27303 |
 | The Android app *(optional)* | [`.apk`](https://github.com/Abacus1829/ayn-dual-screen/releases/latest/download/AynDualScreen-App.apk) | — | [`android/`](android) | — |
 
 Install steps for each are in the [release notes](https://github.com/Abacus1829/ayn-dual-screen/releases/latest).
@@ -31,8 +32,13 @@ Every file there is built from the source in this repository.
 The app is **optional** — any browser pointed at the address the mod prints gives you the same second
 screen.
 
-Minecraft uses 27302 rather than 27301 deliberately: it and Terraria are likely to be installed on
-the same PC, and two mods fighting over one port fails in a way that looks like the app's fault.
+Minecraft uses 27302 and New Vegas 27303 rather than all sharing 27301 deliberately: they are likely
+to be installed on the same PC, and two mods fighting over one port fails in a way that looks like
+the app's fault.
+
+The **Fallout: New Vegas** mod is source-only for now — the second screen and its mock backend are
+finished and working, but the plugin itself has not been compiled yet. See
+[`falloutnv/README.md`](falloutnv/README.md) for exactly what is and isn't done.
 
 ---
 
@@ -61,6 +67,7 @@ shipped alongside. That text is cosmetic. It does not limit what the app can con
 | [`stardew/`](stardew) | The **Stardew Valley** mod (SMAPI). Snapshots the save to JSON every tick and serves it, with the touch commands applied back on the game thread. | C# / .NET 6 |
 | [`terraria/`](terraria) | The **Terraria** mod (tModLoader). Same architecture; the minimap is rendered to a PNG rather than shipped as a tile grid, because a Terraria world is millions of tiles. | C# / .NET 8 |
 | [`minecraft/`](minecraft) | The **Minecraft** mod (Forge, 1.21.1). Client-side only — nothing to install on a server, since it reads only what your own client already knows. | Java 21 / Gradle |
+| [`falloutnv/`](falloutnv) | The **Fallout: New Vegas** mod (xNVSE). The odd one out: New Vegas has no managed modding framework, so this is a native 32-bit DLL that reads the game's own structures. Works under Tale of Two Wastelands unchanged. | C++17 / MSVC |
 | each mod's `web/` | The second-screen page that mod serves — plain HTML/CSS/JS, no build step, no dependencies. | HTML, CSS, vanilla JS |
 
 Each mod is self-contained: they share no files, no build and no output, and none needs the others
@@ -68,7 +75,8 @@ to be present. Ideas were carried across by hand.
 
 Detailed docs live in [`android/README.md`](android/README.md) (the app) and in each mod's own
 README — [`stardew/`](stardew/README.md), [`terraria/`](terraria/README.md),
-[`minecraft/`](minecraft/README.md) — covering its HTTP endpoints and config.
+[`minecraft/`](minecraft/README.md), [`falloutnv/`](falloutnv/README.md) — covering its HTTP
+endpoints and config.
 
 ---
 
@@ -240,6 +248,34 @@ That is a real limit rather than an oversight: **this builds for 1.21.1 only.** 
 during MCP setup on newer Minecraft, so reaching current Forge needs a migration to a newer
 ForgeGradle or to NeoForge's ModDevGradle. [`buildAll.ps1`](minecraft/buildAll.ps1) walks the
 targets that are actually known to compile.
+
+### Fallout: New Vegas — [`falloutnv/`](falloutnv)
+
+The odd one out, and the one place the "standard toolchain, nothing of our own" rule bends. New
+Vegas has no SMAPI, no tModLoader and no Forge — it is a 2010 32-bit Gamebryo game whose only
+extension point is the [New Vegas Script Extender](https://github.com/xNVSE/NVSE), which loads
+native DLLs. So this mod is C++, and it reads the game's own structures rather than a modding API.
+
+**Requirements:** Visual Studio 2022 with the *Desktop development with C++* workload — you need the
+**MSVC v143 x64/x86 build tools** and a **Windows 10/11 SDK** specifically, because the build must
+be 32-bit. Plus Git, to fetch the SDK.
+
+```powershell
+cd falloutnv
+.\fetch-nvse.ps1
+.\build.ps1
+```
+
+The xNVSE SDK is **not vendored** here — it is somebody else's project under its own licence, and a
+pinned copy would go stale. `fetch-nvse.ps1` clones it into `falloutnv/extern/nvse`, which is
+ignored by git; `build.ps1` then builds `Release|Win32` and installs into `Data\NVSE\Plugins`.
+
+It must be Win32: an x64 DLL is one the game physically cannot load, which is why the project has no
+x64 configuration at all.
+
+**Tale of Two Wastelands works unchanged** — TTW is an ordinary New Vegas load order, and this mod
+reads the player and the current cell rather than any named form. Standalone Fallout 3 is a
+different executable behind FOSE and would need a second build of the same source; that isn't done.
 
 ## Security note on the mods
 

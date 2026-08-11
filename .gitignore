@@ -15,6 +15,8 @@ terraria/obj/
 
 # --- game mod (C++ / MSVC) ---
 falloutnv/build/
+# the xNVSE SDK, cloned by fetch-nvse.ps1 -- somebody else's project, not vendored here
+falloutnv/extern/
 falloutnv/Debug/
 falloutnv/Release/
 falloutnv/x64/

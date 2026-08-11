@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!--
+    Ayn Dual Screen - Fallout: New Vegas.
+
+    New Vegas is a 32-bit process, so this MUST build as Win32. There is no x64 configuration on
+    purpose: an x64 build would produce a DLL the game physically cannot load, and having the
+    platform in the dropdown only invites someone to try.
+
+    The xNVSE SDK is not vendored here. Run fetch-nvse.ps1 to clone it into extern\nvse, or point
+    NvseDir at a checkout you already have:
+
+        msbuild AynDualScreen.vcxproj /p:Configuration=Release /p:Platform=Win32 /p:NvseDir=C:\src\NVSE
+  -->
+
+  <PropertyGroup Label="AynDualScreen">
+    <NvseDir Condition="'$(NvseDir)' == ''">$(MSBuildProjectDirectory)\extern\nvse</NvseDir>
+  </PropertyGroup>
+
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{7F3A1C64-2D8E-4B71-9E55-A1C0D4E77B12}</ProjectGuid>
+    <RootNamespace>AynDualScreen</RootNamespace>
+    <ProjectName>AynDualScreen</ProjectName>
+    <WindowsTargetPlatformVersion Condition="'$(WindowsTargetPlatformVersion)' == ''">10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <!-- v143 is what Visual Studio 2022 ships; xNVSE's own projects say v145, which only exists
+         on a preview toolset. Override with /p:PlatformToolset=v145 if you have it. -->
+    <PlatformToolset Condition="'$(PlatformToolset)' == ''">v143</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+    <UseDebugLibraries Condition="'$(Configuration)' == 'Debug'">true</UseDebugLibraries>
+    <UseDebugLibraries Condition="'$(Configuration)' == 'Release'">false</UseDebugLibraries>
+    <WholeProgramOptimization Condition="'$(Configuration)' == 'Release'">false</WholeProgramOptimization>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+
+  <PropertyGroup>
+    <OutDir>$(MSBuildProjectDirectory)\build\$(Configuration)\</OutDir>
+    <IntDir>$(MSBuildProjectDirectory)\build\obj\$(Configuration)\</IntDir>
+    <TargetName>AynDualScreen</TargetName>
+    <LinkIncremental Condition="'$(Configuration)' == 'Release'">false</LinkIncremental>
+  </PropertyGroup>
+
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\src;$(NvseDir);$(NvseDir)\nvse;$(NvseDir)\nvse\nvse;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <!-- RUNTIME selects the game build of the SDK rather than the GECK one. RUNTIME_VERSION is
+           New Vegas 1.4.0.525, the only version the script extender supports. -->
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;RUNTIME;RUNTIME_VERSION=0x040020D0;_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <WarningLevel>Level3</WarningLevel>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <!-- The SDK reaches into game structures constantly; its own projects turn these off too. -->
+      <DisableSpecificWarnings>4267;4244;4018;4996;4200;4291</DisableSpecificWarnings>
+      <ConformanceMode>false</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <ModuleDefinitionFile>$(MSBuildProjectDirectory)\src\exports.def</ModuleDefinitionFile>
+      <AdditionalDependencies>ws2_32.lib;iphlpapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <ItemDefinitionGroup Condition="'$(Configuration)' == 'Debug'">
+    <ClCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <Optimization>Disabled</Optimization>
+    </ClCompile>
+  </ItemDefinitionGroup>
+
+  <ItemDefinitionGroup Condition="'$(Configuration)' == 'Release'">
+    <ClCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <!-- Our code. -->
+  <ItemGroup>
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\Config.cpp" />
+    <ClCompile Include="src\Snapshot.cpp" />
+    <ClCompile Include="src\WebServer.cpp" />
+    <ClInclude Include="src\Config.h" />
+    <ClInclude Include="src\Dtos.h" />
+    <ClInclude Include="src\Json.h" />
+    <ClInclude Include="src\Snapshot.h" />
+    <ClInclude Include="src\WebServer.h" />
+    <None Include="src\exports.def" />
+  </ItemGroup>
+
+  <!-- The parts of the xNVSE SDK a plugin has to compile for itself. This list mirrors
+       nvse_plugin_example, which is the reference for what a plugin actually needs. -->
+  <ItemGroup>
+    <ClCompile Include="$(NvseDir)\nvse\nvse\containers.cpp" />
+    <ClCompile Include="$(NvseDir)\nvse\nvse\GameAPI.cpp" />
+    <ClCompile Include="$(NvseDir)\nvse\nvse\GameBSExtraData.cpp" />
+    <ClCompile Include="$(NvseDir)\nvse\nvse\GameData.cpp" />
+    <ClCompile Include="$(NvseDir)\nvse\nvse\GameExtraData.cpp" />
+    <ClCompile Include="$(NvseDir)\nvse\nvse\GameForms.cpp" />
+    <ClCompile Include="$(NvseDir)\nvse\nvse\GameObjects.cpp" />
+    <ClCompile Include="$(NvseDir)\nvse\nvse\GameOSDepend.cpp" />
+    <ClCompile Include="$(NvseDir)\nvse\nvse\GameProcess.cpp" />
+    <ClCompile Include="$(NvseDir)\nvse\nvse\GameRTTI.cpp" />
+    <ClCompile Include="$(NvseDir)\nvse\nvse\GameScript.cpp" />
+    <ClCompile Include="$(NvseDir)\nvse\nvse\GameSettings.cpp" />
+    <ClCompile Include="$(NvseDir)\nvse\nvse\GameTasks.cpp" />
+    <ClCompile Include="$(NvseDir)\nvse\nvse\GameTiles.cpp" />
+    <ClCompile Include="$(NvseDir)\nvse\nvse\GameTypes.cpp" />
+    <ClCompile Include="$(NvseDir)\nvse\nvse\NiTypes.cpp" />
+    <ClCompile Include="$(NvseDir)\nvse\nvse\printf.cpp" />
+    <ClCompile Include="$(NvseDir)\nvse\nvse\SafeWrite.cpp" />
+    <ClCompile Include="$(NvseDir)\nvse\nvse\Utilities.cpp" />
+    <ClCompile Include="$(NvseDir)\nvse\nvse\utility.cpp" />
+  </ItemGroup>
+
+  <!-- xNVSE's shared "common" library, which its SDK sources include. -->
+  <ItemGroup>
+    <ClCompile Include="$(NvseDir)\common\IDataStream.cpp" />
+    <ClCompile Include="$(NvseDir)\common\IDebugLog.cpp" />
+    <ClCompile Include="$(NvseDir)\common\IDirectoryIterator.cpp" />
+    <ClCompile Include="$(NvseDir)\common\IErrors.cpp" />
+    <ClCompile Include="$(NvseDir)\common\IFileStream.cpp" />
+    <ClCompile Include="$(NvseDir)\common\IMemPool.cpp" />
+    <ClCompile Include="$(NvseDir)\common\ITypes.cpp" />
+  </ItemGroup>
+
+  <Target Name="CheckNvse" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('$(NvseDir)\nvse\nvse\PluginAPI.h')"
+           Text="The xNVSE SDK is not at $(NvseDir). Run fetch-nvse.ps1, or pass /p:NvseDir=&lt;your NVSE checkout&gt;." />
+  </Target>
+
+  <!-- Lay the finished mod out the way it installs, so build\Release\package can be copied
+       straight into Data\NVSE\Plugins. -->
+  <Target Name="Package" AfterTargets="Build">
+    <ItemGroup>
+      <WebFiles Include="$(MSBuildProjectDirectory)\web\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="$(OutDir)AynDualScreen.dll" DestinationFolder="$(OutDir)package\" />
+    <Copy SourceFiles="@(WebFiles)" DestinationFolder="$(OutDir)package\AynDualScreen\web\%(RecursiveDir)" />
+    <Message Importance="high" Text="Packaged to $(OutDir)package - copy its contents into Data\NVSE\Plugins." />
+  </Target>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

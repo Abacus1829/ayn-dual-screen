@@ -1,0 +1,4 @@
+LIBRARY "AynDualScreen"
+EXPORTS
+NVSEPlugin_Query
+NVSEPlugin_Load
