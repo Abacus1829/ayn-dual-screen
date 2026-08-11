@@ -57,6 +57,15 @@ def build():
     shim = """
 // Preview shim: no server, so /state answers from a frozen snapshot and /action is a no-op.
 // Settings still persist to localStorage, so the panel works as it really does.
+
+// The preview exists to show the screen off, so it opens with the casing on -- unlike the real
+// page, which defaults it off to keep every pixel for the UI on a handheld. Only seeded if this
+// browser has no settings yet, so it never overwrites someone's own choices.
+try {
+  if (!localStorage.getItem("aynPipboy"))
+    localStorage.setItem("aynPipboy", JSON.stringify({ bezel: "on" }));
+} catch (e) {}
+
 const FROZEN = %s;
 window.fetch = function (url, options) {
   const path = String(url);
