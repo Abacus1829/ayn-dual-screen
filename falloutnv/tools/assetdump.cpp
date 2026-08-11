@@ -69,6 +69,63 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
+	// Where does the art actually sit on its canvas?
+	//
+	// These limb sprites share a common origin -- that is how the game swaps one limb for its
+	// broken variant without anything else moving. So the position of each piece is not something
+	// to guess at in CSS: it is already in the pixels, as the bounding box of the non-transparent
+	// region. This prints that box as a percentage of the canvas, which is exactly what the layout
+	// needs.
+	if (command == "bounds")
+	{
+		std::string filter = argc > 3 ? argv[3] : "";
+		for (char& c : filter)
+			c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+
+		std::printf("%-22s %9s  %-28s %s\n", "file", "canvas", "opaque box (px)", "as % of canvas");
+
+		for (const std::string& path : bsa.AllPaths())
+		{
+			if (!filter.empty() && path.find(filter) == std::string::npos)
+				continue;
+			if (path.size() < 4 || path.compare(path.size() - 4, 4, ".dds") != 0)
+				continue;
+
+			std::vector<uint8_t> raw;
+			Dds::Image image;
+			if (!bsa.Read(path, raw) || !Dds::Decode(raw, image) || !image.Valid())
+				continue;
+
+			uint32_t minX = image.width, minY = image.height, maxX = 0, maxY = 0;
+			bool any = false;
+			for (uint32_t y = 0; y < image.height; ++y)
+			{
+				for (uint32_t x = 0; x < image.width; ++x)
+				{
+					// Anything above a whisker of alpha counts; these sprites have soft edges.
+					if (image.rgba[(static_cast<size_t>(y) * image.width + x) * 4 + 3] > 8)
+					{
+						any = true;
+						if (x < minX) minX = x;
+						if (y < minY) minY = y;
+						if (x > maxX) maxX = x;
+						if (y > maxY) maxY = y;
+					}
+				}
+			}
+
+			std::string name = path.substr(path.find_last_of('\\') + 1);
+			if (!any) { std::printf("%-22s %4ux%-4u  (fully transparent)\n", name.c_str(), image.width, image.height); continue; }
+
+			uint32_t bw = maxX - minX + 1, bh = maxY - minY + 1;
+			std::printf("%-22s %4ux%-4u  x%-4u y%-4u w%-4u h%-4u   l%5.1f%% t%5.1f%% w%5.1f%% h%5.1f%%\n",
+				name.c_str(), image.width, image.height, minX, minY, bw, bh,
+				100.0 * minX / image.width, 100.0 * minY / image.height,
+				100.0 * bw / image.width, 100.0 * bh / image.height);
+		}
+		return 0;
+	}
+
 	if (command == "sweep")
 	{
 		std::string filter = argc > 3 ? argv[3] : "";

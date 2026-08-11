@@ -291,28 +291,41 @@ const DEVICE_TEXTURES = {
 // in the game's own stats menu XML (menus\ inside Fallout - Misc.bsa), which places each piece
 // explicitly; reading those out and pasting them here is the way to make this exact rather than
 // close. Until then, nudge these.
+// Laid out on a virtual 300x340 canvas, then expressed as percentages of it.
+//
+// The sizes are NOT guesses -- they are the measured opaque bounds of each texture, so the pieces
+// are in their true relative proportions:
+//
+//   head 83x91   torso 97x92   arms 100x52   legs 70x110 and 85x109
+//
+// Every sprite is anchored TOP-LEFT on its own canvas (measured: art starts at x0,y0 in all of
+// them), which is why these are left/top coordinates and not centres. Centring them was the
+// mistake that made the figure come apart.
+const FIGURE_BOX = { w: 300, h: 340 };
+
 const FIGURE_LAYERS = [
-  // key        file          left    top     width   z
-  ["torso",    "torso",       50,     47,     46,     2],
-  ["head",     "head",        50,     16,     30,     3],
-  ["rightArm", "right_arm",   28,     40,     30,     1],
-  ["leftArm",  "left_arm",    72,     40,     30,     1],
-  ["rightLeg", "right_leg",   42,     70,     28,     1],
-  ["leftLeg",  "left_leg",    58,     70,     28,     1],
+  // key        file          x    y    w    h    z
+  ["rightArm", "right_arm",     2,  95,  99,  52,  1],
+  ["leftArm",  "left_arm",    199,  95, 100,  52,  1],
+  ["rightLeg", "right_leg",   100, 168,  85, 109,  1],
+  ["leftLeg",  "left_leg",    150, 168,  70, 110,  1],
+  ["torso",    "torso",       102,  82,  97,  92,  2],
+  ["head",     "head",        109,   0,  83,  91,  3],
 ];
 
 function buildFigure() {
   const host = document.getElementById("figurelayers");
   if (host.childElementCount) return;
 
-  for (const [key, file, left, top, width, z] of FIGURE_LAYERS) {
+  for (const [key, file, x, y, w, h, z] of FIGURE_LAYERS) {
     const img = el("img", "limb-layer");
     img.dataset.limb = key;
     img.dataset.file = file;
     img.alt = "";
-    img.style.left = left + "%";
-    img.style.top = top + "%";
-    img.style.width = width + "%";
+    // Canvas coordinates -> percentages, so the whole figure scales as one piece.
+    img.style.left = (100 * x / FIGURE_BOX.w).toFixed(3) + "%";
+    img.style.top = (100 * y / FIGURE_BOX.h).toFixed(3) + "%";
+    img.style.width = (100 * w / FIGURE_BOX.w).toFixed(3) + "%";
     img.style.zIndex = String(z);
 
     // Each layer reveals the figure itself once it has actually decoded. There is no separate
@@ -452,9 +465,13 @@ function renderStat(s) {
     // The condition bars sit on the figure rather than beside it.
     const host = document.getElementById("limbbars");
     if (!host.childElementCount) {
-      for (const [key] of LIMBS) {
+      // Placed from the same measured table the limbs use, at each piece's centre, so the bars
+      // sit on their limb at any size and cannot drift out of step with the figure.
+      for (const [key, , x, y, w, h] of FIGURE_LAYERS) {
         const b = el("div", "limbbar");
         b.dataset.limb = key;
+        b.style.left = (100 * (x + w / 2) / FIGURE_BOX.w).toFixed(3) + "%";
+        b.style.top = (100 * (y + h / 2) / FIGURE_BOX.h).toFixed(3) + "%";
         b.appendChild(el("div", "fill"));
         host.appendChild(b);
       }

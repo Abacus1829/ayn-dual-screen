@@ -391,7 +391,8 @@ h3:first-child { margin-top: .1rem; }
   left: 50%;
   transform: translate(-50%, -50%);
   height: 100%;
-  aspect-ratio: 3 / 4;
+  /* Matches FIGURE_BOX in app.js (300x340). If you change one, change the other. */
+  aspect-ratio: 300 / 340;
   max-width: 100%;
   /* When the panel is wider than tall the height rules; when it is narrow the width does. */
   max-height: 100%;
@@ -414,9 +415,10 @@ h3:first-child { margin-top: .1rem; }
 
 /* Individual limb sprites, each placed by the percentages in FIGURE_LAYERS.
    Height is left auto so each keeps its own aspect (the arms are 2:1). */
+/* Top-left anchored, matching how the art sits on each texture's own canvas. No centring
+   transform: these are corner coordinates, not midpoints. */
 .limb-layer {
   position: absolute;
-  transform: translate(-50%, -50%);
   height: auto;
   pointer-events: none;
   filter: drop-shadow(0 0 3px var(--fg));
@@ -460,12 +462,9 @@ h3:first-child { margin-top: .1rem; }
 .limbbar .fill { position: absolute; inset: 0 auto 0 0; background: var(--fg); }
 .limbbar .fill.warn { background: var(--warn); }
 .limbbar .fill.bad  { background: var(--bad); }
-.limbbar[data-limb="head"]     { left: 50%; top: 4%; }
-.limbbar[data-limb="torso"]    { left: 50%; top: 40%; }
-.limbbar[data-limb="rightArm"] { left: 13%; top: 41%; }
-.limbbar[data-limb="leftArm"]  { left: 87%; top: 41%; }
-.limbbar[data-limb="rightLeg"] { left: 27%; top: 78%; }
-.limbbar[data-limb="leftLeg"]  { left: 73%; top: 78%; }
+/* No per-limb positions here. They are set inline from FIGURE_LAYERS in app.js, so the bars are
+   derived from the same measured geometry as the limbs and cannot drift out of step with them.
+   Hard-coding a second set here is how they ended up scattered across the panel before. */
 
 #statfoot { font-size: .9em; }
 #equippedrow { display: flex; justify-content: center; gap: 2.2rem; min-height: 1.2rem; }
