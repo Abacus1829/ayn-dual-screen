@@ -40,10 +40,12 @@ Copy-Item "$web\*" -Destination (Join-Path $Target "AynDualScreen\web") -Recurse
 Write-Host "Deployed web/ -> $Target"
 
 if ($Dll) {
-    $dll = Join-Path $package "AynDualScreen.dll"
-    if (-not (Test-Path $dll)) { throw "No built DLL at $dll. Run build.ps1 first." }
+    # Not $dll: PowerShell variable names are case-insensitive, so that would overwrite the $Dll
+    # switch parameter mid-script and the assignment fails with a cast error.
+    $pluginPath = Join-Path $package "AynDualScreen.dll"
+    if (-not (Test-Path $pluginPath)) { throw "No built DLL at $pluginPath. Run build.ps1 first." }
     try {
-        Copy-Item $dll -Destination $Target -Force
+        Copy-Item $pluginPath -Destination $Target -Force
         Write-Host "Deployed AynDualScreen.dll"
     }
     catch {

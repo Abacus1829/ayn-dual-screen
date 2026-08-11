@@ -412,6 +412,21 @@ In dependency order, because two of these unblock others:
    behind its back.
 5. **Radio**: list the stations in range and switch between them.
 6. **Active effects**, and **notes and holotapes**.
+
+   Effects are reachable without offset-hunting. `Actor` carries `MagicTarget magicTarget` at
+   `0x094`, and `MagicTarget` exposes:
+
+   ```cpp
+   virtual EffectNode* GetEffectList(void);
+   ```
+
+   which is a linked list of `ActiveEffect` (`GameEffects.h`). Walk it from the player and read
+   each effect's name, magnitude and remaining duration — those map onto the `name` and `duration`
+   fields the screen's EFFECTS list already expects, so again the wire format needs no change.
+
+   Two cautions. It is a virtual call into game memory, so it belongs on the game thread with the
+   rest of the snapshot and nowhere near a worker thread. And check `GetEffectList()` for null
+   before walking it: an actor with no active effects is the common case, not an error.
 7. **Misc stats** for the DATA tab.
 8. Weight for misc items and chems, once the SDK maps those classes.
 9. A token in the ini so LAN access needs a shared secret.
