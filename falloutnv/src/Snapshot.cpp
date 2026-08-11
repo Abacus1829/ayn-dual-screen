@@ -621,12 +621,28 @@ namespace
 			if (!ref || ref->IsDeleted() || !ref->baseForm)
 				continue;
 
-			if (!ref->extraDataList.HasType(kExtraData_RadioData))
+			// A transmitter is an activator whose base carries a radio station. Checking for
+			// ExtraRadioData instead -- which is what this did first -- matched the wrong
+			// references entirely: it listed things you cannot receive and missed real stations.
+			auto* activator = DYNAMIC_CAST(ref->baseForm, TESForm, TESObjectACTI);
+			if (!activator || !activator->radioStation)
 				continue;
 
-			const char* name = ref->baseForm->GetTheName();
+			// The transmitter's own name. The station it points at would often read better, but
+			// BGSTalkingActivator is only forward-declared in this SDK -- testing the pointer for
+			// null is fine on an incomplete type, reading through it is not.
+			const char* name = activator->fullName.name.CStr();
 			if (!name || !*name)
 				continue;
+
+			// Range is a real signal radius held in the radio data this SDK does not map, so this
+			// is distance to the transmitter against a fixed radius -- a heuristic, not the game's
+			// own answer. Out-of-range stations are still listed, marked weak, because the Pip-Boy
+			// lists them too.
+			float dx = ref->posX - player->posX;
+			float dy = ref->posY - player->posY;
+			const float kRangeUnits = 60000.f;
+			bool inRange = (dx * dx + dy * dy) < (kRangeUnits * kRangeUnits);
 
 			std::string id = FormIdText(ref->refID);
 
@@ -634,9 +650,7 @@ namespace
 				.Str("id", id)
 				.Str("name", name)
 				.Bool("active", !tuned.empty() && tuned == id)
-				// Range is what decides whether a station is audible, and that lives in the data
-				// we cannot read. Reported as in range rather than inventing a distance test.
-				.Bool("inRange", true)
+				.Bool("inRange", inRange)
 				.EndObject();
 
 			++written;
@@ -1260,7 +1274,13 @@ void Snapshot::DrainCommands(const Config& config)
 			// real reference that actually carries radio data before anything is activated.
 			TESForm* form = LookupFormByID(ParseFormId(cmd.id));
 			TESObjectREFR* ref = form ? DYNAMIC_CAST(form, TESForm, TESObjectREFR) : nullptr;
-			if (!ref || !ref->extraDataList.HasType(kExtraData_RadioData))
+			if (!ref || !ref->baseForm)
+				continue;
+
+			// Same test the listing uses, so the screen can only tune something it was actually
+			// offered. Checking ExtraRadioData here was matching the wrong references.
+			auto* activator = DYNAMIC_CAST(ref->baseForm, TESForm, TESObjectACTI);
+			if (!activator || !activator->radioStation)
 				continue;
 
 			// Activating the station reference is how the game itself tunes one -- it is an
