@@ -291,7 +291,7 @@ get the defaults back.
 | `AllowSetQuest` | `1` | Change the active quest. *Not implemented yet — the button greys out anyway.* |
 | `AllowRadio` | `1` | Change the radio station. *Not implemented yet.* |
 | `AllowDrop` | `0` | **Off by default.** Throws an item on the ground. |
-| `AllowFastTravel` | `0` | **Off by default.** Moves your character and burns game hours. *Not implemented yet.* |
+| `AllowFastTravel` | `1` | Moves your character and burns game hours. On by default — it is the point of a map you can touch, and unlike dropping an item it costs nothing you cannot walk back. Set `0` to make the map look-only. |
 | `MaxMapMarkers` | `250` | Ceiling on markers per snapshot. |
 | `MaxInventoryItems` | `400` | Ceiling on inventory entries per snapshot. |
 | `WebRootOverride` | *(empty)* | Serve `web/` from somewhere else — see below. |

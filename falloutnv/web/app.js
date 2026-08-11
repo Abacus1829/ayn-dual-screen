@@ -892,6 +892,14 @@ function renderMap(s) {
   ctx.clearRect(0, 0, w, h);
 
   const bounds = mapMode === "world" ? m.worldBounds : m.localBounds;
+
+  // The worldspace map, from the game's own 2048px texture. Loaded once and reused; if the mod
+  // is not serving assets it simply never arrives and the grid below stands in.
+  if (!renderMap.art) {
+    renderMap.art = new Image();
+    renderMap.art.onload = () => { if (state) renderMap(state); };
+    renderMap.art.src = "asset/interface/worldmap/wasteland_nv_2048_no_map.png";
+  }
   if (!bounds) {
     ctx.fillStyle = dim;
     ctx.font = `${14 * dpr}px monospace`;
@@ -910,6 +918,24 @@ function renderMap(s) {
 
   const px = (wx) => w / 2 + (wx - cx) * scale;
   const py = (wy) => h / 2 - (wy - cy) * scale;
+
+  // Draw the map itself first, stretched across the worldspace bounds so markers plotted from
+  // world coordinates land where they belong on it. Tinted to the current phosphor rather than
+  // left sepia, so a custom colour scheme still holds.
+  const art = renderMap.art;
+  if (art && art.complete && art.naturalWidth) {
+    const ax = px(bounds.minX), ay = py(bounds.maxY);
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.drawImage(art, ax, ay, bw * scale, bh * scale);
+    // Multiply a flat phosphor over the top: the source is a sepia photograph and the panel is
+    // monochrome, so this keeps it one colour with the rest of the screen.
+    ctx.globalCompositeOperation = "multiply";
+    ctx.fillStyle = fg;
+    ctx.globalAlpha = 0.5;
+    ctx.fillRect(ax, ay, bw * scale, bh * scale);
+    ctx.restore();
+  }
 
   ctx.strokeStyle = dim;
   ctx.globalAlpha = 0.16;

@@ -543,9 +543,10 @@ namespace
 			bool visible = (flags & ExtraMapMarker::kFlag_Visible) != 0;
 			bool canTravel = (flags & ExtraMapMarker::kFlag_CanTravel) != 0;
 
-			// Undiscovered markers are still sent -- the screen draws them dimmed, the same way
-			// the Pip-Boy does -- but a hidden one is hidden.
-			if (flags & ExtraMapMarker::kFlag_Hidden)
+			// Only places you have actually found. Sending undiscovered markers dimmed would put
+			// the whole Mojave on the screen from a level 1 save, which is a spoiler and not a
+			// map -- the game does not show them either until you walk into them.
+			if (!visible || (flags & ExtraMapMarker::kFlag_Hidden))
 				continue;
 
 			j.BeginObject()

@@ -20,7 +20,10 @@ struct Config
 	bool allowRadio = true;
 
 	bool allowDrop = false;         // throws an item on the ground
-	bool allowFastTravel = false;   // moves the character and burns hours
+
+	/// Moves the character and burns game hours. On by default because it is the whole point of a
+	/// map you can touch, and unlike dropping an item it costs nothing you cannot walk back.
+	bool allowFastTravel = true;
 
 	int maxMapMarkers = 250;
 	int maxInventoryItems = 400;
