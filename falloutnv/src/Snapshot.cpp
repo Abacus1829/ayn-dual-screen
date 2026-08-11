@@ -5,6 +5,7 @@
 #include "nvse/GameAPI.h"
 #include "nvse/GameForms.h"
 #include "nvse/GameObjects.h"
+#include "nvse/GameEffects.h"       // ActiveEffect; GameObjects.h only forward-declares it
 #include "nvse/GameExtraData.h"
 #include "nvse/GameData.h"
 #include "nvse/GameRTTI.h"
@@ -407,6 +408,162 @@ namespace
 	}
 }
 
+// ── active effects ──────────────────────────────────────────────────────────
+
+namespace
+{
+	/// Seconds as m:ss, which is how the Pip-Boy shows an effect's clock.
+	std::string FormatElapsed(float seconds)
+	{
+		if (!(seconds == seconds) || seconds < 0.f || seconds > 86400.f)
+			return {};
+
+		int total = static_cast<int>(seconds);
+		char tmp[16];
+		std::snprintf(tmp, sizeof tmp, "%d:%02d", total / 60, total % 60);
+		return tmp;
+	}
+
+	/// Whatever is currently acting on the player: chems, food, addictions, crippled limbs.
+	///
+	/// MagicTarget::GetEffectList is a mapped virtual and EffectNode is just tList<ActiveEffect>,
+	/// so this is an ordinary list walk rather than an offset guess. The list pointer is null when
+	/// nothing is active, which is the common case and not an error.
+	void WriteEffects(Json& j, PlayerCharacter* player)
+	{
+		j.BeginArray("effects");
+
+		EffectNode* effects = player->magicTarget.GetEffectList();
+		if (!effects)
+		{
+			j.EndArray();
+			return;
+		}
+
+		int written = 0;
+		for (auto iter = effects->Begin(); !iter.End(); ++iter)
+		{
+			if (written >= 40)
+				break;                       // an addiction-heavy character can carry a lot
+
+			ActiveEffect* effect = iter.Get();
+			if (!effect || !effect->magicItem)
+				continue;
+
+			// MagicItem extends TESFullName rather than TESForm, so the name is right on it and
+			// there is no GetTheName() to call.
+			const char* name = effect->magicItem->name.CStr();
+			if (!name || !*name)
+				continue;
+
+			j.BeginObject()
+				.Str("name", name)
+				// Elapsed rather than remaining: the effect's total duration lives on EffectItem,
+				// whose layout is not mapped here, and a wrong subtraction reads worse than an
+				// honest count-up.
+				.Str("duration", FormatElapsed(effect->timeElapsed))
+				.EndObject();
+
+			++written;
+		}
+
+		j.EndArray();
+	}
+}
+
+// ── map markers ─────────────────────────────────────────────────────────────
+
+namespace
+{
+	/// The marker icons, mapped onto the glyph names web/app.js already draws.
+	const char* MarkerTypeName(UInt16 type)
+	{
+		switch (type)
+		{
+		case 1:  return "City";
+		case 2:  return "Settlement";
+		case 3:  return "Camp";
+		case 4:  return "Landmark";
+		case 5:  return "Cave";
+		case 6:  return "Factory";
+		case 7:  return "Monument";
+		case 8:  return "Military";
+		case 9:  return "Office";
+		case 10: return "Ruin";
+		case 11: return "Ruin";
+		case 12: return "Sewer";
+		case 13: return "Metro";
+		case 14: return "Vault";
+		default: return "Unmarked";
+		}
+	}
+
+	/// Every map marker in the current worldspace.
+	///
+	/// Markers are persistent references, and a worldspace keeps those in its own permanent cell
+	/// (TESWorldSpace::cell) rather than in whichever cell you happen to be standing in. So this
+	/// walks that cell's object list once and picks out the refs carrying ExtraMapMarker.
+	///
+	/// Interiors have no worldspace, so they get an empty list -- which is correct, since there is
+	/// no world map to place anything on.
+	void WriteMarkers(Json& j, PlayerCharacter* player, const Config& config)
+	{
+		j.BeginArray("markers");
+
+		TESObjectCELL* cell = player->parentCell;
+		TESWorldSpace* world = cell ? cell->worldSpace : nullptr;
+		TESObjectCELL* persistent = world ? world->cell : nullptr;
+
+		if (!persistent)
+		{
+			j.EndArray();
+			return;
+		}
+
+		int written = 0;
+		for (auto iter = persistent->objectList.Begin(); !iter.End(); ++iter)
+		{
+			if (written >= config.maxMapMarkers)
+				break;
+
+			TESObjectREFR* ref = iter.Get();
+			if (!ref)
+				continue;
+
+			auto* marker = static_cast<ExtraMapMarker*>(ref->extraDataList.GetByType(kExtraData_MapMarker));
+			if (!marker || !marker->data)
+				continue;
+
+			// Not every marker carries a name; the unnamed ones are the engine's own plumbing.
+			const char* name = marker->data->fullName.name.CStr();
+			if (!name || !*name)
+				continue;
+
+			UInt16 flags = marker->data->flags;
+			bool visible = (flags & ExtraMapMarker::kFlag_Visible) != 0;
+			bool canTravel = (flags & ExtraMapMarker::kFlag_CanTravel) != 0;
+
+			// Undiscovered markers are still sent -- the screen draws them dimmed, the same way
+			// the Pip-Boy does -- but a hidden one is hidden.
+			if (flags & ExtraMapMarker::kFlag_Hidden)
+				continue;
+
+			j.BeginObject()
+				.Str("name", name)
+				.Str("type", MarkerTypeName(marker->data->type))
+				.Num("x", ref->posX, 0)
+				.Num("y", ref->posY, 0)
+				.Bool("visited", visible)
+				.Bool("canFastTravel", canTravel)
+				.EndObject();
+
+			++written;
+		}
+
+		j.EndArray();
+	}
+}
+
 // ── perks ───────────────────────────────────────────────────────────────────
 
 namespace
@@ -608,7 +765,7 @@ namespace
 		j.EndArray();
 	}
 
-	void WriteLocation(Json& j, PlayerCharacter* player)
+	void WriteLocation(Json& j, PlayerCharacter* player, const Config& config)
 	{
 		j.BeginObject("map");
 
@@ -645,6 +802,8 @@ namespace
 			.Num("maxX", 140000.0, 0)
 			.Num("maxY", 140000.0, 0)
 			.EndObject();
+
+		WriteMarkers(j, player, config);
 
 		j.EndObject();
 	}
@@ -706,15 +865,16 @@ namespace
 		j.EndObject();
 
 		WriteQuests(j, player);
-		WriteLocation(j, player);
+		WriteLocation(j, player, config);
 		WritePlugins(j);
 		WritePerks(j, player);
 
 		// Notes, stats, effects and radio are stubbed until their readers land; the screen already
 		// renders an empty tab correctly, so shipping them empty beats shipping fiction.
+		WriteEffects(j, player);
+
 		j.BeginArray("notes").EndArray();
 		j.BeginArray("stats").EndArray();
-		j.BeginArray("effects").EndArray();
 		j.BeginArray("radio").EndArray();
 
 		j.BeginObject("perms")
