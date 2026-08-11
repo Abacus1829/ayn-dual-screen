@@ -186,7 +186,8 @@ Abacus Dual Screen Interface/
 ## Credits
 
 - **Abacus** — author.
-- Shows pages served by the Ayn Dual Screen mods for Stardew Valley and Terraria; it contains no
+- Shows pages served by the Ayn Dual Screen mods for Stardew Valley, Terraria, Minecraft and
+  Fallout: New Vegas; it contains no
   game assets of its own.
 - **Contains AI-assisted code**, written with an AI coding assistant and human-reviewed.
 
