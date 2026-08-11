@@ -13,6 +13,14 @@ stardew/obj/
 terraria/bin/
 terraria/obj/
 
+# --- game mod (C++ / MSVC) ---
+falloutnv/build/
+falloutnv/Debug/
+falloutnv/Release/
+falloutnv/x64/
+falloutnv/*.aps
+*.vcxproj.user
+
 # --- game mod (Gradle) ---
 minecraft/build/
 minecraft/.gradle/

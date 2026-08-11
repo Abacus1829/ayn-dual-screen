@@ -1,0 +1,160 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1a0f">
+<title>Pip-Boy — Ayn Dual Screen</title>
+<link rel="stylesheet" href="style.css">
+
+<div id="crt">
+  <div id="screen">
+
+    <!-- ── header: the Pip-Boy's own status line ─────────────────────────── -->
+    <header id="topbar">
+      <div class="hp">
+        <span class="lbl">HP</span>
+        <b id="hp">—</b><span id="hpmax" class="dim"></span>
+      </div>
+
+      <nav id="tabs" role="tablist">
+        <button class="tab" role="tab" data-tab="stat">STAT</button>
+        <button class="tab" role="tab" data-tab="inv">INV</button>
+        <button class="tab" role="tab" data-tab="data">DATA</button>
+        <button class="tab" role="tab" data-tab="map">MAP</button>
+        <button class="tab" role="tab" data-tab="radio">RADIO</button>
+      </nav>
+
+      <div class="right">
+        <span id="conn" class="dot" title="waiting for the game"></span>
+        <div class="ap">
+          <span class="lbl">AP</span>
+          <b id="ap">—</b><span id="apmax" class="dim"></span>
+        </div>
+        <button id="gear" class="icon" title="Screen settings" aria-label="Screen settings">&#9881;</button>
+      </div>
+    </header>
+
+    <!-- ── the sub-tab strip; contents swapped per page ──────────────────── -->
+    <nav id="subtabs" role="tablist"></nav>
+
+    <main id="body">
+
+      <!-- ══ STAT ══════════════════════════════════════════════════════════ -->
+      <section class="page" data-page="stat">
+
+        <div class="sub" data-sub="status">
+          <div class="statuswrap">
+            <div class="dollcol">
+              <!-- The vault boy is drawn, not extracted: the game ships him as a
+                   set of UI textures we have no licence to redistribute. -->
+              <svg id="doll" viewBox="0 0 120 200" aria-label="Limb condition">
+                <g id="limbs" fill="none" stroke-width="2.5" stroke-linejoin="round">
+                  <ellipse data-limb="head"     cx="60"  cy="26"  rx="18" ry="21"/>
+                  <path    data-limb="torso"    d="M42 50 L78 50 L82 112 L38 112 Z"/>
+                  <path    data-limb="rightArm" d="M40 52 L26 58 L18 108 L30 111 L40 66 Z"/>
+                  <path    data-limb="leftArm"  d="M80 52 L94 58 L102 108 L90 111 L80 66 Z"/>
+                  <path    data-limb="rightLeg" d="M40 114 L57 114 L56 186 L41 186 Z"/>
+                  <path    data-limb="leftLeg"  d="M63 114 L80 114 L79 186 L64 186 Z"/>
+                </g>
+              </svg>
+              <div id="dolllegend" class="legend"></div>
+            </div>
+
+            <div class="statuscol">
+              <div id="condbars" class="bars"></div>
+              <h3>Effects</h3>
+              <ul id="effects" class="list plain"></ul>
+              <h3>Survival</h3>
+              <div id="hardcore" class="bars"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sub" data-sub="special"><ul id="special" class="list"></ul></div>
+        <div class="sub" data-sub="skills"><ul id="skills" class="list"></ul></div>
+        <div class="sub" data-sub="perks"><ul id="perks" class="list"></ul></div>
+      </section>
+
+      <!-- ══ INV ═══════════════════════════════════════════════════════════ -->
+      <section class="page" data-page="inv">
+        <div class="invwrap">
+          <ul id="items" class="list"></ul>
+          <aside id="itemcard" class="card">
+            <p class="hint">Select an item.</p>
+          </aside>
+        </div>
+        <div id="invfoot" class="foot"></div>
+      </section>
+
+      <!-- ══ DATA ══════════════════════════════════════════════════════════ -->
+      <section class="page" data-page="data">
+        <div class="sub" data-sub="quests">
+          <div class="invwrap">
+            <ul id="quests" class="list"></ul>
+            <aside id="questcard" class="card"><p class="hint">Select a quest.</p></aside>
+          </div>
+        </div>
+        <div class="sub" data-sub="notes">
+          <div class="invwrap">
+            <ul id="notes" class="list"></ul>
+            <aside id="notecard" class="card"><p class="hint">Select a note.</p></aside>
+          </div>
+        </div>
+        <div class="sub" data-sub="stats"><ul id="stats" class="list"></ul></div>
+      </section>
+
+      <!-- ══ MAP ═══════════════════════════════════════════════════════════ -->
+      <section class="page" data-page="map">
+        <div class="mapwrap">
+          <div id="mapview">
+            <canvas id="mapcanvas"></canvas>
+            <div id="maptip" class="tip" hidden></div>
+          </div>
+          <aside id="mapside" class="card">
+            <div id="mapwhere"></div>
+            <ul id="markers" class="list compact"></ul>
+          </aside>
+        </div>
+        <div id="mapfoot" class="foot">
+          <button data-mapmode="local" class="btn">LOCAL</button>
+          <button data-mapmode="world" class="btn">WORLD</button>
+          <span class="spacer"></span>
+          <button data-mapzoom="-1" class="btn">&minus;</button>
+          <span id="mapzoom" class="dim">1.0x</span>
+          <button data-mapzoom="1" class="btn">+</button>
+        </div>
+      </section>
+
+      <!-- ══ RADIO ═════════════════════════════════════════════════════════ -->
+      <section class="page" data-page="radio">
+        <div class="radiowrap">
+          <ul id="stations" class="list"></ul>
+          <aside class="card">
+            <div id="nowplaying"></div>
+            <canvas id="wave" height="90"></canvas>
+          </aside>
+        </div>
+      </section>
+
+    </main>
+
+    <footer id="statusline">
+      <span id="loc" class="dim"></span>
+      <span class="spacer"></span>
+      <span id="lvl" class="dim"></span>
+      <span id="caps" class="dim"></span>
+      <span id="wt" class="dim"></span>
+    </footer>
+
+  </div>
+</div>
+
+<!-- ── the per-screen settings panel; nothing here reaches the game ──────── -->
+<div id="settings" hidden>
+  <div class="panel">
+    <h2>Screen settings <button id="closesettings" class="icon">&times;</button></h2>
+    <p class="hint">Saved in this browser only — each screen can differ.</p>
+    <div id="settingsbody"></div>
+    <button id="resetsettings" class="btn wide">Reset to defaults</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
