@@ -37,6 +37,11 @@ namespace
 
 	std::deque<Command> g_queue;
 
+	/// The station this mod last tuned. See WriteRadio: the game's own tuned station cannot be
+	/// read from here, so this is the best available answer and it is only right if the radio was
+	/// last changed from the screen.
+	std::string g_tunedStation;
+
 	/// NVSE's console RunScriptLine, if the interface was available. Null means the write
 	/// operations simply refuse rather than falling back to something less safe.
 	bool (*g_runScriptLine)(const char*, void*) = nullptr;
@@ -569,6 +574,69 @@ namespace
 	}
 }
 
+// ── radio ───────────────────────────────────────────────────────────────────
+
+namespace
+{
+	/// The radio stations in this worldspace.
+	///
+	/// Stations are references carrying ExtraRadioData. The SDK maps the type ID for that but not
+	/// the structure behind it, so this detects which references ARE stations without reading any
+	/// of their fields -- which is the difference between something reliable and a guess at an
+	/// offset.
+	///
+	/// What that costs: there is no way here to tell which station is currently tuned, so `active`
+	/// reflects what this mod last tuned rather than what the game thinks. Tune from the Pip-Boy
+	/// instead and the screen will not notice.
+	void WriteRadio(Json& j, PlayerCharacter* player, const std::string& tuned)
+	{
+		j.BeginArray("radio");
+
+		TESObjectCELL* cell = player->parentCell;
+		TESWorldSpace* world = cell ? cell->worldSpace : nullptr;
+		TESObjectCELL* persistent = world ? world->cell : nullptr;
+
+		if (!persistent)
+		{
+			j.EndArray();
+			return;
+		}
+
+		int written = 0;
+		for (auto iter = persistent->objectList.Begin(); !iter.End(); ++iter)
+		{
+			if (written >= 32)
+				break;
+
+			TESObjectREFR* ref = iter.Get();
+			if (!ref || ref->IsDeleted() || !ref->baseForm)
+				continue;
+
+			if (!ref->extraDataList.HasType(kExtraData_RadioData))
+				continue;
+
+			const char* name = ref->baseForm->GetTheName();
+			if (!name || !*name)
+				continue;
+
+			std::string id = FormIdText(ref->refID);
+
+			j.BeginObject()
+				.Str("id", id)
+				.Str("name", name)
+				.Bool("active", !tuned.empty() && tuned == id)
+				// Range is what decides whether a station is audible, and that lives in the data
+				// we cannot read. Reported as in range rather than inventing a distance test.
+				.Bool("inRange", true)
+				.EndObject();
+
+			++written;
+		}
+
+		j.EndArray();
+	}
+}
+
 // ── the local map ───────────────────────────────────────────────────────────
 
 namespace
@@ -949,9 +1017,10 @@ namespace
 		// renders an empty tab correctly, so shipping them empty beats shipping fiction.
 		WriteEffects(j, player);
 
+		WriteRadio(j, player, g_tunedStation);
+
 		j.BeginArray("notes").EndArray();
 		j.BeginArray("stats").EndArray();
-		j.BeginArray("radio").EndArray();
 
 		j.BeginObject("perms")
 			.Bool("equip", config.allowEquip)
@@ -961,9 +1030,9 @@ namespace
 			// interface, since that is how it reaches the game. Without it the button greys out
 			// rather than pretending.
 			.Bool("fastTravel", config.allowFastTravel && g_runScriptLine != nullptr)
+			.Bool("radio", config.allowRadio && g_runScriptLine != nullptr)
 			// Still unimplemented. Gated to false regardless of config, so the button greys out
 			// instead of offering something that does nothing.
-			.Bool("radio", config.allowRadio && false)
 			.Bool("setQuest", config.allowSetQuest && false)
 			.EndObject();
 
@@ -1091,7 +1160,37 @@ void Snapshot::DrainCommands(const Config& config)
 			std::snprintf(line, sizeof line, "player.MoveTo %08X", ref->refID);
 			g_runScriptLine(line, nullptr);
 		}
-		// setQuest and radio are accepted and queued, but not applied yet.
+		else if (cmd.action == "radio" && config.allowRadio && g_runScriptLine)
+		{
+			// Empty id means "switch it off", which is the same activation on whatever is tuned.
+			if (cmd.id.empty())
+			{
+				if (!g_tunedStation.empty())
+				{
+					char line[64];
+					std::snprintf(line, sizeof line, "%s.Activate player 1", g_tunedStation.c_str());
+					g_runScriptLine(line, nullptr);
+					g_tunedStation.clear();
+				}
+				continue;
+			}
+
+			// Same shape as fast travel: the ID from the screen is looked up and checked to be a
+			// real reference that actually carries radio data before anything is activated.
+			TESForm* form = LookupFormByID(ParseFormId(cmd.id));
+			TESObjectREFR* ref = form ? DYNAMIC_CAST(form, TESForm, TESObjectREFR) : nullptr;
+			if (!ref || !ref->extraDataList.HasType(kExtraData_RadioData))
+				continue;
+
+			// Activating the station reference is how the game itself tunes one -- it is an
+			// ordinary activation, not a write into the radio's own data, which is the part this
+			// SDK does not map.
+			char line[64];
+			std::snprintf(line, sizeof line, "%08X.Activate player 1", ref->refID);
+			g_runScriptLine(line, nullptr);
+			g_tunedStation = FormIdText(ref->refID);
+		}
+		// setQuest is accepted and queued, but not applied yet.
 		//
 		// setQuest is deliberately NOT done by writing player->quest directly: the active quest
 		// has bookkeeping around it -- the objective list, the map target, the Pip-Boy's own

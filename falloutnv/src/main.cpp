@@ -40,6 +40,10 @@ static std::string g_configPath;
 /// worker thread, so both take a copy under this rather than sharing the live object.
 static std::mutex g_configLock;
 
+/// Set when the port or LAN setting changes. The server cannot restart itself from inside one of
+/// its own request threads, so the game thread does it on the next frame.
+static volatile bool g_restartServer = false;
+
 static Config ConfigSnapshot()
 {
 	std::lock_guard<std::mutex> guard(g_configLock);
@@ -215,7 +219,19 @@ static HttpResponse Route(const HttpRequest& req)
 		}
 
 		if (ok)
+		{
 			_MESSAGE("Setting changed from the second screen: %s = %s", key.c_str(), value.c_str());
+
+			// Apply the ones that need more than the next snapshot to notice.
+			if (key == "EnableIcons")
+				Assets::SetEnabled(ConfigSnapshot().enableIcons);
+
+			// Port and LAN access mean rebinding the socket. That cannot happen here -- this IS a
+			// thread of the server being replaced -- so the game thread does it on the next frame,
+			// by which time this response has already gone out.
+			if (key == "Port" || key == "AllowLanAccess")
+				g_restartServer = true;
+		}
 
 		return HttpResponse::Json(ok ? R"({"ok":true})" : R"({"ok":false,"error":"bad key or value"})");
 	}
@@ -242,26 +258,29 @@ static void StartServer()
 	if (g_server)
 		return;
 
-	g_server = std::make_unique<WebServer>(g_config.port, g_config.allowLan, Route);
+	// A copy, not the live object: the settings panel writes g_config from a worker thread, and
+	// this now runs again on a rebind rather than only once at startup.
+	const Config config = ConfigSnapshot();
+	g_server = std::make_unique<WebServer>(config.port, config.allowLan, Route);
 
 	if (!g_server->Start())
 	{
 		_MESSAGE("Could not listen on port %u. Another program is probably using it -- change "
 			"Port in AynDualScreen.ini. The game is unaffected; there is just no second screen.",
-			static_cast<unsigned>(g_config.port));
+			static_cast<unsigned>(config.port));
 		g_server.reset();
 		return;
 	}
 
-	_MESSAGE("Second screen ready on this PC at http://localhost:%u/", static_cast<unsigned>(g_config.port));
+	_MESSAGE("Second screen ready on this PC at http://localhost:%u/", static_cast<unsigned>(config.port));
 
-	if (g_config.allowLan)
+	if (config.allowLan)
 	{
 		// localhost typed into a phone means *that* phone, so it can never reach the game. Print
 		// the addresses another device should actually use.
 		for (const std::string& address : WebServer::LocalAddresses())
 			_MESSAGE("From another device on your network: http://%s:%u/", address.c_str(),
-				static_cast<unsigned>(g_config.port));
+				static_cast<unsigned>(config.port));
 	}
 	else
 	{
@@ -281,6 +300,20 @@ static void MessageHandler(NVSEMessagingInterface::Message* msg)
 		break;
 
 	case NVSEMessagingInterface::kMessage_MainGameLoop:
+		// Rebind the server if the port or LAN setting changed. Done here rather than in the
+		// request that changed it, because that request is running on a thread of the very server
+		// being torn down.
+		if (g_restartServer)
+		{
+			g_restartServer = false;
+			if (g_server)
+			{
+				g_server->Stop();
+				g_server.reset();
+			}
+			StartServer();
+		}
+
 		// The only place game state is ever touched. Takes a copy of the config rather than the
 		// live object, since the settings panel can write it from a worker thread.
 		Snapshot::Tick(ConfigSnapshot());

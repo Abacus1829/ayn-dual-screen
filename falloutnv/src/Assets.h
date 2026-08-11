@@ -19,6 +19,13 @@ namespace Assets
 	/// name tables only, never pixel data. Safe to call more than once.
 	void Init(const std::string& dataFolder, bool enabled);
 
+	/// Turn icons on or off at runtime, from the settings panel.
+	///
+	/// Turning them on after starting with them off opens the archives then and there, so the
+	/// setting takes effect immediately rather than needing the game restarted. Indexing is
+	/// header-and-name-table only, so the pause is not noticeable.
+	void SetEnabled(bool enabled);
+
 	/// Fetch one texture as a PNG, by its archive-relative path
 	/// ("textures\\interface\\icons\\pipboyimages\\weapons\\weapons_10mm_pistol.dds").
 	/// The ".dds" may be given as ".png"; both resolve to the same entry.

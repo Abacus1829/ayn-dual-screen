@@ -14,6 +14,7 @@ namespace
 	std::mutex g_lock;
 	bool g_enabled = false;
 	bool g_ready = false;
+	std::string g_dataFolder;      // remembered so icons can be switched on later without a restart
 
 	/// The texture archives, in the order they should be searched. Later archives in a real load
 	/// order win, but for the stock interface art these two never collide, so first hit is fine.
@@ -73,11 +74,35 @@ namespace
 	}
 }
 
+namespace
+{
+	/// Open and index the archives. Caller holds g_lock.
+	void OpenArchives();
+}
+
+void Assets::SetEnabled(bool enabled)
+{
+	std::lock_guard<std::mutex> guard(g_lock);
+	if (enabled == g_enabled)
+		return;
+
+	g_enabled = enabled;
+
+	// Switched on after starting off: the archives were never opened, so open them now rather
+	// than making someone restart for a setting that is otherwise instant.
+	if (enabled && !g_ready)
+		OpenArchives();
+	else if (!enabled)
+		g_summary = "disabled";
+}
+
 void Assets::Init(const std::string& dataFolder, bool enabled)
 {
 	std::lock_guard<std::mutex> guard(g_lock);
 
+	g_dataFolder = dataFolder;
 	g_enabled = enabled;
+
 	if (!enabled)
 	{
 		g_summary = "disabled in the ini";
@@ -85,6 +110,15 @@ void Assets::Init(const std::string& dataFolder, bool enabled)
 	}
 	if (g_ready)
 		return;
+
+	OpenArchives();
+}
+
+namespace
+{
+	void OpenArchives()
+	{
+		const std::string& dataFolder = g_dataFolder;
 
 	// Every .bsa in Data, not a fixed list.
 	//
@@ -136,7 +170,8 @@ void Assets::Init(const std::string& dataFolder, bool enabled)
 
 	g_summary = summary;
 	g_ready = true;
-}
+	}
+}   // anonymous namespace holding OpenArchives
 
 bool Assets::Png(const std::string& request, std::string& out)
 {
