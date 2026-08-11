@@ -36,9 +36,10 @@ Minecraft uses 27302 and New Vegas 27303 rather than all sharing 27301 deliberat
 to be installed on the same PC, and two mods fighting over one port fails in a way that looks like
 the app's fault.
 
-The **Fallout: New Vegas** mod is source-only for now: it builds into a loadable plugin, but it has
-never been run against a live game, so there is no release worth linking. See
-[`falloutnv/README.md`](falloutnv/README.md) for exactly what is and isn't done.
+The **Fallout: New Vegas** mod runs — it loads under xNVSE and serves a live Pip-Boy off a real
+save — but it is early, and a few tabs are still empty on purpose rather than showing invented
+numbers. Build it yourself for now; see [`falloutnv/README.md`](falloutnv/README.md) for exactly
+what is and isn't done.
 
 ---
 

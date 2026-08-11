@@ -19,27 +19,46 @@ the first one in this repository that isn't a managed mod — see *Why this one 
 
 ## Status
 
-**The screen is finished and works. The plugin compiles and installs. Neither has been run against
-a live game yet**, because xNVSE itself isn't installed here — `build.ps1` says so when it can't
-find `nvse_loader.exe`.
+**It runs.** The plugin loads under xNVSE and serves a live Pip-Boy off a real save.
 
 | Part | State |
 | --- | --- |
-| The second-screen UI (`web/`) | Done, and verified end to end against the mock server. |
-| The mock backend (`tools/mockserver.py`) | Done. Run it and the whole UI is usable now. |
-| The plugin (`src/`) | **Builds**: `AynDualScreen.dll`, 98.5 KB, i386, exporting both NVSE entry points. Never yet loaded by the game. |
-| Player, SPECIAL, skills, limbs, hardcore | Written and compiling. |
-| Inventory, including weapon mods | Written and compiling. |
-| Quests and objectives | Written and compiling. |
-| Load order (DATA → PLUGINS) | Written and compiling. |
-| Equip, use and drop | Written. Applied on the game thread through the game's own routines. |
+| The second-screen UI (`web/`) | Working in-game. |
+| The plugin (`src/`) | Loads, serves, and reads the player. ~150 KB, i386. |
+| Player, SPECIAL, skills, limbs, hardcore | **Live.** |
+| Inventory, including weapon mods | **Live**, with each item's own icon. |
+| Quests and objectives | **Live.** |
+| Perks and traits | **Live.** Read by asking the game per perk, not by walking an unmapped list. |
+| Load order (DATA → PLUGINS) | **Live.** |
+| Equip, use and drop | **Live**, applied on the game thread. |
+| Icons, from your own archives | **Live.** Every `.bsa` in `Data` is indexed — 15 on a full install, DLC included. |
+| The status figure | **Live**, composited from the game's own limb textures with crippled variants. |
 | Fast travel, radio, set active quest | **Not applied.** The buttons grey out regardless of the ini. |
-| Perks, notes, misc stats, active effects, map markers | Sent as empty arrays. Readers not written. |
-| Game assets (icons, the real Pip-Boy textures) | Not extracted yet. See *Assets* below. |
+| Notes, misc stats, active effects, map markers | Sent as empty arrays. Readers not written. |
+| Condition bars on the figure | Positions still wrong. The figure itself is right. |
 
-"Compiles" is not "works". Every number above is read from a structure offset that xNVSE
-reverse-engineered, and until the game has actually loaded this DLL, the honest claim is that it
-builds and is laid out correctly — not that it reports the right health.
+### What "live" is and isn't
+
+It has been loaded, played, and the numbers watched — but it has not been through a long session,
+a hardcore run, or a heavily modded load order. Every value comes from a structure offset the
+xNVSE project reverse-engineered, so the failure mode for a wrong one is a crash rather than a
+wrong number. Treat it as early.
+
+### Why the last four are not done
+
+Not oversight, and each for its own reason:
+
+- **Fast travel** needs the map-marker reader first — it cannot move you to a marker the mod has
+  never read. That is a prerequisite, not a shortcut.
+- **Set active quest** has no vanilla console command, and the tempting version — writing
+  `player->quest` directly — skips the game's own bookkeeping and is exactly how a save desyncs.
+  It needs the game's routine, found properly.
+- **Radio** has no clean route verified yet.
+- **Active effects and map markers** read structures the SDK has mapped only partly.
+
+All three write operations would go through NVSE's console interface, which is already wired up:
+the plugin takes `RunScriptLine` at load and logs whether it got it. The command queue and the
+permission checks are in place. What is missing is the commands themselves.
 
 Nothing in the snapshot is invented: a reader that doesn't exist yet sends an empty list, and the
 screen renders an empty tab, rather than showing a plausible lie about your character.
@@ -48,21 +67,35 @@ screen renders an empty tab, rather than showing a plausible lie about your char
 
 ## Assets
 
-Nothing is redistributed here. The screen is drawn in CSS: one phosphor colour, scanlines, a
-casing, and an anatomical limb figure. The sound is synthesised — a filtered noise burst for the
-click, two sines for the hum — rather than sampled. The boot text is written for this project
-rather than taken from the games.
+**Nothing is redistributed here, and no game file is ever written to disk.** The mod reads
+textures out of *your own installed copy* at runtime and serves them to *your own screen* — the
+same arrangement the Terraria mod in this repository uses, and the reason either can be hosted.
 
-The **planned** next step is the same trick the Terraria mod already uses: read the real textures
-out of *your own installed copy* at runtime and serve them to *your own screen*, never committing
-an extracted file to this repository. That needs three pieces which aren't written yet:
+Three pieces make that work, none of which touch the game:
 
-1. A **BSA reader** — the textures live inside `Fallout - Textures.bsa`.
-2. A **DXT decoder** — they're DDS, which no browser will display.
-3. A **PNG encoder** — the same job `Png.cs` does in the Terraria mod.
+| | |
+| --- | --- |
+| `Bsa.cpp` | v104 archive reader, plus an inflate written out longhand — this project carries no compression library and BSA entries really are zlib-compressed. |
+| `Dds.cpp` | DXT1/3/5 and the uncompressed layouts, to RGBA. Anything else is refused rather than guessed at; a wrong guess produces convincing garbage. |
+| `Png.cpp` | Encoder. Stored deflate blocks, because a real deflate would mean a dependency and the payload is a small icon on a LAN. |
 
-Until then the drawn versions stand in, and they are meant to: a mod that ships Bethesda's artwork
-is a mod that can't be hosted anywhere.
+Because none of it needs the game, all of it is testable. `tools/assetdump.cpp` builds as a plain
+console exe and runs against the real archives: **1153 Pip-Boy icons through read → inflate → DXT
+decode → PNG encode, zero failures**, with one output verified byte by byte.
+
+What comes from the game, at runtime: item and perk icons, the SPECIAL art, and the status
+figure's limb textures. What does **not**: the Pip-Boy frame, the boot text, and the interface
+sounds — those are drawn in CSS and synthesised in the browser, written for this project.
+
+`EnableIcons=0` in the ini skips opening the archives entirely.
+
+### Two traps worth knowing
+
+- `greenscreen.dds` is not a background map despite the name — it is a pre-rendered picture of an
+  entire Pip-Boy screen. Tiling it wallpapers the panel with tiny screenshots.
+- The status figure lives in `textures\interface\stats\`, named by limb (`head`, `torso`,
+  `left_arm`…, each with a `_broken` variant). It is **not** Fallout 3's `pc_body.dds` set, which
+  New Vegas does not ship.
 
 ## Why this one is a DLL
 
@@ -337,20 +370,36 @@ the xNVSE project or the Tale of Two Wastelands team.
 
 ## What's worth doing next
 
-In rough order of how much they'd add:
+In dependency order, because two of these unblock others:
 
-- Compile it, and fix what a first run turns up.
-- The readers that are still stubs: perks, active effects, notes and holotapes, misc stats.
-- Map markers, read from the cells' `ExtraMapMarker` data — the map draws them already, it just
-  isn't being sent any.
-- Radio: list the stations in range and switch between them.
-- Fast travel, applied on the game thread.
-- Set the active quest — through the game's own routine, not by writing `player->quest` behind its
-  back, which is why it isn't done yet.
-- Weight for misc items and chems, once the SDK maps those classes — or by reading the offsets
-  directly, with the same static assertions the SDK uses.
-- Item icons, cropped from the game's own textures at runtime the way the Terraria mod does it.
-- A token in the ini so LAN access needs a shared secret.
+1. **Condition bars on the figure.** The limbs are placed correctly; the bars are not landing on
+   them. `BAR_SPOTS` in `web/app.js`, and `tools/figure-align.html` emits that block.
+2. **Map markers**, from the cells' `ExtraMapMarker` data. The map already draws them — it is not
+   being sent any. This is the prerequisite for fast travel.
+3. **Fast travel**, once markers exist, through the console interface.
+4. **Set the active quest** — through the game's own routine, not by writing `player->quest`
+   behind its back.
+5. **Radio**: list the stations in range and switch between them.
+6. **Active effects**, and **notes and holotapes**.
+7. **Misc stats** for the DATA tab.
+8. Weight for misc items and chems, once the SDK maps those classes.
+9. A token in the ini so LAN access needs a shared secret.
+
+## The tools
+
+Three things in `tools/` that exist because guessing did not work:
+
+| | |
+| --- | --- |
+| `assetdump.exe` | `list` every file in an archive, `info` one, `png` one out, `sweep` a whole folder through the pipeline, and `bounds` to measure a sprite's opaque box in pixels. Build with `tools/build-assetdump.ps1`. |
+| `plugintest.exe` | Loads the real DLL and drives it through Query/Load/DeferredInit without New Vegas, then makes real HTTP requests. 17 checks. Build with `tools/build-plugintest.ps1`. |
+| `figure-align.html` | Drag the status figure's limbs into place against the live art and copy the coordinates out. |
+| `textureviewer.html` | Look at anything the mod can serve, live from the running game. |
+| `mockserver.py` | The whole UI against a fake courier, no game needed. |
+
+`assetdump list` used to stop at forty matches, which caused two confident and wrong "that art is
+not in your install" conclusions. It prints everything now. If a search says something is absent,
+check that before believing it.
 
 ## Layout
 
