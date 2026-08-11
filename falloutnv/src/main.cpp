@@ -282,6 +282,21 @@ __declspec(dllexport) bool NVSEPlugin_Load(const NVSEInterface* nvse)
 		return false;
 	}
 
+	// The console interface is how the write operations reach the game. It is optional: without
+	// it those commands refuse rather than falling back to poking memory directly, which is the
+	// trade this plugin makes everywhere -- a wrong read is a wrong number, a wrong write is a
+	// corrupted save.
+	auto* console = static_cast<NVSEConsoleInterface*>(nvse->QueryInterface(kInterface_Console));
+	if (console && console->version >= 2 && console->RunScriptLine)
+	{
+		Snapshot::SetConsole(reinterpret_cast<bool(*)(const char*, void*)>(console->RunScriptLine));
+		_MESSAGE("Console interface available; world-changing commands are enabled.");
+	}
+	else
+	{
+		_MESSAGE("No console interface. The screen stays read-only.");
+	}
+
 	g_messaging->RegisterListener(g_pluginHandle, "NVSE", MessageHandler);
 	return true;
 }

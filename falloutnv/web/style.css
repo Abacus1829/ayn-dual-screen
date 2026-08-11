@@ -80,6 +80,9 @@ html, body {
   overflow: hidden;
 }
 
+/* Scanlines. The drawn gradient is the default; when the mod is serving assets, app.js sets
+   --tex-scanlines to the Pip-Boy's own 64x64 scanline texture and it tiles over the top instead.
+   Both are driven by --scan-opacity, so the slider keeps working either way. */
 #screen::after {
   content: "";
   position: absolute;
@@ -90,6 +93,42 @@ html, body {
     to bottom,
     rgba(0,0,0,var(--scan-opacity)) 0px, rgba(0,0,0,var(--scan-opacity)) 1px,
     transparent 1px, transparent var(--scan-gap));
+}
+
+:root[data-device-textures="on"] #screen::after {
+  background-image: var(--tex-scanlines);
+  background-repeat: repeat;
+  background-size: auto calc(var(--scan-gap) * 2);
+  opacity: calc(var(--scan-opacity) * 2.6);
+  mix-blend-mode: multiply;
+}
+
+/* The screen's own glare, laid over everything. Purely decorative, and it follows the vignette
+   slider so turning that down turns this down with it. */
+/* The screen surface itself, from the device's own background map. Tinted by the phosphor colour
+   underneath rather than replacing it, so a custom colour scheme still wins -- the texture
+   contributes grain and unevenness, not hue. */
+:root[data-device-textures="on"] #screen {
+  background-image: var(--tex-screen);
+  background-size: 12rem 12rem;
+  background-repeat: repeat;
+  background-blend-mode: overlay;
+}
+
+/* Hidden unless the device textures actually loaded, so it never occupies a row in the flex
+   column on a page that has no glare to draw. */
+#screen .glare { display: none; }
+
+:root[data-device-textures="on"] #screen .glare {
+  display: block;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 41;
+  background-image: var(--tex-glare);
+  background-size: 100% 100%;
+  mix-blend-mode: screen;
+  opacity: calc(var(--vignette) * 0.14);
 }
 
 #screen::before {
@@ -113,6 +152,19 @@ html, body {
       rgba(255,255,255,.030) 0px, rgba(255,255,255,.030) 1px,
       transparent 1px, transparent 3px),
     linear-gradient(160deg, #3b3f39 0%, #23261f 38%, #191b16 62%, #2c2f28 100%);
+}
+
+/* The casing, from the device's own 512x512 body texture. It is a UV map for a 3D model rather
+   than a flat panel, so it is used as a tiled material at a size that reads as brushed metal
+   rather than stretched to fit -- stretching it just shows you the unwrapped seams. The drawn
+   gradient stays underneath as the base tone. */
+:root[data-bezel="on"][data-device-textures="on"] #crt {
+  background:
+    var(--tex-casing),
+    linear-gradient(160deg, #3b3f39 0%, #23261f 38%, #191b16 62%, #2c2f28 100%);
+  background-size: 22rem auto, cover;
+  background-repeat: repeat, no-repeat;
+  background-blend-mode: soft-light, normal;
 }
 
 :root[data-bezel="on"] #screen {

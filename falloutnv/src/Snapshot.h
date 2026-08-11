@@ -32,4 +32,11 @@ namespace Snapshot
 
 	/// Dropped on load, so a stale save's data can't leak into a new one.
 	void Reset();
+
+	/// Hand over NVSE's console interface, if it gave us one.
+	///
+	/// Commands that CHANGE the world go through this rather than through raw memory writes. A bad
+	/// read shows a wrong number; a bad write corrupts a save, so the write path uses the game's
+	/// own script engine and lets it do its own validation.
+	void SetConsole(bool (*runScriptLine)(const char*, void*));
 }

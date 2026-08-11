@@ -36,6 +36,10 @@ namespace
 
 	std::deque<Command> g_queue;
 
+	/// NVSE's console RunScriptLine, if the interface was available. Null means the write
+	/// operations simply refuse rather than falling back to something less safe.
+	bool (*g_runScriptLine)(const char*, void*) = nullptr;
+
 	/// Items are addressed by form ID rather than by list position, so a command that arrives one
 	/// frame after the inventory shifted can't act on the wrong thing.
 	std::string FormIdText(UInt32 refID)
@@ -757,6 +761,11 @@ void Snapshot::Reset()
 	std::lock_guard<std::mutex> guard(g_lock);
 	g_json = R"({"ready":false})";
 	g_queue.clear();
+}
+
+void Snapshot::SetConsole(bool (*runScriptLine)(const char*, void*))
+{
+	g_runScriptLine = runScriptLine;
 }
 
 bool Snapshot::QueueCommand(const std::string& body)

@@ -255,6 +255,34 @@ function specialIcon(name) {
   return icon("interface/icons/pipboyimages/s.p.e.c.i.a.l/special_" + name.toLowerCase() + ".dds", "big");
 }
 
+/**
+ * The real Pip-Boy 3000's own textures, from textures\pipboy3000\ in the game archives: the
+ * casing, the scanline overlay and the screen glare.
+ *
+ * Each one is probed before it is used. If the mod isn't serving assets -- icons disabled, or the
+ * page opened against the mock server -- the probe fails and the CSS keeps its drawn stand-ins,
+ * which is why the page never depends on any of this being present.
+ */
+const DEVICE_TEXTURES = {
+  "--tex-casing":    "pipboy3000/pipboy.dds",
+  "--tex-scanlines": "pipboy3000/pipboyscanlines.dds",
+  "--tex-glare":     "pipboy3000/screenglare.dds",
+  "--tex-screen":    "pipboy3000/greenscreen.dds",
+};
+
+function loadDeviceTextures() {
+  for (const [variable, path] of Object.entries(DEVICE_TEXTURES)) {
+    const url = "asset/" + path.replace(/\.dds$/i, ".png");
+    const probe = new Image();
+    probe.onload = () => {
+      document.documentElement.style.setProperty(variable, `url("${url}")`);
+      document.documentElement.dataset.deviceTextures = "on";
+    };
+    probe.onerror = () => { /* drawn stand-in stays */ };
+    probe.src = url;
+  }
+}
+
 /** Rebuild a list only when its contents changed, so scroll position survives a redraw. */
 function fill(node, key, build) {
   if (node.dataset.key === key) return false;
@@ -1289,6 +1317,7 @@ function showToast(text) {
 
 applySettings();
 setPage(page);
+loadDeviceTextures();
 runBoot();
 poll();
 setInterval(updateDot, 500);
