@@ -9,12 +9,16 @@
   --text: #f2e6d5;
   --text-dim: #a3927c;
   /*
-   * These were dark browns, on the assumption the panel behind them was a light parchment interior.
-   * It isn't — .panel is #221b16 — so every heading, tab label and forecast line was dark-on-dark and
-   * barely legible, worst of all on the Today tab where nearly all the text uses them.
+   * Ink for text sitting directly on a framed panel.
    *
-   * Corrected here rather than at the seventeen places that read them, so the whole UI moves together
-   * and nothing is left behind. If a genuinely light panel ever appears, it needs its own variables.
+   * The backdrop there is NOT --panel. `.framed` uses `border-image: … fill`, and the fill keyword
+   * paints the game's menu box across the whole box, covering --panel entirely. So the real colour
+   * behind this text is whatever Maps/MenuTiles looks like: vanilla's light parchment, or whatever a
+   * recolour makes it (Cinderbox, SVE's interface, any Content Patcher retexture).
+   *
+   * Hardcoding either shade breaks half the setups — light ink vanished on vanilla parchment, dark
+   * ink would vanish on a dark recolour. So the mod samples the box's own centre pixels and reports
+   * their brightness as state.menuLuma, and app.js sets `.on-light` from it. Light box → dark ink.
    */
   --ink: #f2e6d5;
   --ink-dim: #b8a68e;
@@ -58,6 +62,35 @@ body {
   border-image: url(/asset/menubox.png) 20 fill / 20px repeat;
   image-rendering: pixelated;
 }
+
+/* Set at runtime from state.menuLuma: this menu box is light, so the ink must be dark. */
+body.on-light {
+  --ink: #33240f;
+  --ink-dim: #6b5133;
+  --ink-gold: #7a4b12;
+}
+
+/*
+ * Theme off. Drops the game's frame for flat dark panels — the look before the Stardew theme
+ * existed. Listed after .on-light so it wins at equal specificity whatever the menu box looks like.
+ */
+body.theme-plain {
+  --ink: #f2e6d5;
+  --ink-dim: #b8a68e;
+  --ink-gold: #e8bb5c;
+}
+
+body.theme-plain .framed {
+  border: 1px solid var(--edge);
+  border-image: none;
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 6px;
+}
+
+body.theme-plain #hud { border-width: 1px; padding: 6px 10px; }
+body.theme-plain #detail { border-width: 1px; padding: 5px 8px; }
+body.theme-plain .slot { background-image: none; background-color: var(--panel-2); }
 
 #hud {
   flex: 0 0 auto;
@@ -551,7 +584,12 @@ section {
   border: 1px solid var(--edge);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  transition: opacity .45s ease;
 }
+
+/* Idle fade: the cog sits over the top bar, so left at full strength it hides the clock behind it. */
+body.fade-idle.idle #gear { opacity: .1; }
+body.fade-idle.idle #gear:hover { opacity: 1; }
 
 #gear svg { width: 100%; height: 100%; fill: var(--text-dim); display: block; }
 #gear:active svg { fill: var(--edge-hot); }

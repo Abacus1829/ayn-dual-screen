@@ -29,8 +29,21 @@ const SETTING_DEFAULTS = {
   actions: true,
   accent: '#c8a066',
   scale: 'medium',
-  rate: 10
+  rate: 10,
+  theme: 'stardew',
+  followGame: true,
+  fadeIdle: true,
+  npcHeads: true
 };
+
+/** Behaviour switches. Separate from SECTIONS, which only show and hide parts of the layout. */
+const BEHAVIOUR = [
+  ['followGame', 'Follow the controller’s selected item'],
+  ['fadeIdle', 'Fade the settings button when idle'],
+  ['npcHeads', 'Villager faces on the map']
+];
+
+const THEMES = { stardew: 'Stardew', plain: 'Plain' };
 
 /** Which section each toggle hides, and what to call it in the panel. */
 const SECTIONS = [
@@ -149,9 +162,24 @@ function saveSettings() {
   }
 }
 
+/* ---------- idle fade ---------- */
+
+let idleTimer = null;
+
+/** Any touch or click wakes the chrome back up; it fades again after a few seconds of stillness. */
+function markActive() {
+  document.body.classList.remove('idle');
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => document.body.classList.add('idle'), 4000);
+}
+
 function applySettings() {
   for (const [key] of SECTIONS)
     document.body.classList.toggle(`no-${key}`, !settings[key]);
+
+  document.body.classList.toggle('theme-plain', settings.theme === 'plain');
+  document.body.classList.toggle('fade-idle', !!settings.fadeIdle);
+  markActive();
 
   const root = document.documentElement.style;
   root.setProperty('--edge-hot', settings.accent);
@@ -247,7 +275,9 @@ const dom = {
   settingsToggles: el('settings-toggles'),
   settingsAccents: el('settings-accents'),
   settingsScale: el('settings-scale'),
-  settingsRate: el('settings-rate')
+  settingsRate: el('settings-rate'),
+  settingsTheme: el('settings-theme'),
+  settingsBehaviour: el('settings-behaviour')
 };
 
 const ctx = dom.canvas.getContext('2d');
@@ -300,6 +330,8 @@ async function poll() {
       }
 
       state = next;
+      applyMenuContrast();
+      followGameSelection();
       hideOffline();
       render();
       if (state.mapRev !== loadedMapRev) loadMap();
@@ -548,6 +580,62 @@ function buildSlots(count) {
     dom.invGrid.appendChild(slot);
     slots.push({ root: slot, img: img, stack: stack, qual: qual, signature: null });
   }
+}
+
+/**
+ * Pick dark or light ink from the brightness of the game's actual menu box.
+ *
+ * Recolour mods repaint Maps/MenuTiles, and the mod serves whatever is loaded, so the frame can be
+ * light parchment or near-black depending on what's installed. Reading its brightness rather than
+ * assuming one keeps the text legible on both without the player configuring anything.
+ */
+/**
+ * Villager faces for the map, loaded once each and drawn straight to the canvas.
+ *
+ * Returns null until the image has actually decoded, so the caller falls back to a dot rather than
+ * drawing nothing on the first frame a character appears.
+ */
+const npcFaces = new Map();
+
+function npcFace(key) {
+  if (!key)
+    return null;
+
+  let image = npcFaces.get(key);
+  if (image === undefined) {
+    image = new Image();
+    image.src = `/npc/${key}.png`;
+    image.addEventListener('error', () => npcFaces.set(key, null));
+    npcFaces.set(key, image);
+  }
+
+  return image && image.complete && image.naturalWidth > 0 ? image : null;
+}
+
+function applyMenuContrast() {
+  if (typeof state.menuLuma !== 'number')
+    return;
+  document.body.classList.toggle('on-light', state.menuLuma > 128);
+}
+
+let lastGameSlot = -1;
+
+/**
+ * Move the cursor when the held item changes in-game.
+ *
+ * Without this the detail line only followed taps on the screen, so scrolling the hotbar on a
+ * controller left it describing whatever was tapped last.
+ */
+function followGameSelection() {
+  const slot = state.selectedSlot;
+  if (slot === lastGameSlot)
+    return;
+
+  const changedInGame = lastGameSlot !== -1;
+  lastGameSlot = slot;
+
+  if (changedInGame && settings.followGame && slot >= 0)
+    cursor = slot;
 }
 
 function renderInventory() {
@@ -852,9 +940,20 @@ function renderMap() {
   }
 
   for (const entity of state.entities || []) {
+    const x = originX + entity.x * scale;
+    const y = originY + entity.y * scale;
+    const face = settings.npcHeads ? npcFace(entity.iconKey) : null;
+
+    if (face) {
+      // big enough to recognise regardless of map zoom, and centred on the tile like the dot was
+      const size = Math.max(14, dot * 2.4);
+      ctx.drawImage(face, x - size / 2, y - size / 2, size, size);
+      continue;
+    }
+
     ctx.fillStyle = ENTITY_COLORS[entity.kind] || '#ffffff';
     ctx.beginPath();
-    ctx.arc(originX + entity.x * scale, originY + entity.y * scale, dot / 2, 0, Math.PI * 2);
+    ctx.arc(x, y, dot / 2, 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -1092,7 +1191,33 @@ document.addEventListener('dblclick', (event) => event.preventDefault());
 
 /* ---------- the settings panel ---------- */
 
+/** A grid of checkboxes bound to boolean settings. */
+function buildCheckboxes(host, entries) {
+  host.textContent = '';
+  for (const [key, label] of entries) {
+    const row = document.createElement('label');
+
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = !!settings[key];
+    box.addEventListener('change', () => {
+      settings[key] = box.checked;
+      saveSettings();
+      applySettings();
+    });
+
+    const text = document.createElement('span');
+    text.textContent = label;
+
+    row.append(box, text);
+    host.appendChild(row);
+  }
+}
+
 function buildSettingsPanel() {
+  buildSegmented(dom.settingsTheme, Object.keys(THEMES), 'theme', (v) => THEMES[v]);
+  buildCheckboxes(dom.settingsBehaviour, BEHAVIOUR);
+
   dom.settingsToggles.textContent = '';
   for (const [key, label] of SECTIONS) {
     const row = document.createElement('label');
@@ -1193,6 +1318,11 @@ dom.settingsReset.addEventListener('click', () => {
   applySettings();
   buildSettingsPanel();
 });
+
+// capture, so a touch anywhere wakes the chrome even when the target stops the event
+document.addEventListener('pointerdown', markActive, true);
+document.addEventListener('pointermove', markActive, true);
+document.addEventListener('keydown', markActive, true);
 
 loadSettings();
 applySettings();

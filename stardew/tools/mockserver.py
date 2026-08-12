@@ -137,6 +137,11 @@ def make_png(width, height, pixels):
     )
 
 
+# Interior of the stand-in menu box. Vanilla's is light parchment and recolour mods vary wildly, so
+# --light reproduces a light-boxed setup (which is what broke the text) and the default a dark one.
+MENU_FILL = (45, 36, 29)
+
+
 def build_menu_box():
     """Stand-in for Maps/MenuTiles (0,256,60,60): a 60x60 nine-slice of 20px thirds."""
     pixels = bytearray()
@@ -150,8 +155,28 @@ def build_menu_box():
             elif edge < 8:
                 pixels += bytes((200, 155, 98, 255))
             else:
-                pixels += bytes((45, 36, 29, 255))
+                pixels += bytes((*MENU_FILL, 255))
     return make_png(60, 60, bytes(pixels))
+
+
+def menu_luma():
+    """What the mod reports for the box interior: Rec. 601 luma, same formula as MeasureBrightness."""
+    r, g, b = MENU_FILL
+    return round(0.299 * r + 0.587 * g + 0.114 * b)
+
+
+def build_face(seed):
+    """Stand-in for an NPC head cropped from their sprite sheet."""
+    value = (seed * 2654435761) % 0xFFFFFF
+    r, g, b = (value >> 16) & 0xFF, (value >> 8) & 0xFF, value & 0xFF
+    pixels = bytearray()
+    for y in range(16):
+        for x in range(16):
+            if abs(x - 7.5) <= 5 and abs(y - 7.5) <= 6:
+                pixels += bytes((r, g, b, 255))
+            else:
+                pixels += bytes((0, 0, 0, 0))
+    return make_png(16, 16, bytes(pixels))
 
 
 def build_slot():
@@ -270,6 +295,7 @@ def build_state():
         entities.append({
             "kind": kind,
             "name": f"{kind}-{i}",
+            "iconKey": f"face{i}" if kind == "npc" else None,
             "x": MAP_WIDTH / 2 + math.cos(angle * (0.6 + i * 0.2) + i) * (8 + i * 2),
             "y": MAP_HEIGHT / 2 + math.sin(angle * (0.4 + i * 0.3) + i) * (6 + i),
         })
@@ -287,6 +313,7 @@ def build_state():
         "locationId": MAP["locationId"],
         "locationName": MAP["locationName"],
         "mapRev": MAP["rev"],
+        "menuLuma": menu_luma(),
         "timeOfDay": time_of_day,
         "dayOfMonth": 14,
         "dayOfWeek": "Wed",
@@ -379,6 +406,9 @@ class Handler(BaseHTTPRequestHandler):
             if name not in UI_ASSETS:
                 return self.reply(b"not found", "text/plain", 404)
             return self.reply(UI_ASSETS[name], "image/png")
+        if path.startswith("/npc/"):
+            key = path[len("/npc/"):].removesuffix(".png")
+            return self.reply(build_face(sum(key.encode())), "image/png")
         if path.startswith("/icon/"):
             key = path[len("/icon/"):].removesuffix(".png")
             return self.reply(icon_for(key), "image/png")
@@ -402,6 +432,12 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else 27302
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    if "--light" in sys.argv:
+        # reproduces a light menu box, vanilla or recoloured -- the case that made the text vanish
+        MENU_FILL = (222, 199, 158)
+        UI_ASSETS["menubox"] = build_menu_box()
+
+    port = int(args[0]) if args else 27302
     print(f"Mock second screen on http://localhost:{port}/  (serving {WEB_ROOT})")
     ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()

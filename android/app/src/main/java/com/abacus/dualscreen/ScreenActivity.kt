@@ -100,7 +100,11 @@ class ScreenActivity : AppCompatActivity() {
             quitToMenu(null)
         }
 
-        binding.menuButton.setOnClickListener { binding.menuPanel.visibility = View.VISIBLE }
+        binding.menuButton.setOnClickListener {
+            markActive()
+            binding.menuPanel.visibility = View.VISIBLE
+        }
+        markActive()
         binding.cancelButton.setOnClickListener { binding.menuPanel.visibility = View.GONE }
         binding.reloadButton.setOnClickListener {
             binding.menuPanel.visibility = View.GONE
@@ -208,7 +212,28 @@ class ScreenActivity : AppCompatActivity() {
     private fun trackLocation(pageUrl: String?) {
         offSite = pageUrl != null && !pageUrl.startsWith(url)
         binding.backToScreenButton.visibility = if (offSite) View.VISIBLE else View.GONE
-        binding.menuButton.alpha = if (offSite) 0.9f else 0.45f
+        markActive()
+    }
+
+    /**
+     * The menu button floats over the page, so at rest it covers whatever the page drew underneath —
+     * on the Stardew screen that's the date in the top-left. Fade it out when nothing is happening and
+     * bring it straight back on the next touch.
+     */
+    private fun markActive() {
+        handler.removeCallbacks(fade)
+        binding.menuButton.animate().alpha(if (offSite) 0.9f else 0.45f).setDuration(120).start()
+        handler.postDelayed(fade, IDLE_FADE_MS)
+    }
+
+    private val fade = Runnable {
+        binding.menuButton.animate().alpha(0.06f).setDuration(450).start()
+    }
+
+    // any touch anywhere, including inside the WebView, counts as activity
+    override fun dispatchTouchEvent(event: android.view.MotionEvent): Boolean {
+        markActive()
+        return super.dispatchTouchEvent(event)
     }
 
     private fun load() {
@@ -353,6 +378,7 @@ class ScreenActivity : AppCompatActivity() {
         const val EXTRA_RECONNECT = "reconnect"
         const val EXTRA_KEEP_AWAKE = "keepAwake"
 
+        private const val IDLE_FADE_MS = 4000L
         private const val HEALTH_INTERVAL_MS = 4000L
         private const val HEALTH_TIMEOUT_MS = 2500
         private const val HEALTH_MISSES_ALLOWED = 2

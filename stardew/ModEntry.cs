@@ -101,7 +101,18 @@ namespace AynDualScreen
         private readonly ConcurrentQueue<ActionDto> PendingActions = new();
         private readonly ConcurrentDictionary<string, byte[]> IconCache = new();
         private readonly ConcurrentDictionary<string, byte[]> AssetCache = new();
+        private readonly ConcurrentDictionary<string, byte[]> NpcIconCache = new();
         private bool UiAssetsReady;
+
+        /// <summary>
+        /// Average brightness (0-255) of the menu box's interior, or -1 before it has been sampled.
+        /// </summary>
+        /// <remarks>
+        /// The page draws its text straight onto this box, so it needs to know whether the box is light
+        /// or dark to pick readable ink. Recolour mods repaint Maps/MenuTiles freely — Cinderbox, SVE's
+        /// interface, any Content Patcher retexture — so this is measured rather than assumed.
+        /// </remarks>
+        private int MenuLuma = -1;
 
         private int MapRev;
         private string MapLocationId = string.Empty;
@@ -268,6 +279,7 @@ namespace AynDualScreen
             this.StateJson = "{\"ready\":false}";
             this.MapLocationId = string.Empty;
             this.IconCache.Clear();
+            this.NpcIconCache.Clear();
         }
 
         private void OnUpdateTicked(object sender, UpdateTickedEventArgs e)
@@ -358,6 +370,7 @@ namespace AynDualScreen
                 LocationId = location.NameOrUniqueName,
                 LocationName = location.DisplayName ?? location.Name,
                 MapRev = this.MapRev,
+                MenuLuma = this.MenuLuma,
 
                 TimeOfDay = Game1.timeOfDay,
                 DayOfMonth = Game1.dayOfMonth,
@@ -510,7 +523,8 @@ namespace AynDualScreen
                     Kind = npc.IsMonster ? "monster" : "npc",
                     Name = npc.displayName ?? npc.Name,
                     X = npc.Position.X / Game1.tileSize,
-                    Y = npc.Position.Y / Game1.tileSize
+                    Y = npc.Position.Y / Game1.tileSize,
+                    IconKey = npc.IsMonster ? null : this.EnsureNpcIcon(npc)
                 });
             }
 
@@ -700,6 +714,9 @@ namespace AynDualScreen
                 {
                     Texture2D sheet = this.Helper.GameContent.Load<Texture2D>(pair.Value.Asset);
                     this.AssetCache[pair.Key] = CropToPng(sheet, pair.Value.Source);
+
+                    if (pair.Key == "menubox")
+                        this.MenuLuma = MeasureBrightness(sheet, Centre(pair.Value.Source));
                 }
                 catch (Exception ex)
                 {
@@ -718,6 +735,86 @@ namespace AynDualScreen
                 {
                     this.Monitor.Log($"Couldn't dump sheet '{pair.Key}': {ex.Message}", LogLevel.Trace);
                 }
+            }
+        }
+
+        /// <summary>The middle ninth of a nine-slice box — the part that gets stretched behind the text.</summary>
+        private static Rectangle Centre(Rectangle box)
+        {
+            int third = box.Width / 3;
+            int thirdHigh = box.Height / 3;
+            return new Rectangle(box.X + third, box.Y + thirdHigh, Math.Max(1, third), Math.Max(1, thirdHigh));
+        }
+
+        /// <summary>Average perceived brightness (0-255) of a region, ignoring transparent pixels.</summary>
+        /// <remarks>Must run on the game thread: it reads from a GPU texture.</remarks>
+        private static int MeasureBrightness(Texture2D sheet, Rectangle source)
+        {
+            var pixels = new Color[source.Width * source.Height];
+            sheet.GetData(0, source, pixels, 0, pixels.Length);
+
+            double total = 0;
+            int counted = 0;
+            foreach (Color pixel in pixels)
+            {
+                if (pixel.A < 128)
+                    continue;
+
+                // Rec. 601 luma: green carries most of what the eye reads as brightness
+                total += (0.299 * pixel.R) + (0.587 * pixel.G) + (0.114 * pixel.B);
+                counted++;
+            }
+
+            return counted == 0 ? -1 : (int)Math.Round(total / counted);
+        }
+
+        /// <summary>
+        /// Crop a villager's face out of their walking sprite, so the map can show who is who.
+        /// </summary>
+        /// <remarks>
+        /// Taken from the sprite sheet rather than the portrait: every NPC has a sprite, including
+        /// custom ones added by Stardew Valley Expanded and friends, whereas portraits are optional and
+        /// are far too large to draw at map scale. Frame 0 is the front-facing standing pose.
+        /// </remarks>
+        private string EnsureNpcIcon(NPC npc)
+        {
+            string name = npc.Name;
+            if (string.IsNullOrEmpty(name))
+                return null;
+
+            string key = EncodeKey(name);
+            if (this.NpcIconCache.ContainsKey(key))
+                return this.NpcIconCache[key].Length > 0 ? key : null;
+
+            try
+            {
+                AnimatedSprite sprite = npc.Sprite;
+                Texture2D sheet = sprite?.Texture;
+                if (sheet == null)
+                {
+                    this.NpcIconCache[key] = Array.Empty<byte>();
+                    return null;
+                }
+
+                // the head occupies roughly the top half of a standing frame for both 16x32 and 16x16 sheets
+                int width = Math.Max(1, sprite.SpriteWidth);
+                int height = Math.Max(1, sprite.SpriteHeight);
+                var head = new Rectangle(0, 0, width, Math.Max(1, height >= 24 ? height / 2 : height));
+
+                if (head.Right > sheet.Width || head.Bottom > sheet.Height)
+                {
+                    this.NpcIconCache[key] = Array.Empty<byte>();
+                    return null;
+                }
+
+                this.NpcIconCache[key] = CropToPng(sheet, head);
+                return key;
+            }
+            catch (Exception ex)
+            {
+                this.Monitor.Log($"Couldn't build a face for {name}: {ex.Message}", LogLevel.Trace);
+                this.NpcIconCache[key] = Array.Empty<byte>();
+                return null;
             }
         }
 
@@ -843,6 +940,9 @@ namespace AynDualScreen
             {
                 return this.ServeCachedPng(this.IconCache, TrimPng(path.Substring("/icon/".Length)));
             }
+
+            if (path.StartsWith("/npc/", StringComparison.Ordinal))
+                return this.ServeCachedPng(this.NpcIconCache, TrimPng(path.Substring("/npc/".Length)));
 
             if (path == "/action" && request.Method == "POST")
             {

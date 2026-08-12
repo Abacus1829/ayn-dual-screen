@@ -12,6 +12,9 @@ namespace AynDualScreen
         public string LocationName { get; set; }
         public int MapRev { get; set; }
 
+        /// <summary>Brightness (0-255) of the game's menu box, so the page can pick readable ink. -1 if unknown.</summary>
+        public int MenuLuma { get; set; } = -1;
+
         public int TimeOfDay { get; set; }
         public int DayOfMonth { get; set; }
         public string DayOfWeek { get; set; }
@@ -142,6 +145,9 @@ namespace AynDualScreen
         public string Name { get; set; }
         public float X { get; set; }
         public float Y { get; set; }
+
+        /// <summary>Key for <c>/npc/{key}.png</c>, or null if this entity has no face to draw.</summary>
+        public string IconKey { get; set; }
     }
 
     internal sealed class SkillsDto

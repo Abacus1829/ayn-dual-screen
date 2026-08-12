@@ -123,7 +123,35 @@ Nothing here touches the game or the mod's own settings, and it needs no reload.
 
 ### Settings
 
-`config.json` appears next to the mod after the first run:
+Most of what you'd want to change lives in the gear menu on the screen itself, saved per device so
+the Thor and a phone can differ:
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| **Theme** | Stardew | `Stardew` uses the game's own menu art and follows any recolour mod you have. `Plain` drops the frame for flat dark panels. |
+| **Follow the controller's selected item** | on | Moves the cursor and the description when you change the held item in-game, instead of only on tap. |
+| **Fade the settings button when idle** | on | The cog sits over the top bar; this fades it after 4 seconds and brings it back on the next touch. |
+| **Villager faces on the map** | on | Draws each villager's face instead of a coloured dot. |
+
+#### Recolour and content mods
+
+The theme reads `Maps/MenuTiles` through SMAPI's content pipeline, so whatever recolour you have
+installed is what the screen draws — Cinderbox, SVE's interface, any Content Patcher retexture.
+
+Because a recolour can make that box any shade, the mod measures the brightness of the box's own
+interior and sends it as `menuLuma`, and the page picks dark or light ink from it. That's what stops
+the clock and tab labels disappearing into a light frame. Nothing to configure; if you'd rather opt
+out of the whole thing, switch the theme to Plain.
+
+Stardew Valley Expanded needs nothing special. The map is built from whatever tile layers the current
+location has and villagers come from the location's own character list, so SVE's added maps and NPCs
+are drawn like any other — including their faces, which are cropped from each NPC's sprite sheet
+rather than a fixed list of vanilla names.
+
+#### config.json
+
+`config.json` appears next to the mod after the first run, for the things that have to be decided
+before the screen connects:
 
 | Setting | Default | Notes |
 | --- | --- | --- |
