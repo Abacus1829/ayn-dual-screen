@@ -156,6 +156,31 @@ static bool Get(const char* host, int port, const std::string& path, std::string
 	return true;
 }
 
+/// Whether the plugin would find any archives from a DLL at this path -- the same two-levels-up
+/// walk Assets.cpp does, so the harness and the plugin cannot disagree about where Data is.
+static bool ArchivesReachableFrom(const char* dllPath)
+{
+	char full[MAX_PATH];
+	if (!GetFullPathNameA(dllPath, MAX_PATH, full, nullptr))
+		return false;
+
+	std::string data = full;
+	for (int i = 0; i < 3; ++i)          // once for the DLL's own filename, then two folders
+	{
+		size_t slash = data.find_last_of("\\/");
+		if (slash == std::string::npos)
+			return false;
+		data.resize(slash);
+	}
+
+	WIN32_FIND_DATAA found{};
+	HANDLE search = FindFirstFileA((data + "\\*.bsa").c_str(), &found);
+	if (search == INVALID_HANDLE_VALUE)
+		return false;
+	FindClose(search);
+	return true;
+}
+
 static int g_failures = 0;
 
 static void Check(bool ok, const char* what, const std::string& detail = {})
@@ -253,13 +278,31 @@ int main(int argc, char** argv)
 		status.find("404") != std::string::npos, "refuses traversal out of web/", status);
 
 	std::printf("\nAssets:\n");
-	const char* icon = "/asset/textures/interface/icons/pipboyimages/weapons/weapons_10mm_pistol.png";
-	bool served = Get("127.0.0.1", 27303, icon, body, status) && status.find("200") != std::string::npos;
-	Check(served, "GET an icon out of the game archives", status);
-	if (served)
+
+	// The plugin finds the archives two levels up from wherever its DLL sits, because in a real
+	// install that is Data\NVSE\Plugins and Data is where the .bsa files are. Run against a build
+	// folder -- or against a mod-manager folder, where the game's Data is a virtual filesystem that
+	// only exists inside the running game -- there is nothing two levels up to open.
+	//
+	// That is not a failure of the plugin, and reporting it as one taught every future run that a
+	// red line here means nothing. So look for the archives first and say plainly which case this
+	// is, rather than asserting something the setup cannot satisfy.
+	if (!ArchivesReachableFrom(argv[1]))
 	{
-		Check(body.size() > 1000 && body.compare(0, 8, "\x89PNG\r\n\x1a\n") == 0,
-			"and it is a real PNG", std::to_string(body.size()) + " bytes");
+		std::printf("  [SKIP] icon decoding -- no .bsa files two levels up from the DLL.\n"
+		            "         Point this at a DLL inside a real Data\\NVSE\\Plugins to exercise it;\n"
+		            "         tools\\assetdump.exe covers the decoders on their own.\n");
+	}
+	else
+	{
+		const char* icon = "/asset/textures/interface/icons/pipboyimages/weapons/weapons_10mm_pistol.png";
+		bool served = Get("127.0.0.1", 27303, icon, body, status) && status.find("200") != std::string::npos;
+		Check(served, "GET an icon out of the game archives", status);
+		if (served)
+		{
+			Check(body.size() > 1000 && body.compare(0, 8, "\x89PNG\r\n\x1a\n") == 0,
+				"and it is a real PNG", std::to_string(body.size()) + " bytes");
+		}
 	}
 
 	Check(Get("127.0.0.1", 27303, "/asset/textures/nope/not_a_real_texture.png", body, status) &&
