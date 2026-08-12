@@ -514,9 +514,33 @@ function render(s) {
     : active ? "◆ " + active.name
     : (s.gameTime || "");
   document.getElementById("caps").textContent = `${num(p.caps)} caps`;
-  document.getElementById("wt").textContent = `${num(p.weight)}/${num(p.weightMax)} wg`;
+
+  // Weight, coloured as it approaches the cap. Being over-encumbered stops you fast travelling,
+  // so knowing you are close matters before you pick the next thing up.
+  const wt = document.getElementById("wt");
+  const load = pct(p.weight, p.weightMax);
+  wt.textContent = `${num(p.weight)}/${num(p.weightMax)} wg`;
+  wt.classList.toggle("warn", load >= 0.85 && load < 1);
+  wt.classList.toggle("bad", load >= 1);
+
+  // Ammo for whatever is in your hands, on the always-visible line. The weapon knows what it
+  // takes; the count comes from the ammo tab.
+  const held = ((s.inventory || {}).weapons || []).find((i) => i.equipped);
+  const ammoLabel = document.getElementById("ammo");
+  if (held && held.ammoName) {
+    const round = ((s.inventory || {}).ammo || []).find((a) => a.name === held.ammoName);
+    const left = round ? round.count : 0;
+    ammoLabel.textContent = `${num(left)} ${held.ammoName}`;
+    ammoLabel.classList.toggle("bad", left === 0);
+    ammoLabel.classList.toggle("warn", left > 0 && left < (held.clip || 10));
+  } else {
+    ammoLabel.textContent = "";
+    ammoLabel.classList.remove("warn", "bad");
+  }
   document.getElementById("loc").textContent =
     [s.map && s.map.cell, s.map && s.map.world].filter(Boolean).join(" — ");
+
+  checkWarnings(p);
 
   if (page === "stat") renderStat(s);
   else if (page === "inv") renderInv(s);
@@ -767,21 +791,40 @@ function renderItemCard(s, item) {
 
   card.appendChild(el("h4", null, item.name));
 
+  // What you are currently using in the same slot, so a stat can be shown as a difference rather
+  // than a number you have to hold in your head and compare.
+  const rival = !item.equipped
+    ? ((s.inventory || {})[sub.inv] || []).find((i) => i.equipped)
+    : null;
+
   const dl = el("dl");
-  const put = (k, v, pips) => {
+  const put = (k, v, pips, compareKey) => {
     if (v == null || v === "") return;
     dl.appendChild(el("dt", null, k));
     const dd = el("dd", null, String(v));
+
+    // The delta against the equipped item. Only for stats where bigger is plainly better.
+    if (rival && compareKey && typeof v === "number") {
+      const theirs = rival[compareKey];
+      if (typeof theirs === "number" && theirs !== v) {
+        const diff = v - theirs;
+        const tag = el("span", "delta " + (diff > 0 ? "up" : "down"),
+          (diff > 0 ? " +" : " ") + Math.round(diff * 10) / 10);
+        tag.title = `${rival.name}: ${theirs}`;
+        dd.appendChild(tag);
+      }
+    }
+
     if (pips) dd.appendChild(el("span", "pips", pips));
     dl.appendChild(dd);
   };
 
-  put("Damage", item.damage, pipsFor(item.damage, 120));
-  put("DPS", item.dps, pipsFor(item.dps, 200));
-  put("Clip", item.clip);
+  put("Damage", item.damage, pipsFor(item.damage, 120), "damage");
+  put("DPS", item.dps, pipsFor(item.dps, 200), "dps");
+  put("Clip", item.clip, null, "clip");
   put("Ammo", item.ammoName);
   put("Spread", item.spread);
-  put("DT", item.dt, pipsFor(item.dt, 30));
+  put("DT", item.dt, pipsFor(item.dt, 30), "dt");
   put("Effect", item.effect);
   if (item.health != null) put("Condition", Math.round(item.health * 100) + "%");
   put("Weight", item.weight != null ? item.weight.toFixed(1) : null);
@@ -1417,6 +1460,54 @@ function click(level = 0.18, duration = 0.045) {
 
   src.connect(band).connect(gain).connect(ctx.destination);
   src.start();
+}
+
+/** A short tone. Used for warnings, so they carry when you are looking at the game, not the panel. */
+function beep(frequency = 440, duration = 0.18, level = 0.06) {
+  const ctx = sound();
+  if (!ctx) return;
+
+  const osc = ctx.createOscillator();
+  osc.type = "square";
+  osc.frequency.value = frequency;
+
+  const gain = ctx.createGain();
+  // Ramped rather than switched, because an abrupt stop on a square wave clicks.
+  gain.gain.setValueAtTime(level, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+
+  osc.connect(gain).connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + duration);
+}
+
+// ── warnings ──────────────────────────────────────────────────────────────
+//
+// Only on the transition, never on the state. A tone every tenth of a second while you happen to
+// be hurt would be unbearable and would train you to ignore it.
+
+const warned = { health: false, limbs: {} };
+
+function checkWarnings(p) {
+  const fraction = pct(p.hp, p.hpMax);
+
+  if (fraction > 0 && fraction <= 0.25) {
+    if (!warned.health) { warned.health = true; beep(320, 0.5, 0.07); toast("Health critical"); }
+  } else if (fraction > 0.35) {
+    warned.health = false;                     // hysteresis, so hovering at the line is not a siren
+  }
+
+  const cond = p.condition || {};
+  for (const [key, label] of LIMBS) {
+    const crippled = cond[key] != null && cond[key] <= 0;
+    if (crippled && !warned.limbs[key]) {
+      warned.limbs[key] = true;
+      beep(220, 0.35, 0.07);
+      toast(label + " crippled");
+    } else if (!crippled) {
+      warned.limbs[key] = false;
+    }
+  }
 }
 
 function startHum() {

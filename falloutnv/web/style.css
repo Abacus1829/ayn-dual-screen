@@ -671,6 +671,15 @@ h3:first-child { margin-top: .1rem; }
 .spacer { flex: 1; }
 .dim { color: var(--fg-dim); }
 
+/* Status-line readouts that can go bad: weight against the cap, ammo running out. */
+#placeline .warn { color: var(--warn); }
+#placeline .bad  { color: var(--bad); }
+
+/* A stat's difference against the equipped item in the same slot. */
+.delta { font-size: .85em; padding-left: .3em; }
+.delta.up   { color: var(--fg); }
+.delta.down { color: var(--bad); }
+
 /* Inventory search. Deliberately plain -- it sits in the action footer and must not read as
    another button. */
 .invsearch {
