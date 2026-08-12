@@ -781,19 +781,30 @@ namespace
 	/// three data reads off a known address, so those are done here directly rather than calling
 	/// into the game: no game code runs, and a wrong address gives a null rather than a jump into
 	/// nowhere. Every step is null-checked because this is a bare address, not a promise.
-	Tile* PipboyRootTile()
+	Tile* MenuRootTile(UInt32 menuType)
 	{
-		auto* table = *reinterpret_cast<NiTArray<TileMenu*>**>(0x011F3508);
-		if (!table)
+		// The address IS the array object, not a pointer to one -- NVSE's declaration reads
+		// `NiTArray<TileMenu*>* g_TileMenuArray = (NiTArray<TileMenu*>*)0x011F3508`, so the cast
+		// is the whole conversion. Dereferencing it as a pointer-to-pointer, which is what this
+		// did first, reads the array's own first field as an address and gives back nothing.
+		auto* table = reinterpret_cast<NiTArray<TileMenu*>*>(0x011F3508);
+		if (!table || menuType < kMenuType_Min)
 			return nullptr;
 
-		UInt32 index = kMenuType_Stats - kMenuType_Min;   // the Pip-Boy is the Stats menu
+		UInt32 index = menuType - kMenuType_Min;
 		if (index >= table->Length())
 			return nullptr;
 
 		TileMenu* tileMenu = table->Get(index);
 		return tileMenu ? reinterpret_cast<Tile*>(tileMenu) : nullptr;
 	}
+
+	/// The Pip-Boy's DATA page -- quests, notes, the maps and the radio dial.
+	///
+	/// Not the Stats menu, which is only the STATS page: dumping that one found the SPECIAL and
+	/// skills containers and no radio anywhere, because the tab strip along the bottom of the
+	/// Pip-Boy spans several menus rather than one. DATA is the Map menu.
+	Tile* PipboyDataTile() { return MenuRootTile(kMenuType_Map); }
 
 	/// A tile's string trait, or null.
 	const char* TileString(Tile* tile, UInt32 traitId)
@@ -1663,13 +1674,47 @@ namespace
 		if (config.dumpPipboyMenu)
 		{
 			j.BeginArray("menuDump");
-			if (Tile* root = PipboyRootTile())
 			{
-				std::vector<std::string> lines;
-				int budget = 4000;
-				DumpTiles(root, lines, 0, budget);
-				for (const std::string& line : lines)
-					j.Str(nullptr, line);
+				// Which menus the table holds at all. Without this an empty dump is ambiguous
+				// between "the Pip-Boy is shut" and "the table address is wrong", and those need
+				// opposite fixes -- the first costs a keypress, the second a rebuild.
+				auto* table = reinterpret_cast<NiTArray<TileMenu*>*>(0x011F3508);
+				char summary[128];
+				std::snprintf(summary, sizeof summary, "-- menu table: %u slots", table->Length());
+				j.Str(nullptr, summary);
+
+				int live = 0;
+				for (UInt32 i = 0; i < table->Length(); ++i)
+				{
+					if (!table->Get(i))
+						continue;
+					++live;
+					std::snprintf(summary, sizeof summary, "-- open menu type 0x%03X",
+						static_cast<unsigned>(kMenuType_Min + i));
+					j.Str(nullptr, summary);
+				}
+				if (!live)
+					j.Str(nullptr, "-- no menus open");
+
+				// Every open menu, not one guessed in advance. Dumping only the Stats menu found
+				// the STATS page and nothing else, because the Pip-Boy's tab strip spans several
+				// menus -- which is exactly the sort of thing a dump is for discovering.
+				for (UInt32 i = 0; i < table->Length(); ++i)
+				{
+					TileMenu* tileMenu = table->Get(i);
+					if (!tileMenu)
+						continue;
+
+					std::snprintf(summary, sizeof summary, "== menu 0x%03X",
+						static_cast<unsigned>(kMenuType_Min + i));
+					j.Str(nullptr, summary);
+
+					std::vector<std::string> lines;
+					int budget = 1500;
+					DumpTiles(reinterpret_cast<Tile*>(tileMenu), lines, 0, budget);
+					for (const std::string& line : lines)
+						j.Str(nullptr, line);
+				}
 			}
 			j.EndArray();
 		}
