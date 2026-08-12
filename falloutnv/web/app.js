@@ -189,6 +189,25 @@ addEventListener("keydown", (e) => {
     return;
   }
 
+  // Up and down walk the visible list and select as they go, so a page can be driven from a
+  // d-pad or a keyboard without touching the panel at all.
+  if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+    const list = document.querySelector(`.page[data-page="${page}"] .sub.on .list, .page[data-page="${page}"] .list`);
+    if (list) {
+      const rows = [...list.querySelectorAll(".row")];
+      if (rows.length) {
+        const at = rows.findIndex((r) => r.getAttribute("aria-selected") === "true");
+        const next = e.key === "ArrowDown"
+          ? Math.min(rows.length - 1, at + 1)
+          : Math.max(0, (at < 0 ? 1 : at) - 1);
+        rows[next].click();
+        rows[next].scrollIntoView({ block: "nearest" });
+        e.preventDefault();
+        return;
+      }
+    }
+  }
+
   // Comma and period nudge the poll rate, for when the link is struggling.
   if (e.key === "," || e.key === ".") {
     const rates = [5, 10, 15, 20, 30];
@@ -486,7 +505,14 @@ function render(s) {
   document.getElementById("xpfill").style.width =
     (pct((p.xp || 0) - (p.xpBase || 0), (p.xpNext || 0) - (p.xpBase || 0)) * 100).toFixed(1) + "%";
 
-  document.getElementById("gamedate").textContent = s.gameTime || "";
+  // The active quest's current objective, on the always-visible line. It is the one thing you
+  // would otherwise keep flipping to DATA to read.
+  const active = (s.quests || []).find((q) => q.active && !q.completed);
+  const objective = active && (active.objectives || []).find((o) => !o.done);
+  document.getElementById("gamedate").textContent =
+    objective ? "◆ " + objective.text
+    : active ? "◆ " + active.name
+    : (s.gameTime || "");
   document.getElementById("caps").textContent = `${num(p.caps)} caps`;
   document.getElementById("wt").textContent = `${num(p.weight)}/${num(p.weightMax)} wg`;
   document.getElementById("loc").textContent =
@@ -642,6 +668,26 @@ function renderStat(s) {
 
 let invFilter = "";
 
+// Sorting. The game gives us one order; on a screen you are using to make decisions, "what is
+// heaviest" and "what is nearly broken" are the questions you actually have.
+const SORTS = [
+  ["default", "SORT: GAME",  null],
+  ["name",    "SORT: A-Z",   (a, b) => (a.name || "").localeCompare(b.name || "")],
+  ["weight",  "SORT: WEIGHT", (a, b) => (b.weight || 0) - (a.weight || 0)],
+  ["value",   "SORT: VALUE",  (a, b) => (b.value || 0) - (a.value || 0)],
+  ["ratio",   "SORT: VAL/WG", (a, b) => ratio(b) - ratio(a)],
+  ["cond",    "SORT: WORN",   (a, b) => (a.health == null ? 2 : a.health) - (b.health == null ? 2 : b.health)],
+];
+
+let invSort = 0;
+
+/** Value per unit weight — the number that decides what to leave behind when overloaded. */
+function ratio(item) {
+  const w = item.weight || 0;
+  if (!w) return item.value ? Infinity : 0;
+  return (item.value || 0) / w;
+}
+
 function renderInv(s) {
   const all = (s.inventory || {})[sub.inv] || [];
   const list = document.getElementById("items");
@@ -649,11 +695,21 @@ function renderInv(s) {
   // Filter on name. A hoarder's misc tab runs to hundreds of lines and scrolling it on a handheld
   // is the single most tedious thing about the screen.
   const needle = invFilter.trim().toLowerCase();
-  const bucket = needle
+  let bucket = needle
     ? all.filter((i) => (i.name || "").toLowerCase().includes(needle))
-    : all;
+    : all.slice();
 
-  const key = sub.inv + "|" + needle + "|" + bucket.map((i) =>
+  // Equipped items stay pinned to the top whatever the sort, because that is where you look for
+  // them and they are the ones you are comparing against.
+  const compare = SORTS[invSort][2];
+  if (compare) {
+    bucket.sort((a, b) => {
+      if (!!a.equipped !== !!b.equipped) return a.equipped ? -1 : 1;
+      return compare(a, b);
+    });
+  }
+
+  const key = sub.inv + "|" + needle + "|" + invSort + "|" + bucket.map((i) =>
     `${i.id}:${i.count}:${i.equipped ? 1 : 0}:${Math.round((i.health || 0) * 100)}`).join(",");
 
   fill(list, key, (n) => {
@@ -744,7 +800,7 @@ function renderInvFoot(s, item, shown) {
   // Same reasoning as the card: rebuilding this every poll threw away the DROP button's armed
   // state mid-confirmation, so "SURE?" could reset itself before you could tap it.
   const key = [
-    item ? item.id : "none", item ? item.equipped : "", sub.inv,
+    item ? item.id : "none", item ? item.equipped : "", sub.inv, invSort,
     perms.equip, perms.use, perms.drop,
     ((s.inventory || {})[sub.inv] || []).length,
   ].join("|");
@@ -779,6 +835,15 @@ function renderInvFoot(s, item, shown) {
 
   add("DROP", perms.drop, "Dropping is off in the mod's config — it is off by default",
       () => confirmThen(foot, () => act("drop", { id: item.id, count: 1 })), "danger");
+
+  const sortBtn = el("button", "btn", SORTS[invSort][1]);
+  sortBtn.title = "Cycle how this list is ordered. Equipped items stay at the top.";
+  sortBtn.onclick = () => {
+    invSort = (invSort + 1) % SORTS.length;
+    if (state) renderInv(state);
+    toast(SORTS[invSort][1].replace("SORT: ", "Sorted by "));
+  };
+  foot.appendChild(sortBtn);
 
   foot.appendChild(el("span", "spacer"));
 
@@ -1385,6 +1450,30 @@ function stopHum() {
 }
 
 addEventListener("pointerdown", () => { startHum(); }, { once: true });
+
+// ── keeping the panel awake ───────────────────────────────────────────────
+//
+// A second screen that blanks after thirty seconds is not a second screen. The Android app holds
+// its own wake lock, but a plain browser will not, and this page is meant to work in either.
+//
+// The lock is dropped by the browser whenever the tab is hidden, so it has to be retaken when the
+// tab comes back rather than acquired once at startup.
+
+let wakeLock = null;
+
+async function keepAwake() {
+  if (!("wakeLock" in navigator)) return;      // Safari, older Android, any desktop browser
+  try {
+    wakeLock = await navigator.wakeLock.request("screen");
+    wakeLock.addEventListener("release", () => { wakeLock = null; });
+  } catch (e) {
+    // Refused -- usually because the tab is not visible. Retried on the next visibility change.
+  }
+}
+
+addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && !wakeLock) keepAwake();
+});
 
 // ── boot sequence ─────────────────────────────────────────────────────────
 

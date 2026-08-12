@@ -640,6 +640,16 @@ h3:first-child { margin-top: .1rem; }
 }
 #statusline .track .fill { position: absolute; inset: 0 auto 0 0; background: var(--fg); }
 
+/* The objective can be a long sentence, so it takes the space and ellipses rather than pushing
+   the caps and weight readouts off the end. */
+#gamedate {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 #placeline {
   display: flex;
   align-items: center;
