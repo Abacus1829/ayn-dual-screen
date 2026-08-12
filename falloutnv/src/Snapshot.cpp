@@ -366,6 +366,36 @@ namespace
 	/// is nearest" is answerable without any guesswork. Returns -1 when nothing can be measured:
 	/// an objective with no target, or one pointing somewhere in another worldspace, where a
 	/// straight-line distance would be a meaningless number rather than a useful one.
+	/// The objective a node in TESQuest::lVarOrObjectives points at, or null if it is a local
+	/// variable rather than an objective.
+	///
+	/// The list is tList<LocalVariableOrObjectivePtr>, and that union is pointer-sized, so the
+	/// game stores its value directly in each node's data slot. tList hands that slot back as
+	/// Item*, which means the iterator already yields the objective pointer -- reading ->objective
+	/// off it dereferences one level too far and returns the objective's own vtable pointer
+	/// instead. Every quest therefore came back with no objectives at all, which is what shipped.
+	///
+	/// Same shape as the tList<Target*> note below: for these lists the iterator's result must be
+	/// cast, never dereferenced.
+	BGSQuestObjective* ObjectiveFrom(TESQuest::LocalVariableOrObjectivePtr* node, TESQuest* quest)
+	{
+		auto* objective = reinterpret_cast<BGSQuestObjective*>(node);
+
+		// The list mixes objectives and local variables with nothing to tell them apart, so the
+		// back-pointer is the test: a real objective points back at this quest. A local variable
+		// does not, and whatever its bytes happen to say will not match either.
+		if (!objective || objective->quest != quest)
+			return nullptr;
+		return objective;
+	}
+
+	/// The reference a target points at. Same one-level-too-far trap as above.
+	TESObjectREFR* TargetRef(BGSQuestObjective::Target** slot)
+	{
+		auto* target = reinterpret_cast<BGSQuestObjective::Target*>(slot);
+		return target ? target->target : nullptr;
+	}
+
 	float NearestObjectiveDistance(TESQuest* quest, PlayerCharacter* player)
 	{
 		TESObjectCELL* playerCell = player->parentCell;
@@ -375,8 +405,8 @@ namespace
 
 		for (auto oiter = quest->lVarOrObjectives.Begin(); !oiter.End(); ++oiter)
 		{
-			BGSQuestObjective* objective = oiter.Get() ? oiter.Get()->objective : nullptr;
-			if (!objective || objective->quest != quest)
+			BGSQuestObjective* objective = ObjectiveFrom(oiter.Get(), quest);
+			if (!objective)
 				continue;
 
 			// Only objectives you are actually being asked to do.
@@ -387,11 +417,7 @@ namespace
 
 			for (auto titer = objective->targets.Begin(); !titer.End(); ++titer)
 			{
-				// targets is tList<Target*>, so the iterator hands back a Target** -- a pointer to
-				// the list's slot, not the target itself.
-				BGSQuestObjective::Target** slot = titer.Get();
-				BGSQuestObjective::Target* target = slot ? *slot : nullptr;
-				TESObjectREFR* ref = target ? target->target : nullptr;
+				TESObjectREFR* ref = TargetRef(titer.Get());
 				if (!ref)
 					continue;
 
@@ -449,10 +475,23 @@ namespace
 			std::vector<BGSQuestObjective*> objectives;
 			for (auto oiter = quest->lVarOrObjectives.Begin(); !oiter.End(); ++oiter)
 			{
-				BGSQuestObjective* objective = oiter.Get() ? oiter.Get()->objective : nullptr;
-				if (objective && objective->quest == quest && (objective->status & BGSQuestObjective::eQObjStatus_displayed))
+				BGSQuestObjective* objective = ObjectiveFrom(oiter.Get(), quest);
+				if (objective && (objective->status & BGSQuestObjective::eQObjStatus_displayed))
 					objectives.push_back(objective);
 			}
+
+			// Engine bookkeeping quests, kept off the list.
+			//
+			// The load order carries quests that drive scripting rather than anything you do --
+			// "Chargen tutorial", "Non-Quest Level shared quest" -- and the Pip-Boy does not show
+			// them. There is no player-facing flag in this SDK to filter on (only bit 0 of flags
+			// is mapped, and it means running), so the test is behavioural: a quest still running
+			// that has never displayed an objective is not something you have been asked to do.
+			//
+			// Deliberately not applied to completed quests. Those legitimately end up with nothing
+			// displayed, and Welcome To Fabulous New Vegas is a real entry that would vanish.
+			if (!completed && objectives.empty())
+				continue;
 
 			float distance = completed ? -1.f : NearestObjectiveDistance(quest, player);
 
@@ -758,6 +797,16 @@ namespace
 	/// itself. It can be read as a TESForm: every form class in this hierarchy is single
 	/// inheritance rooted at TESForm, so the TESForm subobject sits at offset zero and the cast is
 	/// a no-op rather than a reinterpretation of unrelated memory.
+	/// What identifies a station across its transmitters: the talking activator it speaks through,
+	/// or the activator itself when it is music-only and has none. Keying purely on the talking
+	/// activator collapsed every music station into a single null-keyed entry.
+	TESForm* StationKey(TESObjectACTI* activator)
+	{
+		if (activator->radioStation)
+			return reinterpret_cast<TESForm*>(activator->radioStation);
+		return activator;
+	}
+
 	const char* StationName(TESObjectACTI* activator)
 	{
 		const char* name = nullptr;
@@ -780,6 +829,15 @@ namespace
 		bool sawRadioData = false;
 		UInt32 mode = 0xFFFFFFFF;         // the broadcast mode read, or none seen
 		float staticPct = -1.f;
+
+		// Whether a radio-data block was attached at all, kept separate from whether it could be
+		// read. Collapsing the two is what made the first run of this uninterpretable: "no data"
+		// and "data I misread" looked identical, and they call for opposite fixes.
+		bool sawExtraBlock = false;
+		std::string raw;                  // the block's four unmapped words, as hex
+		std::string types;                // every extra-data type id on the transmitter
+		int refsSeen = 0;                 // how many transmitters were found for this station
+		std::string refFlags;             // the chosen transmitter's form flags
 	};
 
 	/// Consider one placed transmitter against the player, folding it into its station's entry.
@@ -792,6 +850,42 @@ namespace
 		// for exactly this reason.
 		auto* radio = reinterpret_cast<ExtraRadioDataGuess*>(
 			ref->extraDataList.GetByType(kExtraData_RadioData));
+
+		// Every extra-data type actually hanging off this reference. If the range really is stored
+		// per-reference then it is one of these, and listing them is how to find out which rather
+		// than assuming the one whose name matches.
+		{
+			std::string types;
+			int seen = 0;
+			for (BSExtraData* extra = ref->extraDataList.m_data; extra && seen < 24;
+				extra = extra->next, ++seen)
+			{
+				char one[8];
+				std::snprintf(one, sizeof one, "%02X ", extra->type);
+				types += one;
+			}
+			if (!types.empty())
+			{
+				types.pop_back();
+				entry.types = types;
+			}
+		}
+
+		if (radio)
+		{
+			entry.sawExtraBlock = true;
+
+			// The block's payload verbatim, so the layout can be settled by looking at real values
+			// instead of by reasoning about a size. Reading four words past a pointer the game gave
+			// us is in bounds by the type's own declared 0x1C.
+			const UInt32* words = reinterpret_cast<const UInt32*>(
+				reinterpret_cast<const UInt8*>(radio) + 0x0C);
+			char text[64];
+			std::snprintf(text, sizeof text, "%08X %08X %08X %08X",
+				words[0], words[1], words[2], words[3]);
+			entry.raw = text;
+		}
+
 		if (!RadioDataLooksSane(radio))
 			radio = nullptr;
 		if (radio)
@@ -806,10 +900,16 @@ namespace
 		float dz = ref->posZ - player->posZ;
 		float distance = std::sqrt(dx * dx + dy * dy + dz * dz);
 
+		++entry.refsSeen;
+
 		if (entry.bestDistance < 0.f || distance < entry.bestDistance)
 		{
 			entry.bestDistance = distance;
 			entry.best = ref;
+
+			char flags[16];
+			std::snprintf(flags, sizeof flags, "%08X", ref->flags);
+			entry.refFlags = flags;
 		}
 
 		if (!radio)
@@ -866,7 +966,7 @@ namespace
 	/// transmitters' own data. Coming at it from the forms is the same approach the perk reader
 	/// takes, and for the same reason: the list of things that exist is knowable, so it should not
 	/// be inferred from whatever happens to be nearby.
-	void WriteRadio(Json& j, PlayerCharacter* player, const std::string& tuned)
+	void WriteRadio(Json& j, PlayerCharacter* player, const std::string& tuned, const Config& config)
 	{
 		j.BeginArray("radio");
 
@@ -880,17 +980,42 @@ namespace
 		TESObjectCELL* playerCell = player->parentCell;
 		TESWorldSpace* playerWorld = playerCell ? playerCell->worldSpace : nullptr;
 
+		// The station forms, found once and kept.
+		//
+		// The walk is over every bound object in the load order -- tens of thousands of forms on a
+		// modded install, each needing an RTTI cast. That is fine once and far too much ten times a
+		// second on the game thread, which is what this cost before it was cached.
+		//
+		// Caching is safe because the answer cannot change while you play: forms come from the
+		// plugins, and the load order is fixed once the game has loaded. Cleared on load so a
+		// different save with a different load order is read again rather than answered from the
+		// last one's list.
+		static std::vector<TESObjectACTI*> stationForms;
+		static bool scanned = false;
+
+		if (!scanned)
+		{
+			scanned = true;
+			for (TESBoundObject* object = data->boundObjectList->first; object; object = object->next)
+			{
+				auto* activator = DYNAMIC_CAST(object, TESForm, TESObjectACTI);
+				if (!activator)
+					continue;
+
+				// Either half counts. RNAM is the talking activator a station speaks through and
+				// INAM is the sound it broadcasts, and a station needs only one of them: requiring
+				// RNAM dropped the music-only stations, which is why two the game was listing were
+				// missing from this list entirely.
+				if (activator->radioStation || activator->radioTemplate)
+					stationForms.push_back(activator);
+			}
+		}
+
 		// Keyed by the station form, so a station with several transmitters appears once.
 		std::map<TESForm*, StationEntry> stations;
-
-		for (TESBoundObject* object = data->boundObjectList->first; object; object = object->next)
+		for (TESObjectACTI* activator : stationForms)
 		{
-			auto* activator = DYNAMIC_CAST(object, TESForm, TESObjectACTI);
-			if (!activator || !activator->radioStation)
-				continue;
-
-			auto* key = reinterpret_cast<TESForm*>(activator->radioStation);
-			StationEntry& entry = stations[key];
+			StationEntry& entry = stations[StationKey(activator)];
 			if (!entry.activator)
 				entry.activator = activator;
 		}
@@ -913,19 +1038,30 @@ namespace
 				if (!ref || ref->IsDeleted() || !ref->baseForm)
 					continue;
 				auto* activator = DYNAMIC_CAST(ref->baseForm, TESForm, TESObjectACTI);
-				if (!activator || !activator->radioStation)
+				if (!activator || !(activator->radioStation || activator->radioTemplate))
 					continue;
 
-				auto found = stations.find(reinterpret_cast<TESForm*>(activator->radioStation));
+				auto found = stations.find(StationKey(activator));
 				if (found == stations.end())
 					continue;
 				ConsiderTransmitter(found->second, ref, player, playerWorld);
 			}
 		};
 
+		// Every worldspace's persistent cell, not just the one you are standing in.
+		//
+		// Sweeping only the player's worldspace found two transmitters out of nineteen stations,
+		// and lost every add-on station outright -- Zion's, the Sierra Madre's, Big MT's -- because
+		// their transmitters are persistent references of their own worldspaces, which are loaded
+		// but were never looked at. The game lists those stations from the Mojave, so anything that
+		// only looks locally cannot reproduce what the Pip-Boy shows.
 		sweep(playerCell);
-		if (playerWorld && playerWorld->cell != playerCell)
-			sweep(playerWorld->cell);
+		for (auto iter = data->worldSpaceList.Begin(); !iter.End(); ++iter)
+		{
+			TESWorldSpace* world = iter.Get();
+			if (world && world->cell && world->cell != playerCell)
+				sweep(world->cell);
+		}
 
 		int written = 0;
 		for (auto& pair : stations)
@@ -936,6 +1072,12 @@ namespace
 			StationEntry& entry = pair.second;
 			const char* name = StationName(entry.activator);
 			if (!name || !*name)
+				continue;
+
+			// Only what you can pick up, which is what the Pip-Boy shows. A station with no loaded
+			// transmitter is dropped too: it cannot be tuned, so listing it is offering a button
+			// that does nothing.
+			if (config.radioInRangeOnly && !(entry.inRange && entry.best))
 				continue;
 
 			// Tuning activates a placed transmitter, so a station with none found cannot be tuned
@@ -954,6 +1096,33 @@ namespace
 			// a GECK panel, not off a mapped header, and these are the numbers that would look
 			// wrong first if it were misread.
 			j.Bool("hasData", entry.sawRadioData);
+			j.Bool("hasBlock", entry.sawExtraBlock);
+
+			// Telling a Pip-Boy station apart from an ambient emitter.
+			//
+			// Every one of these carries a radio station, so that test alone lists bomb collars,
+			// casino lounge music and PA systems next to Radio New Vegas. Something else must
+			// separate them; these are the candidates, dumped against a list whose real entries are
+			// already known, so the discriminator can be picked by looking rather than guessing.
+			j.Int("refs", entry.refsSeen);
+			if (!entry.refFlags.empty())
+				j.Str("refFlags", entry.refFlags);
+			j.Str("form", FormIdText(entry.activator->refID));
+			// Music-only stations have no talking activator, so this must not dereference blindly.
+			j.Str("tact", entry.activator->radioStation
+				? FormIdText(reinterpret_cast<TESForm*>(entry.activator->radioStation)->refID)
+				: std::string("-"));
+			j.Bool("hasTemplate", entry.activator->radioTemplate != nullptr);
+			j.Bool("hasScript", entry.activator->scriptable.script != nullptr);
+			{
+				char flags[16];
+				std::snprintf(flags, sizeof flags, "%08X", entry.activator->flags);
+				j.Str("flags", flags);
+			}
+			if (!entry.raw.empty())
+				j.Str("raw", entry.raw);
+			if (!entry.types.empty())
+				j.Str("types", entry.types);
 			if (entry.sawRadioData)
 			{
 				j.Int("mode", static_cast<long long>(entry.mode));
@@ -1353,7 +1522,7 @@ namespace
 		// renders an empty tab correctly, so shipping them empty beats shipping fiction.
 		WriteEffects(j, player);
 
-		WriteRadio(j, player, g_tunedStation);
+		WriteRadio(j, player, g_tunedStation, config);
 		WriteCompanions(j, player);
 
 		// Notes and holotapes, pulled back out of the inventory walk above.

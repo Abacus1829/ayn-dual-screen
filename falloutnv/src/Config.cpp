@@ -35,6 +35,7 @@ Config Config::Load(const std::string& path)
 	c.maxInventoryItems = GetPrivateProfileIntA("Limits", "MaxInventoryItems", c.maxInventoryItems, p);
 
 	c.enableIcons = ReadBool("Assets", "EnableIcons", c.enableIcons, p);
+	c.radioInRangeOnly = ReadBool("Control", "RadioInRangeOnly", c.radioInRangeOnly, p);
 
 	c.enableLocalMap = ReadBool("Map", "EnableLocalMap", c.enableLocalMap, p);
 	c.maxLocalRefs = GetPrivateProfileIntA("Map", "MaxLocalRefs", c.maxLocalRefs, p);
@@ -110,6 +111,9 @@ std::string Config::ToJson() const
 		"on by default and the screen can equip, drop and fast travel. It is a doorlock, not "
 		"encryption: the traffic is still plain HTTP.\",\"restart\":false}";
 
+	boolRow("RadioInRangeOnly", radioInRangeOnly, "Only stations in range",
+		"List only what you can pick up. Off lists every station in the load order, which is the "
+		"escape hatch if the range read is wrong.", false);
 	boolRow("EnableIcons", enableIcons, "Icons",
 		"Read icons out of your own game archives. Off skips opening them entirely.", true);
 	intRow("MaxMapMarkers", maxMapMarkers, 10, 1000, "Max map markers",
@@ -148,6 +152,7 @@ bool Config::Set(const std::string& key, const std::string& value)
 	if (key == "AllowSetQuest")    { allowSetQuest = asBool(); return true; }
 	if (key == "AllowRadio")       { allowRadio = asBool(); return true; }
 	if (key == "EnableIcons")      { enableIcons = asBool(); return true; }
+	if (key == "RadioInRangeOnly") { radioInRangeOnly = asBool(); return true; }
 	if (key == "EnableLocalMap")   { enableLocalMap = asBool(); return true; }
 
 	if (key == "AccessToken")
@@ -218,6 +223,11 @@ void Config::WriteDefaults(const std::string& path) const
 		"AllowRadio=%d\n"
 		"AllowDrop=%d\n"
 		"AllowFastTravel=%d\n"
+		"; Only list radio stations you can actually receive, the way the Pip-Boy does. Set 0 to\n"
+		"; list every station in the load order instead -- worth trying if the tab looks emptier\n"
+		"; than the game says it should be, since the range data is read from a structure the\n"
+		"; xNVSE headers do not describe.\n"
+		"RadioInRangeOnly=%d\n"
 		"\n"
 		"[Limits]\n"
 		"; Ceilings on how much goes into one snapshot. The Mojave has a lot of map markers and\n"
@@ -244,7 +254,7 @@ void Config::WriteDefaults(const std::string& path) const
 		"WebRootOverride=\n",
 		static_cast<unsigned>(port), allowLan ? 1 : 0, updatesPerSecond, accessToken.c_str(),
 		allowEquip ? 1 : 0, allowUse ? 1 : 0, allowSetQuest ? 1 : 0, allowRadio ? 1 : 0,
-		allowDrop ? 1 : 0, allowFastTravel ? 1 : 0,
+		allowDrop ? 1 : 0, allowFastTravel ? 1 : 0, radioInRangeOnly ? 1 : 0,
 		maxMapMarkers, maxInventoryItems,
 		enableLocalMap ? 1 : 0, maxLocalRefs,
 		enableIcons ? 1 : 0);

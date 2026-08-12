@@ -67,6 +67,17 @@ const DEFAULTS = {
   // Stored as { "6": { id, name, bucket } } -- the name is kept so an empty slot can still say
   // what used to be in it once the last one is used up.
   hotkeys: {},
+
+  // Radio stations you have chosen to hide, as { "Bomb Collar Speakers": true }.
+  //
+  // Keyed by name rather than by form id on purpose: a station with no loaded transmitter has no
+  // id to key on, and those are exactly the ones worth keeping -- Radio New Vegas is one of them.
+  //
+  // This exists because the game's own station list cannot be read. What the mod can enumerate is
+  // every activator in the load order that carries a station or a broadcast sound, and that set
+  // contains bomb collars, casino lounge music and PA speakers alongside the real stations, with
+  // nothing in the data separating them. So the choice is yours to make once, and it is kept.
+  hiddenStations: {},
 };
 
 const HOTKEY_SLOTS = ["6", "7", "8", "9", "0"];
@@ -351,16 +362,27 @@ function row(onclick) {
  */
 function icon(path, cls) {
   if (!path) return null;
-  const img = el("img", "icon-img" + (cls ? " " + cls : ""));
-  img.loading = "lazy";
-  img.decoding = "async";
-  img.alt = "";
-  img.src = "asset/" + path.replace(/\\/g, "/").replace(/\.dds$/i, ".png");
-  // Hidden rather than removed. Removing it collapsed the row and left names in a list ragged
-  // wherever one item's texture was missing, which made a gap look like a layout bug rather than
-  // a missing icon. The slot stays; only the picture goes.
-  img.onerror = () => { img.style.visibility = "hidden"; };
-  return img;
+  const url = withToken("asset/" + path.replace(/\\/g, "/").replace(/\.dds$/i, ".png"));
+
+  // Drawn as a CSS mask rather than as a picture, so the art takes the screen's colour.
+  //
+  // These textures are pure white with a graduated alpha channel -- the alpha carries the whole
+  // drawing, shading included, and the colour channel says nothing. Painted as an <img> they come
+  // out white regardless of whether the screen is green, amber or blue. Masked, every pixel is the
+  // screen's own foreground at the texture's own opacity, so the Vault Boy matches the theme and
+  // keeps all his shading.
+  const node = el("span", "icon-img" + (cls ? " " + cls : ""));
+  node.style.setProperty("--icon-src", `url("${url}")`);
+
+  // A mask that fails to load leaves a solid block of colour, which looks far worse than a missing
+  // icon -- so the URL is probed, and the slot is emptied if it is not there. Hidden rather than
+  // removed: removing it collapsed the row and left names ragged wherever a texture was missing,
+  // which read as a layout bug rather than a missing icon.
+  const probe = new Image();
+  probe.onerror = () => { node.style.visibility = "hidden"; };
+  probe.src = url;
+
+  return node;
 }
 
 /** The game's own Vault Boy art for a SPECIAL attribute. */
@@ -1616,33 +1638,83 @@ document.getElementById("mapfoot").addEventListener("click", (e) => {
 
 // ── RADIO ─────────────────────────────────────────────────────────────────
 
+/** Whether the RADIO tab is in "choose what to list" mode rather than "tune something" mode. */
+let radioEdit = false;
+
+function renderRadioFoot(total, shown) {
+  const foot = document.getElementById("radiofoot");
+  const key = `${radioEdit}|${total}|${shown}`;
+  if (foot.dataset.key === key) return;
+  foot.dataset.key = key;
+  foot.textContent = "";
+
+  const edit = el("button", "btn", radioEdit ? "DONE" : "EDIT LIST");
+  edit.title = "Choose which stations this screen lists.";
+  edit.onclick = () => { radioEdit = !radioEdit; if (state) renderRadio(state); };
+  foot.appendChild(edit);
+
+  if (radioEdit) {
+    const all = el("button", "btn", "SHOW ALL");
+    all.onclick = () => {
+      settings.hiddenStations = {};
+      save();
+      if (state) renderRadio(state);
+      toast("All stations shown");
+    };
+    foot.appendChild(all);
+  }
+
+  foot.appendChild(el("span", "spacer"));
+  foot.appendChild(el("span", "dim",
+    shown === total ? `${total} stations` : `${shown} of ${total} shown`));
+}
+
 function renderRadio(s) {
   const stations = s.radio || [];
   const list = document.getElementById("stations");
   const key = stations.map((r) =>
     `${r.id}:${r.active ? 1 : 0}:${r.inRange ? 1 : 0}:${r.canTune ? 1 : 0}:${r.name}`).join(",");
 
-  // In range first, then alphabetically. A dial you cannot pick anything up on should not be the
-  // first thing you scroll past.
-  const ordered = stations.slice().sort((a, b) =>
-    (b.inRange ? 1 : 0) - (a.inRange ? 1 : 0) || (a.name || "").localeCompare(b.name || ""));
+  // Alphabetical. Sorting by "in range" was tried and dropped: that flag is derived from data the
+  // mod cannot read reliably, so ordering by it moved rows around for no reason the screen could
+  // justify.
+  const all = stations.slice().sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  const ordered = radioEdit ? all : all.filter((st) => !settings.hiddenStations[st.name]);
 
-  fill(list, key, (n) => {
-    if (!ordered.length) { n.appendChild(el("li", "empty", "No stations found.")); return; }
-    for (const st of ordered) {
+  fill(list, key + "|" + (radioEdit ? "edit" : "") + "|" + Object.keys(settings.hiddenStations).join(","), (n) => {
+    if (!all.length) { n.appendChild(el("li", "empty", "No stations found.")); return; }
+    if (!ordered.length) {
+      n.appendChild(el("li", "empty", "Every station is hidden — tap EDIT LIST."));
+      return;
+    }
+    for (const st of all) {
+      const hidden = !!settings.hiddenStations[st.name];
+      if (hidden && !radioEdit) continue;
+
       const li = row(() => {
+        if (radioEdit) {
+          if (hidden) delete settings.hiddenStations[st.name];
+          else settings.hiddenStations[st.name] = true;
+          save();
+          renderRadio(state);
+          return;
+        }
         if (!(s.perms || {}).radio) return;
         if (!st.canTune) { toast(st.name + " — no transmitter loaded to tune"); return; }
         act("radio", { id: st.active ? "" : st.id });
       });
       li.dataset.id = st.id;
-      li.setAttribute("aria-selected", String(!!st.active));
+      li.setAttribute("aria-selected", String(!radioEdit && !!st.active));
       li.appendChild(el("span", "name", st.name));
-      if (!st.inRange) li.appendChild(el("span", "tag", "WEAK"));
-      if (!st.canTune) li.classList.add("dim");
+
+      if (radioEdit) li.appendChild(el("span", "tag", hidden ? "HIDDEN" : "SHOWN"));
+      if (hidden) li.classList.add("dim");
+      else if (!st.canTune) li.classList.add("dim");
       n.appendChild(li);
     }
   });
+
+  renderRadioFoot(all.length, ordered.length);
 
   const active = stations.find((r) => r.active);
   const now = document.getElementById("nowplaying");
@@ -1651,19 +1723,10 @@ function renderRadio(s) {
   if (!(s.perms || {}).radio) now.appendChild(el("p", "hint", "Radio control is off in the mod's config."));
   else if (active) now.appendChild(el("p", "hint", "Tap again to switch it off."));
 
-  // Why each station was judged reachable, in the open. The range data behind this is read from a
-  // structure the SDK does not map, so showing the working is what makes a wrong answer reportable
-  // instead of just puzzling.
-  const sel = stations.find((r) => r.active) || ordered[0];
-  if (sel && sel.hasData !== undefined) {
-    const how = sel.hasData
-      ? ["radius", "everywhere", "worldspace"][sel.mode] || ("mode " + sel.mode)
-      : "no radio data on the transmitter";
-    const bits = [how];
-    if (sel.radius) bits.push("range " + num(sel.radius));
-    if (sel.distance != null) bits.push(num(sel.distance) + " away");
-    now.appendChild(el("p", "hint", `${sel.name}: ${bits.join(" · ")}`));
-  }
+  if (radioEdit)
+    now.appendChild(el("p", "hint",
+      "Tap a station to show or hide it. The game's own list cannot be read from here, so this " +
+      "one is yours to trim — it is kept per screen."));
 
   drawWave(!!active);
 }

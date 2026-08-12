@@ -514,25 +514,42 @@ h3:first-child { margin-top: .1rem; }
    Every one of these can fail to load and the row still reads fine -- the <img>
    removes itself and the text stays where it was. */
 
+/* The game's art, recoloured to whichever phosphor this screen is set to.
+   Painted through a mask, not as a picture: these textures are white with a graduated alpha, so
+   masking paints --fg at the texture's own opacity and the art follows the colour setting. */
 .icon-img {
+  display: inline-block;
   width: 1.5em;
   height: 1.5em;
-  object-fit: contain;
   flex: none;
-  filter: drop-shadow(0 0 2px var(--fg));
+  background-color: var(--fg);
+  -webkit-mask-image: var(--icon-src);
+  mask-image: var(--icon-src);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
 }
 
 .icon-img.big { width: 2.1em; height: 2.1em; }
 
-.row[aria-selected="true"] .icon-img { filter: none; }
-
+/* The Vault Boy holding the thing.
+   In the game this is the biggest object on the ITEMS page -- the icons in New Vegas's
+   pipboyimages set ARE the Vault Boy art, so this is the same picture the Pip-Boy draws, and it
+   was being shown at half the size it deserves. Sized off the card rather than in fixed rem so it
+   stays large on a phone and does not swallow the stats on a small panel. */
 .card-art {
   display: block;
-  max-width: 100%;
-  max-height: 7rem;
+  width: 100%;
+  max-width: 15rem;
+  /* A mask has no intrinsic size, so the box has to state the shape. Every pipboyimages texture
+     in the set is 256x256, so square is the art's own ratio rather than a guess. */
+  aspect-ratio: 1;
   height: auto;
-  margin: 0 auto .3rem;
-  object-fit: contain;
+  max-height: min(15rem, 34vh);
+  margin: 0 auto .4rem;
 }
 
 .grouphead {

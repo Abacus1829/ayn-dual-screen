@@ -38,6 +38,14 @@ struct Config
 	/// written anywhere; set false to skip opening the archives at all.
 	bool enableIcons = true;
 
+	/// Only list radio stations you can actually pick up, the way the Pip-Boy does.
+	///
+	/// Turning this off lists every station in the load order regardless. That is the escape hatch
+	/// for when the range read is wrong: the range data lives in a structure the SDK does not map,
+	/// so a filter built on it can hide stations that really are receivable, and an empty tab gives
+	/// you no way to tell a quiet wasteland from a broken reader.
+	bool radioInRangeOnly = true;
+
 	/// A shared secret every request must carry. Empty means no check, which is the default and
 	/// matches how the other mods in this repository behave.
 	///
