@@ -1,4 +1,4 @@
-/* Bottom-screen UI for Stardew Valley. Sized to fill whatever panel it's put on without ever scrolling the page. */
+﻿/* Bottom-screen UI for Stardew Valley. Sized to fill whatever panel it's put on without ever scrolling the page. */
 
 :root {
   --bg: #14100e;
@@ -11,14 +11,14 @@
   /*
    * Ink for text sitting directly on a framed panel.
    *
-   * The backdrop there is NOT --panel. `.framed` uses `border-image: … fill`, and the fill keyword
+   * The backdrop there is NOT --panel. `.framed` uses `border-image: â€¦ fill`, and the fill keyword
    * paints the game's menu box across the whole box, covering --panel entirely. So the real colour
    * behind this text is whatever Maps/MenuTiles looks like: vanilla's light parchment, or whatever a
    * recolour makes it (Cinderbox, SVE's interface, any Content Patcher retexture).
    *
-   * Hardcoding either shade breaks half the setups — light ink vanished on vanilla parchment, dark
+   * Hardcoding either shade breaks half the setups â€” light ink vanished on vanilla parchment, dark
    * ink would vanish on a dark recolour. So the mod samples the box's own centre pixels and reports
-   * their brightness as state.menuLuma, and app.js sets `.on-light` from it. Light box → dark ink.
+   * their brightness as state.menuLuma, and app.js sets `.on-light` from it. Light box â†’ dark ink.
    */
   --ink: #f2e6d5;
   --ink-dim: #b8a68e;
@@ -31,6 +31,14 @@
 
 * { box-sizing: border-box; }
 
+/*
+ * The Size setting works by setting the root font size, so this is the only place a fixed pixel size
+ * belongs. Everything else is in rem â€” when body carried its own `font-size: 14px`, body text ignored
+ * the root entirely, and the small labels were written in px besides, so turning Size up moved almost
+ * nothing on screen.
+ */
+html { font-size: 14px; }
+
 html, body {
   height: 100%;
   margin: 0;
@@ -38,7 +46,6 @@ html, body {
   background: var(--bg);
   color: var(--text);
   font-family: "Segoe UI", system-ui, sans-serif;
-  font-size: 14px;
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
@@ -63,15 +70,22 @@ body {
   image-rendering: pixelated;
 }
 
-/* Set at runtime from state.menuLuma: this menu box is light, so the ink must be dark. */
+/*
+ * Set at runtime from state.menuLuma: this menu box is light, so the ink must be dark.
+ *
+ * The dim and gold shades are darker than they look like they need to be. They were mid-browns that
+ * measured 4.35:1 against a vanilla parchment box — fine for a heading, not fine for the 10px labels
+ * they are actually used on, which is every bit of small print along the bottom of the panels. These
+ * clear 6.5:1 and 7:1, so they still read as secondary without going faint.
+ */
 body.on-light {
   --ink: #33240f;
-  --ink-dim: #6b5133;
-  --ink-gold: #7a4b12;
+  --ink-dim: #402f19;
+  --ink-gold: #5c3406;
 }
 
 /*
- * Theme off. Drops the game's frame for flat dark panels — the look before the Stardew theme
+ * Theme off. Drops the game's frame for flat dark panels â€” the look before the Stardew theme
  * existed. Listed after .on-light so it wins at equal specificity whatever the menu box looks like.
  */
 body.theme-plain {
@@ -154,7 +168,7 @@ body.theme-plain .slot { background-image: none; background-color: var(--panel-2
   position: absolute;
   inset: 0;
   text-align: center;
-  font-size: 9px;
+  font-size: 0.72rem;
   line-height: 10px;
   color: var(--text);
   text-shadow: 0 1px 1px #000;
@@ -188,7 +202,7 @@ section {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  font-size: 12px;
+  font-size: 0.93rem;
   color: var(--ink-dim);
   text-transform: uppercase;
   letter-spacing: .06em;
@@ -202,7 +216,7 @@ section {
   border: 1px solid var(--edge);
   border-radius: 999px;
   padding: 3px 12px;
-  font-size: 11px;
+  font-size: 0.86rem;
   cursor: pointer;
 }
 
@@ -219,7 +233,7 @@ section {
   border: 1px solid transparent;
   border-radius: 4px;
   padding: 3px 7px;
-  font-size: 10px;
+  font-size: 0.79rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .04em;
@@ -241,7 +255,7 @@ section {
 
 .tab-body.hidden { display: none; }
 
-#today-notes { flex: 0 0 auto; display: flex; flex-direction: column; gap: 2px; font-size: 11px; }
+#today-notes { flex: 0 0 auto; display: flex; flex-direction: column; gap: 2px; font-size: 0.86rem; }
 
 .note {
   padding: 3px 7px;
@@ -263,7 +277,7 @@ section {
   border-radius: 4px;
   color: var(--text);
   padding: 5px 8px;
-  font-size: 12px;
+  font-size: 0.93rem;
 }
 
 #village-list, #bundle-list {
@@ -279,7 +293,7 @@ section {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 11px;
+  font-size: 0.86rem;
   padding: 3px 7px;
   border-radius: 3px;
   background: var(--panel-2);
@@ -291,8 +305,8 @@ section {
 .villager.birthday { border-color: var(--edge-hot); }
 .villager b { font-weight: 600; white-space: nowrap; }
 .villager span { color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.villager em { font-style: normal; margin-left: auto; flex: 0 0 auto; color: var(--gold); font-size: 10px; }
-.villager i { font-style: normal; flex: 0 0 auto; font-size: 10px; }
+.villager em { font-style: normal; margin-left: auto; flex: 0 0 auto; color: var(--gold); font-size: 0.79rem; }
+.villager i { font-style: normal; flex: 0 0 auto; font-size: 0.79rem; }
 .villager i.talked { color: #5fbf4f; }
 
 #village-count, #bundle-progress { color: var(--ink-gold); }
@@ -310,13 +324,13 @@ section {
 }
 
 .room.done { opacity: .55; border-color: #4f7a3f; }
-.room-head { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: var(--text); }
+.room-head { display: flex; justify-content: space-between; font-size: 0.86rem; font-weight: 600; color: var(--text); }
 .room-head em { font-style: normal; color: var(--text-dim); font-weight: 400; }
-.room small { font-size: 10px; color: var(--text-dim); }
+.room small { font-size: 0.79rem; color: var(--text-dim); }
 
 .head-tools { display: flex; align-items: center; gap: 5px; }
 .chip.tight { padding: 3px 8px; min-width: 26px; }
-#zoom-text { font-size: 10px; color: var(--ink-dim); min-width: 22px; text-align: center; }
+#zoom-text { font-size: 0.79rem; color: var(--ink-dim); min-width: 22px; text-align: center; }
 
 /* connection health: green while snapshots keep arriving, amber when they stall, red when they stop */
 .dot {
@@ -342,7 +356,7 @@ section {
   border-radius: 4px;
   background: rgba(12, 9, 7, .9);
   border: 1px solid var(--edge);
-  font-size: 11px;
+  font-size: 0.86rem;
   color: var(--text);
   pointer-events: none;
   white-space: nowrap;
@@ -355,7 +369,7 @@ section {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 10px;
+  font-size: 0.79rem;
   color: var(--ink-dim);
   text-transform: uppercase;
   letter-spacing: .06em;
@@ -364,7 +378,7 @@ section {
 
 #forecast {
   flex: 0 0 auto;
-  font-size: 11px;
+  font-size: 0.86rem;
   color: var(--ink-dim);
 }
 
@@ -387,7 +401,7 @@ section {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  font-size: 11px;
+  font-size: 0.86rem;
   color: var(--ink);
   background: var(--panel-2);
   border: 1px solid var(--edge);
@@ -424,7 +438,7 @@ section {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 10px;
-  font-size: 10px;
+  font-size: 0.79rem;
   color: var(--ink-dim);
 }
 
@@ -448,12 +462,12 @@ section {
   padding: 2px 0;
 }
 
-.skill b { font-size: 13px; line-height: 1.1; }
-.skill span { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; }
+.skill b { font-size: 1rem; line-height: 1.1; }
+.skill span { font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; }
 
 /* ---------- inventory ---------- */
 
-#inv-hint { font-size: 10px; text-transform: none; letter-spacing: 0; }
+#inv-hint { font-size: 0.79rem; text-transform: none; letter-spacing: 0; }
 
 #inv-grid {
   flex: 1 1 auto;
@@ -498,7 +512,7 @@ section {
   position: absolute;
   right: 2px;
   bottom: 0;
-  font-size: 10px;
+  font-size: 0.79rem;
   font-weight: 700;
   line-height: 1.1;
   text-shadow: 0 1px 0 #000, 0 -1px 0 #000, 1px 0 0 #000, -1px 0 0 #000;
@@ -546,7 +560,7 @@ section {
   overflow-y: auto;
 }
 
-#chest-hint { font-size: 10px; color: var(--ink-dim); text-transform: none; letter-spacing: 0; }
+#chest-hint { font-size: 0.79rem; color: var(--ink-dim); text-transform: none; letter-spacing: 0; }
 
 /* the Store button only earns its place while a chest is open */
 #act-store { display: none; }
@@ -577,7 +591,7 @@ body.chest-open #actions { grid-template-columns: repeat(5, 1fr); }
 
 #detail-text { display: flex; flex-direction: column; min-width: 0; }
 #detail-name { font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#detail-meta { font-size: 11px; color: var(--ink-dim); }
+#detail-meta { font-size: 0.86rem; color: var(--ink-dim); }
 
 #actions {
   flex: 0 0 auto;
@@ -592,7 +606,7 @@ body.chest-open #actions { grid-template-columns: repeat(5, 1fr); }
   border: 1px solid var(--edge);
   border-radius: 6px;
   padding: 9px 4px;
-  font-size: 13px;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
 }
@@ -643,17 +657,17 @@ body.fade-idle.idle #gear:hover { opacity: 1; }
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  font-size: 15px;
+  font-size: 1.1rem;
   font-weight: 600;
   margin-bottom: 4px;
 }
 
-.settings-note { margin: 0 0 6px; font-size: 11px; color: var(--text-dim); }
+.settings-note { margin: 0 0 6px; font-size: 0.86rem; color: var(--text-dim); }
 
 .settings-section {
   margin-top: 14px;
   margin-bottom: 6px;
-  font-size: 10px;
+  font-size: 0.79rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .1em;
@@ -670,7 +684,7 @@ body.fade-idle.idle #gear:hover { opacity: 1; }
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 13px;
+  font-size: 1rem;
   padding: 3px 0;
   cursor: pointer;
 }
@@ -700,7 +714,7 @@ body.fade-idle.idle #gear:hover { opacity: 1; }
   border: 1px solid var(--edge);
   border-radius: 5px;
   padding: 7px 6px;
-  font-size: 12px;
+  font-size: 0.93rem;
   cursor: pointer;
 }
 
@@ -712,7 +726,7 @@ body.fade-idle.idle #gear:hover { opacity: 1; }
   background: none;
   border: none;
   padding: 4px 0;
-  font-size: 13px;
+  font-size: 1rem;
   color: var(--edge-hot);
   text-decoration: underline;
   cursor: pointer;
@@ -756,8 +770,8 @@ body.no-map main, body.no-inv main { grid-template-columns: minmax(0, 1fr); }
 
 .overlay.hidden { display: none; }
 .overlay-box { text-align: center; padding: 20px; }
-.overlay-box h1 { font-size: 18px; margin: 0 0 6px; }
-.overlay-box p { margin: 0; color: var(--text-dim); font-size: 13px; }
+.overlay-box h1 { font-size: 1.3rem; margin: 0 0 6px; }
+.overlay-box p { margin: 0; color: var(--text-dim); font-size: 1rem; }
 
 /* ---------- narrow / portrait screens ---------- */
 

@@ -46,6 +46,8 @@ const BEHAVIOUR = [
 
 const THEMES = { stardew: 'Stardew', plain: 'Plain' };
 
+const MAP_MODES = { local: 'Tile map', world: 'In-game map' };
+
 /** Which section each toggle hides, and what to call it in the panel. */
 const SECTIONS = [
   ['hud', 'Top bar'],
@@ -280,6 +282,7 @@ const dom = {
   settingsRate: el('settings-rate'),
   settingsTheme: el('settings-theme'),
   settingsBehaviour: el('settings-behaviour'),
+  settingsMap: el('settings-map'),
   mapMode: el('map-mode'),
   chest: el('chest'),
   chestName: el('chest-name'),
@@ -1389,6 +1392,7 @@ function buildCheckboxes(host, entries) {
 
 function buildSettingsPanel() {
   buildSegmented(dom.settingsTheme, Object.keys(THEMES), 'theme', (v) => THEMES[v]);
+  buildSegmented(dom.settingsMap, Object.keys(MAP_MODES), 'mapMode', (v) => MAP_MODES[v]);
   buildCheckboxes(dom.settingsBehaviour, BEHAVIOUR);
 
   dom.settingsToggles.textContent = '';
