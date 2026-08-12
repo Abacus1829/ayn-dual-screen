@@ -62,7 +62,14 @@ const DEFAULTS = {
   cards: "on",
   rate: 10,
   tabs: ALL_TABS.slice(),
+
+  // Items pinned to number keys. Keys 1-5 select tabs, so hotkeys live on 6-9 and 0.
+  // Stored as { "6": { id, name, bucket } } -- the name is kept so an empty slot can still say
+  // what used to be in it once the last one is used up.
+  hotkeys: {},
 };
+
+const HOTKEY_SLOTS = ["6", "7", "8", "9", "0"];
 
 const DENSITIES = [0.05, 0.12, 0.2, 0.32, 0.45];   // rem of vertical padding per row
 
@@ -174,6 +181,9 @@ addEventListener("keydown", (e) => {
     const panel = document.getElementById("settings");
     if (!panel.hidden) { panel.hidden = true; return; }
   }
+
+  // Hotkeys before tabs: 6-9 and 0 are never tab keys, so there is no ambiguity to resolve.
+  if (HOTKEY_SLOTS.includes(e.key)) { fireHotkey(e.key); return; }
 
   const n = parseInt(e.key, 10);
   if (n >= 1 && n <= settings.tabs.length) { setPage(settings.tabs[n - 1]); return; }
@@ -705,6 +715,66 @@ const SORTS = [
 
 let invSort = 0;
 
+// ── hotkeys ───────────────────────────────────────────────────────────────
+
+/** Every item in the snapshot, whatever tab it lives on. Hotkeys ignore tabs. */
+function findItem(id) {
+  for (const bucket of Object.values((state && state.inventory) || {})) {
+    const hit = (bucket || []).find((i) => i.id === id);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/**
+ * Use whatever is pinned to a key.
+ *
+ * Aid gets used, weapons and apparel get equipped -- which is what you would want from a single
+ * key in each case, and matches what the tab's own button does.
+ */
+function fireHotkey(key) {
+  const slot = settings.hotkeys[key];
+  if (!slot) { toast("Nothing on " + key); return; }
+
+  const item = findItem(slot.id);
+  if (!item) { toast(slot.name + " — none left"); return; }
+
+  const perms = (state && state.perms) || {};
+  if (slot.bucket === "aid") {
+    if (!perms.use) { toast("Using items is off in the mod's config"); return; }
+    act("use", { id: item.id });
+    toast(item.name + (item.count > 1 ? `  (${item.count - 1} left)` : ""));
+    return;
+  }
+
+  if (!perms.equip) { toast("Equipping is off in the mod's config"); return; }
+  act("equip", { id: item.id });
+  toast((item.equipped ? "Unequipped " : "Equipped ") + item.name);
+}
+
+/** Pin the selected item to the first free slot, or clear it if already pinned. */
+function toggleHotkey(item) {
+  const existing = HOTKEY_SLOTS.find((k) => settings.hotkeys[k] && settings.hotkeys[k].id === item.id);
+  if (existing) {
+    delete settings.hotkeys[existing];
+    save();
+    toast(`${item.name} unpinned from ${existing}`);
+    return;
+  }
+
+  const free = HOTKEY_SLOTS.find((k) => !settings.hotkeys[k]);
+  if (!free) { toast("All hotkeys taken — clear one first"); return; }
+
+  settings.hotkeys[free] = { id: item.id, name: item.name, bucket: sub.inv };
+  save();
+  toast(`${item.name} pinned to ${free}`);
+}
+
+/** Which key an item is on, if any. */
+function hotkeyFor(id) {
+  return HOTKEY_SLOTS.find((k) => settings.hotkeys[k] && settings.hotkeys[k].id === id) || null;
+}
+
 /** Value per unit weight — the number that decides what to leave behind when overloaded. */
 function ratio(item) {
   const w = item.weight || 0;
@@ -733,7 +803,11 @@ function renderInv(s) {
     });
   }
 
-  const key = sub.inv + "|" + needle + "|" + invSort + "|" + bucket.map((i) =>
+  // Hotkey bindings are part of the key: without them, pinning an item changed the settings but
+  // the list never rebuilt, so the tag did not appear until something else forced a redraw.
+  const key = sub.inv + "|" + needle + "|" + invSort
+    + "|" + HOTKEY_SLOTS.map((k) => (settings.hotkeys[k] || {}).id || "").join(",")
+    + "|" + bucket.map((i) =>
     `${i.id}:${i.count}:${i.equipped ? 1 : 0}:${Math.round((i.health || 0) * 100)}`).join(",");
 
   fill(list, key, (n) => {
@@ -749,6 +823,9 @@ function renderInv(s) {
       const art = icon(item.icon);
       if (art) li.appendChild(art);
       li.appendChild(el("span", "name", item.name));
+
+      const bound = hotkeyFor(item.id);
+      if (bound) li.appendChild(el("span", "hotkeytag", bound));
       if (item.count > 1) li.appendChild(el("span", "tag", "(" + item.count + ")"));
       li.appendChild(el("span", "val", item.weight != null ? item.weight.toFixed(1) : ""));
       n.appendChild(li);
@@ -878,6 +955,16 @@ function renderInvFoot(s, item, shown) {
 
   add("DROP", perms.drop, "Dropping is off in the mod's config — it is off by default",
       () => confirmThen(foot, () => act("drop", { id: item.id, count: 1 })), "danger");
+
+  if (item) {
+    const bound = hotkeyFor(item.id);
+    const hk = el("button", "btn", bound ? `UNPIN ${bound}` : "HOTKEY");
+    hk.title = bound
+      ? `Press ${bound} to use this. Click to unpin.`
+      : "Pin this to a number key, so it can be used without opening this tab.";
+    hk.onclick = () => { toggleHotkey(item); renderInv(state); };
+    foot.appendChild(hk);
+  }
 
   const sortBtn = el("button", "btn", SORTS[invSort][1]);
   sortBtn.title = "Cycle how this list is ordered. Equipped items stay at the top.";
