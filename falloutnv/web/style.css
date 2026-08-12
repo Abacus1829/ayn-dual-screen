@@ -417,14 +417,33 @@ h3:first-child { margin-top: .1rem; }
    Height is left auto so each keeps its own aspect (the arms are 2:1). */
 /* Top-left anchored, matching how the art sits on each texture's own canvas. No centring
    transform: these are corner coordinates, not midpoints. */
+/* Each limb, painted through its own texture as a mask so the fill is a CSS colour: the phosphor
+   normally, amber as it wears down, red once it is crippled. Height comes from an aspect-ratio set
+   off the real texture when it loads, since a mask has no intrinsic size of its own. */
 .limb-layer {
   position: absolute;
-  height: auto;
   pointer-events: none;
+  background-color: var(--fg);
+  -webkit-mask-image: var(--limb-src);
+  mask-image: var(--limb-src);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
   filter: drop-shadow(0 0 3px var(--fg));
 }
 
-.limb-layer.hurt { filter: drop-shadow(0 0 4px var(--warn)); }
+.limb-layer.hurt {
+  background-color: var(--warn);
+  filter: drop-shadow(0 0 4px var(--warn));
+}
+
+.limb-layer.crippled {
+  background-color: var(--bad);
+  filter: drop-shadow(0 0 5px var(--bad));
+}
 
 /* The drawn fallback shares the same fixed-aspect box, for the same reason. */
 #doll {

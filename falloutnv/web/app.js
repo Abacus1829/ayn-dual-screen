@@ -465,30 +465,41 @@ function buildFigure() {
   if (host.childElementCount) return;
 
   for (const [key, file, x, y, w, h, z] of FIGURE_LAYERS) {
-    const img = el("img", "limb-layer");
-    img.dataset.limb = key;
-    img.dataset.file = file;
-    img.alt = "";
+    // A masked span, not an <img>, for the same reason the item icons are: these textures are
+    // white with a graduated alpha, so painting them as pictures gives a white figure whatever
+    // colour the screen is set to -- and a crippled limb could not be made red at all. Masked,
+    // the fill is a CSS colour, so the limb can be the phosphor normally and red when broken.
+    const layer = el("span", "limb-layer");
+    layer.dataset.limb = key;
+    layer.dataset.file = file;
     // Canvas coordinates -> percentages, so the whole figure scales as one piece.
-    img.style.left = (100 * x / FIGURE_BOX.w).toFixed(3) + "%";
-    img.style.top = (100 * y / FIGURE_BOX.h).toFixed(3) + "%";
-    img.style.width = (100 * w / FIGURE_BOX.w).toFixed(3) + "%";
-    img.style.zIndex = String(z);
+    layer.style.left = (100 * x / FIGURE_BOX.w).toFixed(3) + "%";
+    layer.style.top = (100 * y / FIGURE_BOX.h).toFixed(3) + "%";
+    layer.style.width = (100 * w / FIGURE_BOX.w).toFixed(3) + "%";
+    layer.style.zIndex = String(z);
 
-    // Each layer reveals the figure itself once it has actually decoded. There is no separate
-    // probe: an earlier version used one, and if that single request lost a race at startup the
-    // whole figure stayed hidden forever with no way to recover. This way any layer arriving is
-    // enough to switch over, and a layer that never arrives costs only itself.
-    img.onload = () => {
+    // A mask has no intrinsic size, so the height an <img> used to get from its own texture has to
+    // be stated. It is taken from that same texture once it loads rather than assumed, so the
+    // hand-placed layout below comes out identical to what it was.
+    const probe = new Image();
+    probe.onload = () => {
+      if (probe.naturalWidth && probe.naturalHeight)
+        layer.style.aspectRatio = `${probe.naturalWidth} / ${probe.naturalHeight}`;
+
+      // Each layer reveals the figure itself once it has actually decoded. There is no single
+      // gatekeeping probe: an earlier version had one, and if that request lost a race at startup
+      // the whole figure stayed hidden forever with no way to recover. This way any layer arriving
+      // is enough to switch over, and a layer that never arrives costs only itself.
       host.hidden = false;
       // A class, not the hidden attribute: [hidden] is an HTML attribute and browsers do not
       // reliably apply the UA display:none rule to an <svg>, so the drawn figure was still
       // showing through underneath the real one.
       document.getElementById("doll").classList.add("replaced");
     };
-    img.onerror = () => { img.style.visibility = "hidden"; };
+    probe.onerror = () => { layer.style.visibility = "hidden"; };
+    probe.src = withToken(statsAsset(file));
 
-    host.appendChild(img);
+    host.appendChild(layer);
   }
 }
 
@@ -499,20 +510,22 @@ function statsAsset(file) {
 
 /** Point each layer at its good or broken variant, following the live condition values. */
 function updateFigure(condition) {
-  for (const img of document.querySelectorAll("#figurelayers .limb-layer")) {
-    const value = condition[img.dataset.limb];
+  for (const layer of document.querySelectorAll("#figurelayers .limb-layer")) {
+    const value = condition[layer.dataset.limb];
     const broken = value != null && value <= 0;
-    const wanted = statsAsset(img.dataset.file + (broken ? "_broken" : ""));
+    const wanted = withToken(statsAsset(layer.dataset.file + (broken ? "_broken" : "")));
 
-    // Only touch src when it actually changes, or the browser re-decodes every frame.
-    if (img.dataset.current !== wanted) {
-      img.dataset.current = wanted;
-      img.src = wanted;
+    // Only touch the mask when it actually changes, or the browser re-decodes every frame.
+    if (layer.dataset.current !== wanted) {
+      layer.dataset.current = wanted;
+      layer.style.setProperty("--limb-src", `url("${wanted}")`);
     }
 
-    // Below a quarter condition the game tints the limb; mirror that with a filter so a hurt
-    // limb reads at a glance without needing the bar.
-    img.classList.toggle("hurt", value != null && value <= 0.25 && value > 0);
+    // Red once crippled, amber while it is on the way there. The game's own broken texture is
+    // swapped in above, but that change is easy to miss on a glance at a second screen -- colour
+    // is not, which is the whole reason to look at this panel rather than the Pip-Boy.
+    layer.classList.toggle("crippled", broken);
+    layer.classList.toggle("hurt", value != null && value <= 0.25 && value > 0);
   }
 }
 
