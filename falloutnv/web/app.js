@@ -800,13 +800,26 @@ function fireHotkey(key) {
   const item = findItem(slot.id);
   if (!item) { toast(slot.name + " — none left"); return; }
 
+  defaultAction(item, slot.bucket);
+}
+
+/**
+ * The one obvious thing to do with an item: aid gets used, weapons and apparel get equipped.
+ *
+ * Shared by the hotkeys and by tapping a row that is already selected, so a key and a tap can
+ * never disagree about what "use this" means.
+ */
+function defaultAction(item, bucket) {
   const perms = (state && state.perms) || {};
-  if (slot.bucket === "aid") {
+
+  if (bucket === "aid") {
     if (!perms.use) { toast("Using items is off in the mod's config"); return; }
     act("use", { id: item.id });
     toast(item.name + (item.count > 1 ? `  (${item.count - 1} left)` : ""));
     return;
   }
+
+  if (bucket !== "weapons" && bucket !== "apparel") return;   // nothing sensible to do with junk
 
   if (!perms.equip) { toast("Equipping is off in the mod's config"); return; }
   act("equip", { id: item.id });
@@ -884,7 +897,16 @@ function renderInv(s) {
       return;
     }
     for (const item of bucket) {
-      const li = row(() => { selected.inv = item.id; renderInv(state); });
+      // Tap to select, tap the selected one again to equip or use it.
+      //
+      // Equipping on the FIRST tap was the other option and is worse: the card on the right is
+      // how you read an item's stats, and reaching it would mean equipping everything you wanted
+      // to look at. Two taps keeps browsing free and still puts equipping a tap away.
+      const li = row(() => {
+        if (selected.inv === item.id) { defaultAction(item, sub.inv); return; }
+        selected.inv = item.id;
+        renderInv(state);
+      });
       li.classList.toggle("equipped", !!item.equipped);
       li.dataset.id = item.id;
       const art = icon(item.icon);
@@ -990,6 +1012,14 @@ function renderItemCard(s, item) {
   card.appendChild(dl);
 
   if (item.desc) card.appendChild(el("p", null, item.desc));
+
+  // Say that a second tap does something, because nothing else on screen would tell you.
+  const perms = (s.perms || {});
+  const again =
+    sub.inv === "aid" && perms.use ? `Tap again to use ${item.name}.` :
+    (sub.inv === "weapons" || sub.inv === "apparel") && perms.equip
+      ? `Tap again to ${item.equipped ? "unequip" : "equip"} ${item.name}.` : null;
+  if (again) card.appendChild(el("p", "hint", again));
 }
 
 function renderInvFoot(s, item, shown) {
@@ -1589,19 +1619,27 @@ document.getElementById("mapfoot").addEventListener("click", (e) => {
 function renderRadio(s) {
   const stations = s.radio || [];
   const list = document.getElementById("stations");
-  const key = stations.map((r) => `${r.id}:${r.active ? 1 : 0}:${r.inRange ? 1 : 0}`).join(",");
+  const key = stations.map((r) =>
+    `${r.id}:${r.active ? 1 : 0}:${r.inRange ? 1 : 0}:${r.canTune ? 1 : 0}:${r.name}`).join(",");
+
+  // In range first, then alphabetically. A dial you cannot pick anything up on should not be the
+  // first thing you scroll past.
+  const ordered = stations.slice().sort((a, b) =>
+    (b.inRange ? 1 : 0) - (a.inRange ? 1 : 0) || (a.name || "").localeCompare(b.name || ""));
 
   fill(list, key, (n) => {
-    if (!stations.length) { n.appendChild(el("li", "empty", "No stations in range.")); return; }
-    for (const st of stations) {
+    if (!ordered.length) { n.appendChild(el("li", "empty", "No stations found.")); return; }
+    for (const st of ordered) {
       const li = row(() => {
         if (!(s.perms || {}).radio) return;
+        if (!st.canTune) { toast(st.name + " — no transmitter loaded to tune"); return; }
         act("radio", { id: st.active ? "" : st.id });
       });
       li.dataset.id = st.id;
       li.setAttribute("aria-selected", String(!!st.active));
       li.appendChild(el("span", "name", st.name));
       if (!st.inRange) li.appendChild(el("span", "tag", "WEAK"));
+      if (!st.canTune) li.classList.add("dim");
       n.appendChild(li);
     }
   });
@@ -1612,6 +1650,20 @@ function renderRadio(s) {
   now.appendChild(el("h4", null, active ? active.name : "Radio off"));
   if (!(s.perms || {}).radio) now.appendChild(el("p", "hint", "Radio control is off in the mod's config."));
   else if (active) now.appendChild(el("p", "hint", "Tap again to switch it off."));
+
+  // Why each station was judged reachable, in the open. The range data behind this is read from a
+  // structure the SDK does not map, so showing the working is what makes a wrong answer reportable
+  // instead of just puzzling.
+  const sel = stations.find((r) => r.active) || ordered[0];
+  if (sel && sel.hasData !== undefined) {
+    const how = sel.hasData
+      ? ["radius", "everywhere", "worldspace"][sel.mode] || ("mode " + sel.mode)
+      : "no radio data on the transmitter";
+    const bits = [how];
+    if (sel.radius) bits.push("range " + num(sel.radius));
+    if (sel.distance != null) bits.push(num(sel.distance) + " away");
+    now.appendChild(el("p", "hint", `${sel.name}: ${bits.join(" · ")}`));
+  }
 
   drawWave(!!active);
 }

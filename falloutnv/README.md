@@ -38,7 +38,7 @@ the first one in this repository that isn't a managed mod — see *Why this one 
 | The local map | **Approximate**, and off by default (`EnableLocalMap`). It is sketched from the objects in the cell — it is not the game's own local map, and the screen says so rather than passing it off as one. |
 | Companions | **Live** — name, health and how far away they are. |
 | Fast travel, set active quest | **Live**, through NVSE's console interface, and refused unless the marker is both discovered and travellable. |
-| Radio | Written, **not yet confirmed in play.** Stations are found by looking for activators that carry a radio station, not by the `ExtraRadioData` the name suggests. Treat it as the least-tested thing here. |
+| Radio | **Still not right.** The station list now comes from the forms rather than from whatever transmitters happen to be nearby, and range is read from each transmitter's own radio data — but that structure is unmapped in the SDK and this reads it off a size and a GECK panel, so it is a considered guess with a sanity check in front of it, not a known layout. Treat it as the least-trustworthy thing here. |
 | Condition bars on the figure | **Live**, on hand-tuned positions. |
 
 ### What "live" is and isn't
@@ -463,6 +463,10 @@ falloutnv/
   web/              the second-screen UI (index.html, style.css, app.js)
   tools/
     mockserver.py   fake backend for designing the UI
+    assetdump.cpp   reads the archives without the game, to prove the decoders
+    plugintest.cpp  loads the real DLL and drives it, without the game
   fetch-nvse.ps1    clones the xNVSE SDK into extern/nvse
   build.ps1         builds Win32 and installs into the game
+  deploy.ps1        pushes web/ (and optionally the DLL) into an existing install
+  package-release.ps1  builds the release zip, always from source and a fresh build
 ```

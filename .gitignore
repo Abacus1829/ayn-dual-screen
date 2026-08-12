@@ -34,3 +34,7 @@ minecraft/run/
 __pycache__/
 .claude/
 falloutnv/preview.html
+
+# the plugin writes this next to the DLL at runtime; it records the real install path
+# and the machine LAN addresses, neither of which belong in a public repository
+falloutnv/AynDualScreen.log

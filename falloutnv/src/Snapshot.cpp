@@ -12,6 +12,7 @@
 
 #include <windows.h>
 #include <algorithm>
+#include <cmath>
 #include <deque>
 #include <map>
 #include <cstdio>
@@ -707,71 +708,263 @@ namespace
 	/// What that costs: there is no way here to tell which station is currently tuned, so `active`
 	/// reflects what this mod last tuned rather than what the game thinks. Tune from the Pip-Boy
 	/// instead and the screen will not notice.
+	/// A reference's radio data, which the SDK header lists only as "ExtraRadioData ???????? 68 1C".
+	///
+	/// The size is the useful clue: 0x1C total, and BSExtraData's own header is 0x0C, which leaves
+	/// exactly four fields. The GECK's Radio Data panel on a reference has exactly four controls --
+	/// range radius, a broadcast-range mode, a static percentage, and an optional position
+	/// reference -- so this is the obvious reading of those sixteen bytes.
+	///
+	/// It is still a reading, so nothing here trusts it blindly: RadioDataLooksSane below refuses
+	/// values that could not have come from that panel, and a reference whose data fails that test
+	/// is treated as having none rather than as having whatever the bytes happened to say.
+	struct ExtraRadioDataGuess
+	{
+		void* vtbl;              // 00
+		UInt8 type;              // 04
+		UInt8 pad05[3];
+		void* next;              // 08
+		float rangeRadius;       // 0C
+		UInt32 broadcastRange;   // 10  0 radius, 1 everywhere, 2 worldspace+linked interiors
+		float staticPercentage;  // 14
+		TESObjectREFR* posRef;   // 18
+	};
+
+	enum
+	{
+		kBroadcast_Radius = 0,
+		kBroadcast_Everywhere = 1,
+		kBroadcast_WorldAndLinked = 2,
+	};
+
+	bool RadioDataLooksSane(const ExtraRadioDataGuess* d)
+	{
+		if (!d)
+			return false;
+		if (d->broadcastRange > kBroadcast_WorldAndLinked)
+			return false;
+		if (!(d->staticPercentage >= 0.f && d->staticPercentage <= 100.f))
+			return false;                      // NaN fails this too, which is the point
+		if (!(d->rangeRadius >= 0.f && d->rangeRadius < 1.0e7f))
+			return false;
+		return true;
+	}
+
+	/// The station a transmitter broadcasts. Named off the talking activator rather than the
+	/// transmitter, because a transmitter is usually a mast or a terminal and is named like one,
+	/// which is not what belongs on a radio dial.
+	///
+	/// BGSTalkingActivator is only forward-declared in this SDK, so it cannot be dereferenced as
+	/// itself. It can be read as a TESForm: every form class in this hierarchy is single
+	/// inheritance rooted at TESForm, so the TESForm subobject sits at offset zero and the cast is
+	/// a no-op rather than a reinterpretation of unrelated memory.
+	const char* StationName(TESObjectACTI* activator)
+	{
+		const char* name = nullptr;
+		if (auto* station = reinterpret_cast<TESForm*>(activator->radioStation))
+			name = station->GetTheName();
+		if (!name || !*name)
+			name = activator->fullName.name.CStr();
+		return name;
+	}
+
+	/// What one station looks like once every transmitter for it has been considered.
+	struct StationEntry
+	{
+		TESObjectACTI* activator = nullptr;
+		TESObjectREFR* best = nullptr;   // the transmitter that gives the strongest signal
+		float bestDistance = -1.f;       // -1 means "no positioned transmitter found"
+		bool inRange = false;
+		bool everywhere = false;
+		float radius = 0.f;
+		bool sawRadioData = false;
+		UInt32 mode = 0xFFFFFFFF;         // the broadcast mode read, or none seen
+		float staticPct = -1.f;
+	};
+
+	/// Consider one placed transmitter against the player, folding it into its station's entry.
+	void ConsiderTransmitter(StationEntry& entry, TESObjectREFR* ref, PlayerCharacter* player,
+		TESWorldSpace* playerWorld)
+	{
+		// reinterpret, not static_cast: ExtraRadioDataGuess is this file's own reading of those
+		// bytes rather than a declared subclass of BSExtraData, so the compiler has no relationship
+		// between the two to convert along. The layout above starts with BSExtraData's own header
+		// for exactly this reason.
+		auto* radio = reinterpret_cast<ExtraRadioDataGuess*>(
+			ref->extraDataList.GetByType(kExtraData_RadioData));
+		if (!RadioDataLooksSane(radio))
+			radio = nullptr;
+		if (radio)
+		{
+			entry.sawRadioData = true;
+			entry.mode = radio->broadcastRange;
+			entry.staticPct = radio->staticPercentage;
+		}
+
+		float dx = ref->posX - player->posX;
+		float dy = ref->posY - player->posY;
+		float dz = ref->posZ - player->posZ;
+		float distance = std::sqrt(dx * dx + dy * dy + dz * dz);
+
+		if (entry.bestDistance < 0.f || distance < entry.bestDistance)
+		{
+			entry.bestDistance = distance;
+			entry.best = ref;
+		}
+
+		if (!radio)
+			return;
+
+		// A transmitter set to broadcast everywhere reaches you wherever you are, which is how the
+		// story stations work -- their masts are nowhere near where you can first hear them.
+		if (radio->broadcastRange == kBroadcast_Everywhere)
+		{
+			entry.inRange = true;
+			entry.everywhere = true;
+			return;
+		}
+
+		// Worldspace mode reaches anywhere in the same worldspace. An interior counts as being in
+		// the worldspace it is linked to, which is not something this can see from here, so the
+		// player's own worldspace is the test and interiors fall through to the radius.
+		TESObjectCELL* refCell = ref->parentCell;
+		TESWorldSpace* refWorld = refCell ? refCell->worldSpace : nullptr;
+		if (radio->broadcastRange == kBroadcast_WorldAndLinked)
+		{
+			if (playerWorld && refWorld == playerWorld)
+			{
+				entry.inRange = true;
+				entry.everywhere = true;
+			}
+			return;
+		}
+
+		// Plain radius. A zero radius in the GECK means "no limit", not "reaches nothing".
+		float radius = radio->rangeRadius;
+		if (radius <= 0.f)
+		{
+			entry.inRange = true;
+			entry.everywhere = true;
+			return;
+		}
+
+		if (radius > entry.radius)
+			entry.radius = radius;
+		if (distance <= radius)
+			entry.inRange = true;
+	}
+
+	/// Every radio station in the load order, with whether you can actually pick it up.
+	///
+	/// The earlier version walked only the worldspace's persistent cell looking for transmitters,
+	/// which is why it found two stations out of a Mojave full of them and marked both unreachable:
+	/// most transmitters are not persistent refs of the worldspace you happen to be standing in,
+	/// and range is a property of the reference's radio data rather than of how far away it is.
+	///
+	/// So the station list now comes from the forms -- every activator in the load order that
+	/// carries a station, which is the complete set and costs one walk -- and range comes from the
+	/// transmitters' own data. Coming at it from the forms is the same approach the perk reader
+	/// takes, and for the same reason: the list of things that exist is knowable, so it should not
+	/// be inferred from whatever happens to be nearby.
 	void WriteRadio(Json& j, PlayerCharacter* player, const std::string& tuned)
 	{
 		j.BeginArray("radio");
 
-		TESObjectCELL* cell = player->parentCell;
-		TESWorldSpace* world = cell ? cell->worldSpace : nullptr;
-		TESObjectCELL* persistent = world ? world->cell : nullptr;
-
-		if (!persistent)
+		DataHandler* data = DataHandler::Get();
+		if (!data || !data->boundObjectList)
 		{
 			j.EndArray();
 			return;
 		}
 
+		TESObjectCELL* playerCell = player->parentCell;
+		TESWorldSpace* playerWorld = playerCell ? playerCell->worldSpace : nullptr;
+
+		// Keyed by the station form, so a station with several transmitters appears once.
+		std::map<TESForm*, StationEntry> stations;
+
+		for (TESBoundObject* object = data->boundObjectList->first; object; object = object->next)
+		{
+			auto* activator = DYNAMIC_CAST(object, TESForm, TESObjectACTI);
+			if (!activator || !activator->radioStation)
+				continue;
+
+			auto* key = reinterpret_cast<TESForm*>(activator->radioStation);
+			StationEntry& entry = stations[key];
+			if (!entry.activator)
+				entry.activator = activator;
+		}
+
+		if (stations.empty())
+		{
+			j.EndArray();
+			return;
+		}
+
+		// Now the placed transmitters, for range and for something to activate. Both the cell the
+		// player is standing in and the worldspace's persistent cell are walked: persistent refs
+		// are where the story transmitters live, and the local cell catches the props.
+		auto sweep = [&](TESObjectCELL* cell) {
+			if (!cell)
+				return;
+			for (auto iter = cell->objectList.Begin(); !iter.End(); ++iter)
+			{
+				TESObjectREFR* ref = iter.Get();
+				if (!ref || ref->IsDeleted() || !ref->baseForm)
+					continue;
+				auto* activator = DYNAMIC_CAST(ref->baseForm, TESForm, TESObjectACTI);
+				if (!activator || !activator->radioStation)
+					continue;
+
+				auto found = stations.find(reinterpret_cast<TESForm*>(activator->radioStation));
+				if (found == stations.end())
+					continue;
+				ConsiderTransmitter(found->second, ref, player, playerWorld);
+			}
+		};
+
+		sweep(playerCell);
+		if (playerWorld && playerWorld->cell != playerCell)
+			sweep(playerWorld->cell);
+
 		int written = 0;
-		for (auto iter = persistent->objectList.Begin(); !iter.End(); ++iter)
+		for (auto& pair : stations)
 		{
 			if (written >= 32)
 				break;
 
-			TESObjectREFR* ref = iter.Get();
-			if (!ref || ref->IsDeleted() || !ref->baseForm)
-				continue;
-
-			// A transmitter is an activator whose base carries a radio station. Checking for
-			// ExtraRadioData instead -- which is what this did first -- matched the wrong
-			// references entirely: it listed things you cannot receive and missed real stations.
-			auto* activator = DYNAMIC_CAST(ref->baseForm, TESForm, TESObjectACTI);
-			if (!activator || !activator->radioStation)
-				continue;
-
-			// The station's name, not the transmitter's -- a transmitter is usually a mast or a
-			// terminal and is named like one, which is not what belongs on a radio dial.
-			//
-			// BGSTalkingActivator is only forward-declared here, so it cannot be dereferenced as
-			// itself. It can be read as a TESForm: every form class in this hierarchy is single
-			// inheritance rooted at TESForm, so the TESForm subobject sits at offset zero and the
-			// cast is a no-op rather than a reinterpretation of unrelated memory.
-			const char* name = nullptr;
-			if (auto* station = reinterpret_cast<TESForm*>(activator->radioStation))
-				name = station->GetTheName();
-
-			// Fall back to the transmitter if the station has no name of its own.
-			if (!name || !*name)
-				name = activator->fullName.name.CStr();
+			StationEntry& entry = pair.second;
+			const char* name = StationName(entry.activator);
 			if (!name || !*name)
 				continue;
 
-			// Range is a real signal radius held in the radio data this SDK does not map, so this
-			// is distance to the transmitter against a fixed radius -- a heuristic, not the game's
-			// own answer. Out-of-range stations are still listed, marked weak, because the Pip-Boy
-			// lists them too.
-			float dx = ref->posX - player->posX;
-			float dy = ref->posY - player->posY;
-			const float kRangeUnits = 60000.f;
-			bool inRange = (dx * dx + dy * dy) < (kRangeUnits * kRangeUnits);
-
-			std::string id = FormIdText(ref->refID);
+			// Tuning activates a placed transmitter, so a station with none found cannot be tuned
+			// and says so rather than offering a button that quietly does nothing.
+			std::string id = entry.best ? FormIdText(entry.best->refID) : std::string();
 
 			j.BeginObject()
 				.Str("id", id)
 				.Str("name", name)
-				.Bool("active", !tuned.empty() && tuned == id)
-				.Bool("inRange", inRange)
-				.EndObject();
+				.Bool("active", !id.empty() && !tuned.empty() && tuned == id)
+				.Bool("inRange", entry.inRange)
+				.Bool("canTune", !id.empty());
+
+			// What the range decision was actually made on. This is here to be checked against the
+			// game rather than taken on trust -- the radio data layout above is read off a size and
+			// a GECK panel, not off a mapped header, and these are the numbers that would look
+			// wrong first if it were misread.
+			j.Bool("hasData", entry.sawRadioData);
+			if (entry.sawRadioData)
+			{
+				j.Int("mode", static_cast<long long>(entry.mode));
+				j.Num("staticPct", entry.staticPct);
+			}
+			if (entry.radius > 0.f)
+				j.Num("radius", entry.radius, 0);
+			if (entry.bestDistance >= 0.f)
+				j.Num("distance", entry.bestDistance, 0);
+
+			j.EndObject();
 
 			++written;
 		}
@@ -1399,10 +1592,19 @@ void Snapshot::DrainCommands(const Config& config)
 				continue;
 
 			// Same test the listing uses, so the screen can only tune something it was actually
-			// offered. Checking ExtraRadioData here was matching the wrong references.
+			// offered: a placed reference whose base activator carries a station.
 			auto* activator = DYNAMIC_CAST(ref->baseForm, TESForm, TESObjectACTI);
 			if (!activator || !activator->radioStation)
 				continue;
+
+			// Switching stations while one is playing has to turn the old one off first, or the
+			// game is left with two active and the Pip-Boy shows whichever it feels like.
+			if (!g_tunedStation.empty() && g_tunedStation != cmd.id)
+			{
+				char off[64];
+				std::snprintf(off, sizeof off, "%s.Activate player 1", g_tunedStation.c_str());
+				g_runScriptLine(off, nullptr);
+			}
 
 			// Activating the station reference is how the game itself tunes one -- it is an
 			// ordinary activation, not a write into the radio's own data, which is the part this

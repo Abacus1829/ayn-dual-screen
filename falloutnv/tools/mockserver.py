@@ -178,10 +178,18 @@ MARKERS = [
     ("Cottonwood Cove", "Camp", 28000, -6000, False), ("The Fort", "Camp", 8000, 26000, False),
 ]
 
+# id, name, in range, can tune, how the range was decided, radius, distance.
+#
+# The last four mirror what the plugin now reports so the tab can be worked on without the game:
+# mode 0 is a plain radius, 1 broadcasts everywhere, 2 covers the worldspace. The out-of-range and
+# untunable rows are here on purpose -- both were states the real game produced and the screen had
+# nothing sensible to show for either.
 RADIO = [
-    ("r1", "Radio New Vegas", True), ("r2", "Mojave Music Radio", True),
-    ("r3", "Black Mountain Radio", True), ("r4", "Radio Vegas Emergency", False),
-    ("r5", "Mysterious Broadcast", False),
+    ("r1", "Radio New Vegas",       True,  True,  1, 0,     42000),
+    ("r2", "Mojave Music Radio",    True,  True,  0, 60000, 18400),
+    ("r3", "Black Mountain Radio",  True,  True,  2, 0,     91000),
+    ("r4", "Radio Vegas Emergency", False, True,  0, 8000,  53000),
+    ("r5", "Mysterious Broadcast",  False, False, 0, 0,     None),
 ]
 
 # Mutable state the actions actually change.
@@ -269,8 +277,12 @@ def snapshot():
                    for q in QUESTS],
         "notes": NOTES,
         "stats": [{"group": g, "name": n, "value": v} for g, n, v in STATS],
-        "radio": [{"id": i, "name": n, "inRange": r, "active": i == world["station"]}
-                  for i, n, r in RADIO],
+        "radio": [dict({"id": i, "name": n, "inRange": r, "canTune": t,
+                        "active": i == world["station"], "hasData": t,
+                        "mode": mode, "staticPct": 0.0},
+                       **({"radius": rad} if rad else {}),
+                       **({"distance": dist} if dist is not None else {}))
+                  for i, n, r, t, mode, rad, dist in RADIO],
         # One healthy, one badly hurt, one wandered off -- so every state the row can show gets
         # exercised rather than just the happy one.
         "companions": [
