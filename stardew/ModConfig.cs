@@ -33,6 +33,13 @@ namespace AynDualScreen
         /// <summary>Whether the screen may make the player eat or drink the selected item.</summary>
         public bool AllowEat { get; set; } = true;
 
+        /// <summary>Whether the game's own world map is offered as an alternative to the tile minimap.</summary>
+        /// <remarks>Turning this off also stops the per-character world-map lookups each snapshot.</remarks>
+        public bool EnableWorldMap { get; set; } = true;
+
+        /// <summary>Whether an open chest is mirrored onto the second screen.</summary>
+        public bool ShowChests { get; set; } = true;
+
         /// <summary>Whether monsters appear on the minimap.</summary>
         public bool ShowMonsters { get; set; } = true;
 

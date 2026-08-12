@@ -217,6 +217,49 @@ UI_ASSETS = {
 }
 
 
+# Stand-in for the game's world map: a coloured region with a coordinate frame offset away from the
+# origin, so a client that forgets to subtract WORLD["x"]/["y"] visibly misplaces every marker.
+WORLD = {"rev": 1, "region": "Valley", "x": 300, "y": 200, "width": 320, "height": 180}
+
+
+def build_world_map():
+    w, h = WORLD["width"], WORLD["height"]
+    pixels = bytearray()
+    for y in range(h):
+        for x in range(w):
+            if (x // 20 + y // 20) % 2 == 0:
+                pixels += bytes((58, 92, 62, 255))
+            else:
+                pixels += bytes((72, 108, 74, 255))
+            # a border so the edges of the frame are obvious when it's drawn
+            if x < 2 or y < 2 or x >= w - 2 or y >= h - 2:
+                pixels[-4:] = bytes((200, 160, 90, 255))
+    return make_png(w, h, bytes(pixels))
+
+
+WORLD_IMAGE = build_world_map()
+
+# A chest that is "open" so the panel can be exercised. Items move for real, like the inventory does.
+CHEST = [None] * 36
+for slot, entry in {
+    0: item("Stone", "(O)390", 240, 0, "Resource"),
+    1: item("Wood", "(O)388", 180, 0, "Resource"),
+    2: item("Blueberry", "(O)258", 24, 2, "Fruit", True),
+    5: item("Iron Bar", "(O)335", 12, 0, "Resource"),
+}.items():
+    CHEST[slot] = entry
+
+
+def build_chest():
+    items = []
+    for index, entry in enumerate(CHEST):
+        slot = {"index": index}
+        if entry:
+            slot.update(entry)
+        items.append(slot)
+    return {"open": True, "name": "Mock Chest", "canEdit": True, "items": items}
+
+
 ICON_CACHE = {}
 
 
@@ -314,6 +357,13 @@ def build_state():
         "locationName": MAP["locationName"],
         "mapRev": MAP["rev"],
         "menuLuma": menu_luma(),
+        "worldRev": WORLD["rev"],
+        "world": {
+            "region": WORLD["region"],
+            "x": WORLD["x"] + WORLD["width"] * (0.5 + 0.35 * math.cos(angle)),
+            "y": WORLD["y"] + WORLD["height"] * (0.5 + 0.3 * math.sin(angle * 1.3)),
+        },
+        "chest": build_chest(),
         "timeOfDay": time_of_day,
         "dayOfMonth": 14,
         "dayOfWeek": "Wed",
@@ -362,6 +412,14 @@ def apply_action(action):
         entry["stack"] -= 1
         if entry["stack"] <= 0:
             INVENTORY[index] = None
+    elif kind == "chestTake" and 0 <= index < len(CHEST) and CHEST[index]:
+        free = next((i for i, e in enumerate(INVENTORY) if e is None), None)
+        if free is not None:
+            INVENTORY[free], CHEST[index] = CHEST[index], None
+    elif kind == "chestPut" and valid(index) and INVENTORY[index]:
+        free = next((i for i, e in enumerate(CHEST) if e is None), None)
+        if free is not None:
+            CHEST[free], INVENTORY[index] = INVENTORY[index], None
     elif kind == "sort":
         filled = [entry for entry in INVENTORY if entry]
         filled.sort(key=lambda entry: entry["name"])
@@ -401,6 +459,10 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/map":
             return self.reply_json(MAP)
+        if path == "/worldmap":
+            return self.reply_json({"available": True, **WORLD})
+        if path.startswith("/worldmap/"):
+            return self.reply(WORLD_IMAGE, "image/png")
         if path.startswith("/asset/"):
             name = path[len("/asset/"):].removesuffix(".png")
             if name not in UI_ASSETS:

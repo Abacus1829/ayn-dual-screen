@@ -1,7 +1,7 @@
 {
   "Name": "Ayn Dual Screen",
   "Author": "Abacus",
-  "Version": "0.3.0",
+  "Version": "0.4.0",
   "Description": "Serves a live second-screen UI (inventory, map, clock) over HTTP, with touch interaction back into the game. By Abacus. Contains AI-assisted code.",
   "UniqueID": "Abacus.AynDualScreen",
   "EntryDll": "AynDualScreen.dll",

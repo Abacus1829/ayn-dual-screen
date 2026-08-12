@@ -133,6 +133,42 @@ the Thor and a phone can differ:
 | **Fade the settings button when idle** | on | The cog sits over the top bar; this fades it after 4 seconds and brings it back on the next touch. |
 | **Villager faces on the map** | on | Draws each villager's face instead of a coloured dot. |
 
+#### The world map
+
+The **World** button above the map switches from the tile minimap to the map the game draws in your
+journal, with you and every villager placed on it.
+
+It isn't a picture of the map — it's built from the game's own world map data at runtime. The image
+is composed the way the journal composes it, base artwork plus each area's overlays, so the state of
+the Community Centre, your farm's layout and seasonal artwork all come through. Positions come from
+the same lookup the NPC map mods use, and they're measured against the image that was actually
+composed, so markers line up rather than being nudged into place.
+
+That means **Stardew Valley Expanded's map works without the mod knowing SVE exists.** SVE replaces
+the world map data with its own regions and artwork; the image and the coordinates both come back
+changed together.
+
+Plenty of places have no spot on the world map — mine levels, most interiors, anything a content pack
+adds without world map data. There the button reads *Not mapped* and the tile map is drawn instead,
+rather than leaving you with an empty panel.
+
+The composed image is cached and rebuilt when it can have changed: on a new day, and whenever a
+content pack invalidates the map assets. That's what keeps a Joja-route map, a new barn or a seasonal
+repaint from being stuck on yesterday's picture.
+
+#### Open chests
+
+Open a chest in-game and its contents appear under your inventory. Tap a chest slot to take that
+stack; **Store** puts the selected inventory stack in.
+
+Both directions go through the game's own add methods, which stack into what's already there, respect
+capacity, and hand back whatever didn't fit — and that remainder is written back to the slot it came
+from. A move into a full chest leaves the stack exactly where it was.
+
+Editing is only offered when the container is a real chest. Shipping bins, shop menus and containers
+added by other mods are shown read-only, because moving items through something this mod doesn't
+understand is how an item transfer destroys things.
+
 #### Recolour and content mods
 
 The theme reads `Maps/MenuTiles` through SMAPI's content pipeline, so whatever recolour you have
@@ -163,6 +199,8 @@ before the screen connects:
 | `AllowDrop` | `true` | Set `false` to stop the screen throwing items on the ground. |
 | `AllowInventoryEdit` | `true` | Set `false` to stop it rearranging or sorting the inventory. |
 | `AllowEat` | `true` | Set `false` to disable the Eat button. |
+| `EnableWorldMap` | `true` | Offer the game's world map. `false` also skips the per-character map lookups. |
+| `ShowChests` | `true` | Mirror an open chest onto the screen. |
 | `ShowMonsters` | `true` | Whether monsters get a dot on the minimap. |
 | `ShowNpcs` | `true` | Whether villagers get a dot. |
 | `ShowAnimals` | `true` | Whether farm animals get a dot. |

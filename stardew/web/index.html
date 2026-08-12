@@ -97,6 +97,7 @@
           <span id="zoom-text">1x</span>
           <button id="zoom-in" class="chip tight">+</button>
           <button id="zoom-toggle" class="chip">Fit</button>
+          <button id="map-mode" class="chip" title="Switch between the tile map and the game's world map">World</button>
         </span>
       </div>
       <div id="tab-map" class="tab-body">
@@ -149,6 +150,14 @@
       </div>
       <div id="inv-grid"></div>
 
+      <div id="chest" class="hidden">
+        <div class="sub-head">
+          <span id="chest-name">Chest</span>
+          <span id="chest-hint">tap to take</span>
+        </div>
+        <div id="chest-grid"></div>
+      </div>
+
       <div id="detail" class="framed">
         <img id="detail-icon" alt="">
         <div id="detail-text">
@@ -163,6 +172,7 @@
         <button class="act" data-act="drop" disabled>Drop</button>
         <button class="act danger" data-act="trash" disabled>Trash</button>
         <button class="act" data-act="sort">Sort</button>
+        <button class="act" id="act-store" data-act="chestPut" disabled>Store</button>
       </div>
     </section>
   </main>

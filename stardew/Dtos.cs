@@ -15,6 +15,15 @@ namespace AynDualScreen
         /// <summary>Brightness (0-255) of the game's menu box, so the page can pick readable ink. -1 if unknown.</summary>
         public int MenuLuma { get; set; } = -1;
 
+        /// <summary>Where the player sits on the game's world map, or null if this location isn't mapped.</summary>
+        public WorldPosDto World { get; set; }
+
+        /// <summary>Bumped when the world map region changes, so the client refetches the image.</summary>
+        public int WorldRev { get; set; }
+
+        /// <summary>The open container, or null when none is open.</summary>
+        public ChestDto Chest { get; set; }
+
         public int TimeOfDay { get; set; }
         public int DayOfMonth { get; set; }
         public string DayOfWeek { get; set; }
@@ -148,6 +157,46 @@ namespace AynDualScreen
 
         /// <summary>Key for <c>/npc/{key}.png</c>, or null if this entity has no face to draw.</summary>
         public string IconKey { get; set; }
+
+        /// <summary>Position in world-map pixels, or null if this spot isn't on the world map.</summary>
+        public float? Wx { get; set; }
+        public float? Wy { get; set; }
+    }
+
+    /// <summary>Where the player is on the game's own world map, in that map's pixel space.</summary>
+    internal sealed class WorldPosDto
+    {
+        public string Region { get; set; }
+        public float X { get; set; }
+        public float Y { get; set; }
+    }
+
+    /// <summary>The world map image the game itself draws, and the pixel rectangle it covers.</summary>
+    internal sealed class WorldMapDto
+    {
+        public bool Available { get; set; }
+        public string Region { get; set; }
+
+        /// <summary>Bumped on every rebuild. Goes in the image URL, because the region id alone doesn't change when only the artwork does.</summary>
+        public int Rev { get; set; }
+
+        /// <summary>Offset of the region within map-pixel space; entity positions are relative to this.</summary>
+        public int X { get; set; }
+        public int Y { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
+    }
+
+    /// <summary>A container the player has open, mirrored onto the second screen.</summary>
+    internal sealed class ChestDto
+    {
+        public bool Open { get; set; }
+        public string Name { get; set; }
+
+        /// <summary>Whether items may be moved. False for containers this mod won't risk touching.</summary>
+        public bool CanEdit { get; set; }
+
+        public List<SlotDto> Items { get; set; }
     }
 
     internal sealed class SkillsDto

@@ -33,7 +33,8 @@ const SETTING_DEFAULTS = {
   theme: 'stardew',
   followGame: true,
   fadeIdle: true,
-  npcHeads: true
+  npcHeads: true,
+  mapMode: 'local'
 };
 
 /** Behaviour switches. Separate from SECTIONS, which only show and hide parts of the layout. */
@@ -179,6 +180,7 @@ function applySettings() {
 
   document.body.classList.toggle('theme-plain', settings.theme === 'plain');
   document.body.classList.toggle('fade-idle', !!settings.fadeIdle);
+  updateMapModeButton();
   markActive();
 
   const root = document.documentElement.style;
@@ -277,7 +279,13 @@ const dom = {
   settingsScale: el('settings-scale'),
   settingsRate: el('settings-rate'),
   settingsTheme: el('settings-theme'),
-  settingsBehaviour: el('settings-behaviour')
+  settingsBehaviour: el('settings-behaviour'),
+  mapMode: el('map-mode'),
+  chest: el('chest'),
+  chestName: el('chest-name'),
+  chestHint: el('chest-hint'),
+  chestGrid: el('chest-grid'),
+  actStore: el('act-store')
 };
 
 const ctx = dom.canvas.getContext('2d');
@@ -335,6 +343,7 @@ async function poll() {
       hideOffline();
       render();
       if (state.mapRev !== loadedMapRev) loadMap();
+      if (state.worldRev !== loadedWorldRev) loadWorldMap();
     }
 
     setTimeout(poll, POLL_MS);
@@ -556,13 +565,14 @@ function renderSkills() {
 
 /* ---------- inventory ---------- */
 
-function buildSlots(count) {
-  dom.invGrid.textContent = '';
-  slots = [];
+/** Build `count` empty slot elements into `host`, returning the handles used to refresh them. */
+function makeSlots(host, count, hotbar) {
+  host.textContent = '';
+  const made = [];
 
   for (let i = 0; i < count; i++) {
     const slot = document.createElement('div');
-    slot.className = 'slot' + (i < 12 ? ' hotbar' : '');
+    slot.className = 'slot' + (hotbar && i < 12 ? ' hotbar' : '');
     slot.dataset.index = String(i);
 
     const img = document.createElement('img');
@@ -577,10 +587,77 @@ function buildSlots(count) {
     qual.style.display = 'none';
 
     slot.append(img, stack, qual);
-    dom.invGrid.appendChild(slot);
-    slots.push({ root: slot, img: img, stack: stack, qual: qual, signature: null });
+    host.appendChild(slot);
+    made.push({ root: slot, img: img, stack: stack, qual: qual, signature: null });
+  }
+
+  return made;
+}
+
+function buildSlots(count) {
+  slots = makeSlots(dom.invGrid, count, true);
+}
+
+/** Repaint one slot from its item, skipping the DOM writes when nothing about it changed. */
+function paintSlot(slot, item) {
+  const signature = item && item.name ? `${item.iconKey}|${item.stack}|${item.quality}|${item.name}` : '';
+  if (slot.signature === signature)
+    return;
+
+  slot.signature = signature;
+
+  if (item && item.name) {
+    if (item.iconKey) {
+      slot.img.src = `/icon/${item.iconKey}.png`;
+      slot.img.style.display = '';
+    } else {
+      slot.img.removeAttribute('src');
+      slot.img.style.display = 'none';
+    }
+    slot.stack.textContent = item.stack > 1 ? item.stack : '';
+    slot.qual.className = `qual q${item.quality}`;
+    slot.qual.style.display = item.quality > 0 ? '' : 'none';
+  } else {
+    slot.img.removeAttribute('src');
+    slot.img.style.display = 'none';
+    slot.stack.textContent = '';
+    slot.qual.style.display = 'none';
   }
 }
+
+/* ---------- the open chest ---------- */
+
+let chestSlots = [];
+
+function renderChest() {
+  const chest = state.chest;
+  const open = !!(chest && chest.open);
+
+  // the Store button's enabled state is decided in renderDetail with the other actions
+  document.body.classList.toggle('chest-open', open);
+  dom.chest.classList.toggle('hidden', !open);
+
+  if (!open)
+    return;
+
+  dom.chestName.textContent = chest.name || 'Chest';
+  dom.chestHint.textContent = chest.canEdit ? 'tap to take' : 'read-only';
+
+  const items = chest.items || [];
+  if (chestSlots.length !== items.length)
+    chestSlots = makeSlots(dom.chestGrid, items.length, false);
+
+  for (let i = 0; i < items.length; i++)
+    paintSlot(chestSlots[i], items[i]);
+}
+
+dom.chestGrid.addEventListener('click', (event) => {
+  const slot = event.target.closest('.slot');
+  if (!slot || !state || !state.chest || !state.chest.canEdit)
+    return;
+
+  send('chestTake', Number(slot.dataset.index));
+});
 
 /**
  * Pick dark or light ink from the brightness of the game's actual menu box.
@@ -589,6 +666,92 @@ function buildSlots(count) {
  * light parchment or near-black depending on what's installed. Reading its brightness rather than
  * assuming one keeps the text legible on both without the player configuring anything.
  */
+/* ---------- the game's own world map ---------- */
+
+let worldMap = null;        // {region, x, y, width, height}
+let worldImage = null;
+let loadedWorldRev = -1;
+let worldPending = false;
+
+async function loadWorldMap() {
+  if (worldPending) return;
+  worldPending = true;
+
+  try {
+    const next = await (await fetch('/worldmap', { cache: 'no-store' })).json();
+    if (next && next.available) {
+      worldMap = next;
+      loadedWorldRev = state.worldRev;
+
+      // the rev is in the URL because the image is served with a long cache lifetime and the region
+      // id doesn't change when only the artwork does — a repainted map would otherwise never appear
+      const image = new Image();
+      image.src = `/worldmap/${next.region}.png?v=${next.rev}`;
+      image.addEventListener('load', () => { worldImage = image; });
+      image.addEventListener('error', () => { worldImage = null; });
+    } else {
+      worldMap = null;
+      worldImage = null;
+      loadedWorldRev = state.worldRev;
+    }
+  } catch (err) {
+    /* the next poll retries */
+  } finally {
+    worldPending = false;
+  }
+}
+
+/** True when the world map can actually be drawn right now. */
+function worldReady() {
+  return settings.mapMode === 'world' && !!worldMap && !!worldImage && !!state.world;
+}
+
+/**
+ * Draw the map the game itself draws, with everyone placed on it.
+ *
+ * Positions arrive in the map's own pixel space, and the image served is exactly the region the mod
+ * measured those against, so placing a marker is a straight scale rather than a guess.
+ */
+function renderWorldMap(cw, ch) {
+  const scale = Math.min(cw / worldMap.width, ch / worldMap.height);
+  const drawWidth = worldMap.width * scale;
+  const drawHeight = worldMap.height * scale;
+  const originX = (cw - drawWidth) / 2;
+  const originY = (ch - drawHeight) / 2;
+
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(worldImage, originX, originY, drawWidth, drawHeight);
+
+  const place = (wx, wy) => [
+    originX + (wx - worldMap.x) * scale,
+    originY + (wy - worldMap.y) * scale
+  ];
+
+  const dot = Math.max(4, scale * 6);
+
+  for (const entity of state.entities || []) {
+    if (entity.wx == null || entity.wy == null)
+      continue;
+
+    const [ex, ey] = place(entity.wx, entity.wy);
+    const face = settings.npcHeads ? npcFace(entity.iconKey) : null;
+
+    if (face) {
+      const size = Math.max(16, dot * 2);
+      ctx.drawImage(face, ex - size / 2, ey - size / 2, size, size);
+      continue;
+    }
+
+    ctx.fillStyle = ENTITY_COLORS[entity.kind] || '#ffffff';
+    ctx.beginPath();
+    ctx.arc(ex, ey, dot / 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const [px, py] = place(state.world.x, state.world.y);
+  drawPlayer(px, py, Math.max(9, dot * 1.6));
+}
+
 /**
  * Villager faces for the map, loaded once each and drawn straight to the canvas.
  *
@@ -643,34 +806,9 @@ function renderInventory() {
   if (slots.length !== items.length) buildSlots(items.length);
 
   for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    const slot = slots[i];
-    const signature = item.name ? `${item.iconKey}|${item.stack}|${item.quality}|${item.name}` : '';
-
-    if (slot.signature !== signature) {
-      slot.signature = signature;
-
-      if (item.name) {
-        if (item.iconKey) {
-          slot.img.src = `/icon/${item.iconKey}.png`;
-          slot.img.style.display = '';
-        } else {
-          slot.img.removeAttribute('src');
-          slot.img.style.display = 'none';
-        }
-        slot.stack.textContent = item.stack > 1 ? item.stack : '';
-        slot.qual.className = `qual q${item.quality}`;
-        slot.qual.style.display = item.quality > 0 ? '' : 'none';
-      } else {
-        slot.img.removeAttribute('src');
-        slot.img.style.display = 'none';
-        slot.stack.textContent = '';
-        slot.qual.style.display = 'none';
-      }
-    }
-
-    slot.root.classList.toggle('equipped', i === state.selectedSlot);
-    slot.root.classList.toggle('cursor', i === cursor);
+    paintSlot(slots[i], items[i]);
+    slots[i].root.classList.toggle('equipped', i === state.selectedSlot);
+    slots[i].root.classList.toggle('cursor', i === cursor);
   }
 
   renderDetail(items[cursor]);
@@ -712,6 +850,7 @@ function renderDetail(item) {
 
     if (act === 'sort') button.disabled = !allowed;
     else if (act === 'eat') button.disabled = !allowed || !(hasItem && item.edible && cursor < 12);
+    else if (act === 'chestPut') button.disabled = !hasItem || !(state.chest && state.chest.open && state.chest.canEdit);
     else button.disabled = !allowed || !hasItem;
 
     button.title = allowed ? '' : 'Turned off in the mod config';
@@ -907,7 +1046,14 @@ function renderMap() {
   const ch = dom.canvas.height;
   ctx.clearRect(0, 0, cw, ch);
 
-  if (!mapImage || !state) return;
+  if (!state) return;
+
+  if (worldReady()) {
+    renderWorldMap(cw, ch);
+    return;
+  }
+
+  if (!mapImage) return;
 
   const fit = Math.min(cw / mapData.width, ch / mapData.height);
   const scale = (followMode ? fit * 3.5 : fit) * ZOOM_STEPS[zoomStep];
@@ -983,12 +1129,14 @@ function drawPlayer(x, y, size) {
 /* ---------- frame ---------- */
 
 function render() {
+  updateMapModeButton();
   renderHud();
   renderForecast();
   renderToday();
   renderQuests();
   renderSkills();
   renderInventory();
+  renderChest();
   renderMap();
 }
 
@@ -1142,6 +1290,31 @@ dom.actions.addEventListener('click', (event) => {
 
   disarmTrash();
   send(act, cursor);
+});
+
+/**
+ * Label the toggle with what it will switch *to*, and say when the world map can't show this spot.
+ *
+ * Plenty of places aren't on the world map at all — mine levels, most interiors, anything a mod adds
+ * without world map data. Rather than show an empty canvas, the drawing falls back to the tile map,
+ * so the button says so instead of looking broken.
+ */
+function updateMapModeButton() {
+  const wantWorld = settings.mapMode === 'world';
+  const unmapped = wantWorld && state && !state.world;
+
+  dom.mapMode.textContent = unmapped ? 'Not mapped' : (wantWorld ? 'Tiles' : 'World');
+  dom.mapMode.classList.toggle('on', wantWorld && !unmapped);
+  dom.mapMode.title = unmapped
+    ? 'This place has no spot on the world map, so the tile map is shown'
+    : 'Switch between the tile map and the game\'s world map';
+}
+
+dom.mapMode.addEventListener('click', () => {
+  settings.mapMode = settings.mapMode === 'world' ? 'local' : 'world';
+  saveSettings();
+  applySettings();
+  if (state) renderMap();
 });
 
 dom.zoomToggle.addEventListener('click', () => {

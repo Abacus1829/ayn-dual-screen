@@ -18,7 +18,9 @@ using StardewValley.ItemTypeDefinitions;
 using StardewValley.Menus;
 using StardewValley.Network;
 using StardewValley.Quests;
+using StardewValley.Objects;
 using StardewValley.TerrainFeatures;
+using StardewValley.WorldMaps;
 using xTile.Layers;
 using SObject = StardewValley.Object;
 
@@ -114,6 +116,11 @@ namespace AynDualScreen
         /// </remarks>
         private int MenuLuma = -1;
 
+        /// <summary>The world map region whose image is currently cached, and a counter the client watches.</summary>
+        private string WorldRegionId;
+        private int WorldRev;
+        private volatile string WorldMapJson = "{\"available\":false}";
+
         private int MapRev;
         private string MapLocationId = string.Empty;
         private int TicksSinceMap;
@@ -130,6 +137,12 @@ namespace AynDualScreen
             helper.Events.GameLoop.GameLaunched += this.OnGameLaunched;
             helper.Events.GameLoop.UpdateTicked += this.OnUpdateTicked;
             helper.Events.GameLoop.ReturnedToTitle += this.OnReturnedToTitle;
+
+            // The world map's artwork changes without its region id changing: the Community Centre being
+            // finished, a seasonal texture, a new barn, or a content pack patching mid-save. Neither event
+            // fires often, and a rebuild is cheap, so redo it rather than try to work out what moved.
+            helper.Events.GameLoop.DayStarted += (_, _) => this.InvalidateWorldMap();
+            helper.Events.Content.AssetsInvalidated += this.OnAssetsInvalidated;
         }
 
         public override object GetApi()
@@ -282,6 +295,42 @@ namespace AynDualScreen
             this.NpcIconCache.Clear();
         }
 
+        /// <summary>
+        /// Drop the cached map when a content pack repaints it, and the menu sprites when a recolour changes.
+        /// </summary>
+        private void OnAssetsInvalidated(object sender, AssetsInvalidatedEventArgs e)
+        {
+            bool worldMapChanged = false;
+            bool uiChanged = false;
+
+            foreach (IAssetName name in e.NamesWithoutLocale)
+            {
+                if (name.StartsWith("Data/WorldMap") || name.StartsWith("LooseSprites/map") || name.StartsWith("Maps/"))
+                    worldMapChanged = true;
+                if (name.StartsWith("Maps/MenuTiles") || name.StartsWith("LooseSprites/Cursors"))
+                    uiChanged = true;
+            }
+
+            if (worldMapChanged)
+                this.InvalidateWorldMap();
+
+            // a recolour swapping the menu box changes how bright it is, so the ink has to be re-measured
+            if (uiChanged)
+                this.UiAssetsReady = false;
+        }
+
+        /// <summary>
+        /// Force the world map image to be rebuilt on the next snapshot.
+        /// </summary>
+        /// <remarks>
+        /// Only the cached image needs clearing. The game reloads its own world map data when the
+        /// underlying assets change, so the positions read afterwards are already the new ones.
+        /// </remarks>
+        private void InvalidateWorldMap()
+        {
+            this.WorldRegionId = null;
+        }
+
         private void OnUpdateTicked(object sender, UpdateTickedEventArgs e)
         {
             if (this.Server == null)
@@ -342,25 +391,7 @@ namespace AynDualScreen
 
             var inventory = new List<SlotDto>(player.Items.Count);
             for (int i = 0; i < player.Items.Count; i++)
-            {
-                Item item = player.Items[i];
-                if (item == null)
-                {
-                    inventory.Add(new SlotDto { Index = i });
-                    continue;
-                }
-
-                inventory.Add(new SlotDto
-                {
-                    Index = i,
-                    Name = item.DisplayName,
-                    Stack = item.Stack,
-                    Quality = (item as SObject)?.Quality ?? 0,
-                    Category = item.getCategoryName(),
-                    IconKey = this.Config.EnableItemIcons ? this.EnsureIcon(item) : null,
-                    Edible = item is SObject edible && edible.Edibility > -300
-                });
-            }
+                inventory.Add(this.BuildSlot(i, player.Items[i]));
 
             var state = new StateDto
             {
@@ -371,6 +402,9 @@ namespace AynDualScreen
                 LocationName = location.DisplayName ?? location.Name,
                 MapRev = this.MapRev,
                 MenuLuma = this.MenuLuma,
+                World = this.BuildWorldPosition(location, player.TilePoint),
+                WorldRev = this.WorldRev,
+                Chest = this.BuildChest(),
 
                 TimeOfDay = Game1.timeOfDay,
                 DayOfMonth = Game1.dayOfMonth,
@@ -505,6 +539,69 @@ namespace AynDualScreen
             return quests;
         }
 
+        /// <summary>One slot of any container, empty or not. Shared by the backpack and the chest panel.</summary>
+        private SlotDto BuildSlot(int index, Item item)
+        {
+            if (item == null)
+                return new SlotDto { Index = index };
+
+            return new SlotDto
+            {
+                Index = index,
+                Name = item.DisplayName,
+                Stack = item.Stack,
+                Quality = (item as SObject)?.Quality ?? 0,
+                Category = item.getCategoryName(),
+                IconKey = this.Config.EnableItemIcons ? this.EnsureIcon(item) : null,
+                Edible = item is SObject edible && edible.Edibility > -300
+            };
+        }
+
+        /// <summary>The player's spot on the world map, caching that region's image on the way past.</summary>
+        private WorldPosDto BuildWorldPosition(GameLocation location, Point tile)
+        {
+            if (!this.Config.EnableWorldMap)
+                return null;
+
+            if (!TryWorldPixel(location, tile, out Vector2 pixel, out MapRegion region))
+                return null;
+
+            this.EnsureWorldMap(region);
+            return new WorldPosDto { Region = region.Id, X = pixel.X, Y = pixel.Y };
+        }
+
+        /// <summary>
+        /// Mirror whatever container the player has open.
+        /// </summary>
+        /// <remarks>
+        /// Editing is only offered when the menu's context is a real <see cref="Chest"/>, because that is
+        /// the case where the game gives us <c>addItem</c> to move things through — it handles capacity
+        /// and stacking and hands back whatever wouldn't fit. Anything else (shipping bin, a shop's grab
+        /// menu, a mod's own container) is shown read-only rather than guessed at, since getting this
+        /// wrong destroys items.
+        /// </remarks>
+        private ChestDto BuildChest()
+        {
+            if (!this.Config.ShowChests || Game1.activeClickableMenu is not ItemGrabMenu grab)
+                return null;
+
+            IList<Item> contents = grab.ItemsToGrabMenu?.actualInventory;
+            if (contents == null)
+                return null;
+
+            var items = new List<SlotDto>(contents.Count);
+            for (int i = 0; i < contents.Count; i++)
+                items.Add(this.BuildSlot(i, contents[i]));
+
+            return new ChestDto
+            {
+                Open = true,
+                Name = (grab.context as Chest)?.DisplayName ?? "Container",
+                CanEdit = this.Config.AllowInventoryEdit && grab.context is Chest,
+                Items = items
+            };
+        }
+
         private List<EntityDto> BuildEntities(GameLocation location)
         {
             var entities = new List<EntityDto>();
@@ -518,14 +615,22 @@ namespace AynDualScreen
                 if (!this.Config.ShowNpcs && !npc.IsMonster)
                     continue;
 
-                entities.Add(new EntityDto
+                var entity = new EntityDto
                 {
                     Kind = npc.IsMonster ? "monster" : "npc",
                     Name = npc.displayName ?? npc.Name,
                     X = npc.Position.X / Game1.tileSize,
                     Y = npc.Position.Y / Game1.tileSize,
                     IconKey = npc.IsMonster ? null : this.EnsureNpcIcon(npc)
-                });
+                };
+
+                if (this.Config.EnableWorldMap && TryWorldPixel(location, npc.TilePoint, out Vector2 worldPixel, out _))
+                {
+                    entity.Wx = worldPixel.X;
+                    entity.Wy = worldPixel.Y;
+                }
+
+                entities.Add(entity);
             }
 
             foreach (FarmAnimal animal in location.animals.Values)
@@ -738,6 +843,164 @@ namespace AynDualScreen
             }
         }
 
+        /*********
+        ** The game's own world map
+        *********/
+        /// <summary>
+        /// Where a tile sits on the world map the game draws in the journal, in that map's pixel space.
+        /// </summary>
+        /// <remarks>
+        /// This is the same lookup the NPC map mods use. Reading it rather than hand-placing locations
+        /// means Stardew Valley Expanded works untouched: SVE replaces Data/WorldMap with its own regions
+        /// and artwork, and both the coordinates and the image below come back changed to match.
+        /// </remarks>
+        private static bool TryWorldPixel(GameLocation location, Point tile, out Vector2 pixel, out MapRegion region)
+        {
+            pixel = Vector2.Zero;
+            region = null;
+
+            if (location == null)
+                return false;
+
+            MapAreaPositionWithContext? found = WorldMapManager.GetPositionData(location, tile);
+            if (found == null)
+                return false;
+
+            MapAreaPositionWithContext position = found.Value;
+            pixel = position.GetMapPixelPosition();
+            region = position.Data?.Region;
+            return region != null;
+        }
+
+        /// <summary>Cache the region's map image and publish its pixel bounds, once per region.</summary>
+        /// <remarks>Must run on the game thread: it reads a GPU texture.</remarks>
+        private void EnsureWorldMap(MapRegion region)
+        {
+            if (region == null || region.Id == this.WorldRegionId)
+                return;
+
+            try
+            {
+                MapAreaTexture baseTexture = region.GetBaseTexture();
+                if (baseTexture?.Texture == null)
+                    return;
+
+                // The base image's own pixel area is the coordinate frame: positions come back in the
+                // same space, so anchoring to it means the player marker lines up without a fudge factor.
+                Rectangle frame = baseTexture.MapPixelArea;
+                Color[] canvas = ReadPixels(baseTexture, frame.Width, frame.Height);
+
+                // then the per-area artwork the journal layers on top — the Community Centre's state,
+                // the farm layout, and on an SVE map the bulk of the detail
+                foreach (MapArea area in region.GetAreas())
+                {
+                    foreach (MapAreaTexture overlay in area.GetTextures())
+                        Blit(canvas, frame, overlay);
+                }
+
+                this.AssetCache["world:" + region.Id] = EncodePng(canvas, frame.Width, frame.Height);
+                this.WorldRegionId = region.Id;
+                this.WorldRev++;
+                this.WorldMapJson = JsonConvert.SerializeObject(
+                    new WorldMapDto
+                    {
+                        Available = true,
+                        Region = region.Id,
+                        Rev = this.WorldRev,
+                        X = frame.X,
+                        Y = frame.Y,
+                        Width = frame.Width,
+                        Height = frame.Height
+                    },
+                    JsonSettings
+                );
+            }
+            catch (Exception ex)
+            {
+                this.Monitor.Log($"Couldn't read the world map for region '{region.Id}': {ex.Message}", LogLevel.Debug);
+            }
+        }
+
+        /// <summary>Read one map layer's pixels, scaled to the size it occupies on the map.</summary>
+        private static Color[] ReadPixels(MapAreaTexture layer, int width, int height)
+        {
+            Rectangle source = layer.SourceRect;
+            var raw = new Color[source.Width * source.Height];
+            layer.Texture.GetData(0, source, raw, 0, raw.Length);
+
+            if (source.Width == width && source.Height == height)
+                return raw;
+
+            // nearest-neighbour, because these are pixel art and the map areas are usually 1:1 anyway
+            var scaled = new Color[width * height];
+            for (int y = 0; y < height; y++)
+            {
+                int sourceY = y * source.Height / height;
+                for (int x = 0; x < width; x++)
+                    scaled[(y * width) + x] = raw[(sourceY * source.Width) + (x * source.Width / width)];
+            }
+
+            return scaled;
+        }
+
+        /// <summary>Alpha-blend one map area's artwork onto the composed map.</summary>
+        private static void Blit(Color[] canvas, Rectangle frame, MapAreaTexture layer)
+        {
+            if (layer?.Texture == null)
+                return;
+
+            Rectangle target = layer.MapPixelArea;
+            if (target.Width <= 0 || target.Height <= 0)
+                return;
+
+            Color[] pixels = ReadPixels(layer, target.Width, target.Height);
+
+            for (int y = 0; y < target.Height; y++)
+            {
+                int canvasY = target.Y - frame.Y + y;
+                if (canvasY < 0 || canvasY >= frame.Height)
+                    continue;
+
+                for (int x = 0; x < target.Width; x++)
+                {
+                    int canvasX = target.X - frame.X + x;
+                    if (canvasX < 0 || canvasX >= frame.Width)
+                        continue;
+
+                    Color top = pixels[(y * target.Width) + x];
+                    if (top.A == 0)
+                        continue;
+
+                    int index = (canvasY * frame.Width) + canvasX;
+                    canvas[index] = top.A == 255 ? top : Over(top, canvas[index]);
+                }
+            }
+        }
+
+        /// <summary>Source-over compositing for the semi-transparent edges map artwork uses.</summary>
+        private static Color Over(Color top, Color bottom)
+        {
+            float alpha = top.A / 255f;
+            return new Color(
+                (int)((top.R * alpha) + (bottom.R * (1 - alpha))),
+                (int)((top.G * alpha) + (bottom.G * (1 - alpha))),
+                (int)((top.B * alpha) + (bottom.B * (1 - alpha))),
+                Math.Max(top.A, bottom.A)
+            );
+        }
+
+        /// <summary>Turn a pixel buffer into a PNG.</summary>
+        /// <remarks>Must run on the game thread: it allocates a GPU texture.</remarks>
+        private static byte[] EncodePng(Color[] pixels, int width, int height)
+        {
+            using var texture = new Texture2D(Game1.graphics.GraphicsDevice, width, height);
+            texture.SetData(pixels);
+
+            using var stream = new MemoryStream();
+            texture.SaveAsPng(stream, width, height);
+            return stream.ToArray();
+        }
+
         /// <summary>The middle ninth of a nine-slice box — the part that gets stretched behind the text.</summary>
         private static Rectangle Centre(Rectangle box)
         {
@@ -897,9 +1160,61 @@ namespace AynDualScreen
                         ItemGrabMenu.organizeItemsInList(player.Items);
                     break;
 
+                case "chestTake":
+                    this.MoveChestItem(action.Index, toChest: false);
+                    break;
+
+                case "chestPut":
+                    this.MoveChestItem(action.Index, toChest: true);
+                    break;
+
                 default:
                     this.Monitor.Log($"Ignoring unknown action '{action.Type}'.", LogLevel.Trace);
                     break;
+            }
+        }
+
+        /// <summary>
+        /// Move one stack between the open chest and the backpack.
+        /// </summary>
+        /// <remarks>
+        /// Both directions go through the game's own add methods, which stack into what's already there,
+        /// respect capacity, and return whatever didn't fit. The returned remainder is written back into
+        /// the slot the stack came from, so a partial move leaves the rest where it was and a full move
+        /// clears the slot. Nothing is ever dropped on the floor of a failed transfer, which is the way
+        /// this goes wrong and eats items.
+        /// </remarks>
+        private void MoveChestItem(int index, bool toChest)
+        {
+            if (!this.Config.AllowInventoryEdit || !this.Config.ShowChests)
+                return;
+
+            if (Game1.activeClickableMenu is not ItemGrabMenu grab || grab.context is not Chest chest)
+                return;
+
+            IList<Item> contents = grab.ItemsToGrabMenu?.actualInventory;
+            IList<Item> backpack = Game1.player.Items;
+            if (contents == null)
+                return;
+
+            if (toChest)
+            {
+                if (!InRange(backpack, index) || backpack[index] == null)
+                    return;
+
+                backpack[index] = chest.addItem(backpack[index]);
+            }
+            else
+            {
+                if (!InRange(contents, index) || contents[index] == null)
+                    return;
+
+                Item leftover = Game1.player.addItemToInventory(contents[index]);
+                contents[index] = leftover;
+
+                // the game leaves nulls behind in a chest's list; clearing them keeps it tidy like vanilla
+                if (leftover == null)
+                    chest.clearNulls();
             }
         }
 
@@ -943,6 +1258,12 @@ namespace AynDualScreen
 
             if (path.StartsWith("/npc/", StringComparison.Ordinal))
                 return this.ServeCachedPng(this.NpcIconCache, TrimPng(path.Substring("/npc/".Length)));
+
+            if (path == "/worldmap")
+                return HttpResponse.Json(this.WorldMapJson);
+
+            if (path.StartsWith("/worldmap/", StringComparison.Ordinal))
+                return this.ServeCachedPng(this.AssetCache, "world:" + TrimPng(path.Substring("/worldmap/".Length)));
 
             if (path == "/action" && request.Method == "POST")
             {
