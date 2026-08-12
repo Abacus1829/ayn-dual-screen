@@ -1723,10 +1723,18 @@ function renderRadio(s) {
   if (!(s.perms || {}).radio) now.appendChild(el("p", "hint", "Radio control is off in the mod's config."));
   else if (active) now.appendChild(el("p", "hint", "Tap again to switch it off."));
 
+  // Where this list came from. It matters: one of these is the game's own answer and the other is
+  // everything the mod could find, and they are not close to the same thing.
+  if (stations.length && stations[0].fromMenu)
+    now.appendChild(el("p", "hint", "Read from the Pip-Boy's own dial."));
+  else if (stations.length)
+    now.appendChild(el("p", "hint",
+      "Open DATA → Radio in game once — the Pip-Boy's own list is read from there, and it is " +
+      "the only accurate one. Until then this is every station the mod can find."));
+
   if (radioEdit)
     now.appendChild(el("p", "hint",
-      "Tap a station to show or hide it. The game's own list cannot be read from here, so this " +
-      "one is yours to trim — it is kept per screen."));
+      "Tap a station to show or hide it, kept per screen."));
 
   drawWave(!!active);
 }

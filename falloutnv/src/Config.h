@@ -38,13 +38,14 @@ struct Config
 	/// written anywhere; set false to skip opening the archives at all.
 	bool enableIcons = true;
 
-	/// Only list radio stations you can actually pick up, the way the Pip-Boy does.
+	/// Filter the FALLBACK station list to ones that look receivable.
 	///
-	/// Turning this off lists every station in the load order regardless. That is the escape hatch
-	/// for when the range read is wrong: the range data lives in a structure the SDK does not map,
-	/// so a filter built on it can hide stations that really are receivable, and an empty tab gives
-	/// you no way to tell a quiet wasteland from a broken reader.
-	bool radioInRangeOnly = true;
+	/// Only applies before the Pip-Boy's own dial has been read. Once you have opened DATA -> Radio
+	/// in game the list comes from the menu itself, which is the game's own answer and needs no
+	/// filtering. Off by default because the fallback's idea of range is built on a structure the
+	/// SDK does not map, and it was wrong in both directions -- an empty tab gives you no way to
+	/// tell a quiet wasteland from a broken reader.
+	bool radioInRangeOnly = false;
 
 	/// Dump the Pip-Boy menu's tile tree into the snapshot while the Pip-Boy is open.
 	///

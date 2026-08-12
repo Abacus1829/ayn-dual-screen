@@ -18,6 +18,7 @@
 #include <deque>
 #include <map>
 #include <cstdio>
+#include <cstring>                  // strncmp, for sorting menu furniture from list rows
 
 // ── published state ─────────────────────────────────────────────────────────
 
@@ -768,7 +769,17 @@ namespace
 	{
 		std::string name;
 		bool active = false;
+		float visible = 0.f;
 	};
+
+	/// A tile's numeric trait, with a default when it carries none.
+	float TileNum(Tile* tile, UInt32 traitId, float fallback)
+	{
+		if (!tile)
+			return fallback;
+		Tile::Value* value = tile->GetValue(traitId);
+		return value ? value->num : fallback;
+	}
 
 	/// The last list the Pip-Boy was seen showing, and when.
 	std::vector<MenuStation> g_menuStations;
@@ -813,6 +824,113 @@ namespace
 			return nullptr;
 		Tile::Value* value = tile->GetValue(traitId);
 		return value ? value->str : nullptr;
+	}
+
+	Tile* FindTileNamed(Tile* tile, const char* wanted, int depth, int& budget);
+
+	/// The first non-empty string anywhere in a subtree, which is how a list row carries its label.
+	///
+	/// A row in these menus holds its text both on itself and on a ListItemText child -- SPECIAL's
+	/// rows read "Luck = Luck" with a "ListItemText = Luck" beneath. Taking the first either way
+	/// means this does not care which of the two a given list happens to use.
+	const char* FirstText(Tile* tile, int depth, int& budget)
+	{
+		if (!tile || depth > 4 || budget <= 0)
+			return nullptr;
+		--budget;
+
+		if (const char* text = TileString(tile, Tile::kTileValue_string))
+		{
+			if (*text)
+				return text;
+		}
+
+		for (auto iter = tile->childList.Begin(); !iter.End(); ++iter)
+		{
+			Tile::ChildNode* node = iter.Get();
+			if (!node || !node->child)
+				continue;
+			if (const char* text = FirstText(node->child, depth + 1, budget))
+				return text;
+		}
+		return nullptr;
+	}
+
+	/// Read the Pip-Boy's radio dial and remember what it said.
+	///
+	/// MM_RadioStationList is the list the Pip-Boy draws on DATA -> Radio, so its rows are the
+	/// stations you can actually pick up -- by definition, with none of the guessing the data route
+	/// needed. The name is stable: it comes from the game's menu XML, and while a UI overhaul could
+	/// rename it, the list is found by walking rather than by a fixed path, so it survives being
+	/// moved around the tree.
+	///
+	/// The rows only exist while the page has been shown -- the list is built when you open it and
+	/// torn down after -- so this keeps the last thing it saw. That is why the result is remembered
+	/// rather than read fresh each snapshot: the screen would otherwise show stations only for as
+	/// long as you were looking at the Pip-Boy instead of at the screen, which is the opposite of
+	/// the point.
+	void ReadMenuStations()
+	{
+		Tile* data = PipboyDataTile();
+		if (!data)
+			return;
+
+		int findBudget = 3000;
+		Tile* list = FindTileNamed(data, "MM_RadioStationList", 0, findBudget);
+		if (!list)
+			return;
+
+		std::vector<MenuStation> found;
+		for (auto iter = list->childList.Begin(); !iter.End(); ++iter)
+		{
+			Tile::ChildNode* node = iter.Get();
+			if (!node || !node->child)
+				continue;
+
+			// The scrollbar and the highlight box are furniture, not stations.
+			const char* name = node->child->name.CStr();
+			if (name && (std::strncmp(name, "lb_", 3) == 0 || std::strncmp(name, "MM_", 3) == 0))
+				continue;
+
+			int textBudget = 40;
+			const char* text = FirstText(node->child, 0, textBudget);
+			if (!text || !*text)
+				continue;
+
+			MenuStation station;
+			station.name = text;
+			station.visible = TileNum(node->child, Tile::kTileValue_visible, 1.f);
+			found.push_back(station);
+		}
+
+		// An empty read means the page is not open, not that the dial is empty. Keeping the last
+		// list is the entire reason this is cached.
+		if (found.empty())
+			return;
+
+		// The list holds a row per station the game knows about and shows only the ones you can
+		// pick up -- reading it unfiltered gave eighteen rows, junk and a duplicate included, where
+		// the Pip-Boy was drawing five. Visibility is what separates them.
+		std::vector<MenuStation> shown;
+		for (const MenuStation& station : found)
+		{
+			if (station.visible == 0.f)
+				continue;
+
+			// Rows get recycled, so the same station can appear twice in one read.
+			bool already = false;
+			for (const MenuStation& kept : shown)
+			{
+				if (kept.name == station.name) { already = true; break; }
+			}
+			if (!already)
+				shown.push_back(station);
+		}
+
+		// If every row reads as hidden the trait does not mean what this assumes, and showing
+		// nothing would be worse than showing too much. Fall back rather than blank the tab.
+		g_menuStations = shown.empty() ? std::move(found) : std::move(shown);
+		g_menuStationsAt = GetTickCount();
 	}
 
 	/// Walk a tile subtree, collecting the text of every leaf that carries a string.
@@ -1207,6 +1325,44 @@ namespace
 			TESWorldSpace* world = iter.Get();
 			if (world && world->cell && world->cell != playerCell)
 				sweep(world->cell);
+		}
+
+		// If the Pip-Boy's own dial has ever been seen, that is the list -- it is what the game
+		// shows, so it cannot disagree with the game. The form scan below stays only to supply an
+		// id to tune with, matched by name.
+		ReadMenuStations();
+
+		if (!g_menuStations.empty())
+		{
+			for (const MenuStation& seen : g_menuStations)
+			{
+				std::string id;
+				bool inRange = false;
+				for (auto& pair : stations)
+				{
+					const char* name = StationName(pair.second.activator);
+					if (!name || seen.name != name)
+						continue;
+					if (pair.second.best)
+						id = FormIdText(pair.second.best->refID);
+					inRange = true;
+					break;
+				}
+
+				j.BeginObject()
+					.Str("id", id)
+					.Str("name", seen.name)
+					.Bool("active", !id.empty() && !tuned.empty() && tuned == id)
+					// It is on the Pip-Boy's dial, so it is receivable. That is the whole point of
+					// reading the dial rather than working it out.
+					.Bool("inRange", true)
+					.Bool("canTune", !id.empty())
+					.Bool("fromMenu", true)
+					.EndObject();
+			}
+
+			j.EndArray();
+			return;
 		}
 
 		int written = 0;
