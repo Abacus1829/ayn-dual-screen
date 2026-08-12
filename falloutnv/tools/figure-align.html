@@ -3,22 +3,38 @@
 <title>Ayn Dual Screen — figure alignment</title>
 
 <!--
-  Drag the limbs into place and copy the result.
+  Place the status figure and its condition bars by hand, against the real art at real size.
 
-  I had been guessing these coordinates and nudging them a few percent at a time, which never
-  converged. This puts the numbers in the hands of whoever can actually see the figure.
+  Open this file straight off disk while New Vegas is running with the mod loaded. The limb art is
+  fetched live from the game through the mod's /asset route, so nothing is extracted to disk and
+  nothing is bundled here.
 
-  The limb art is served live from the running game via the mod's /asset route, so nothing is
-  extracted to disk. Open this file straight off disk while New Vegas is running.
+  WHAT CHANGED, AND WHY
 
-    - drag a limb to move it
-    - drag its corner handle to resize
-    - arrow keys nudge the selected limb by 1 (hold shift for 10)
-    - COPY writes a FIGURE_LAYERS block to the clipboard; paste it into web/app.js
+  The first version of this tool could only move limbs one at a time, and it DERIVED the bar
+  positions from each limb's centre. Both were wrong for the job:
+
+    * If the whole Vault Boy sits a few units off, fixing that meant dragging six pieces by the
+      same amount and keeping them in step by hand. So there is now a whole-figure mode that moves
+      and scales everything together, bars included.
+
+    * A bar reads best slightly off a limb's exact centre, so computing it from the limb box could
+      never produce what someone actually wants. The bars are now their own draggable things.
+
+  It also starts from the values currently in web/app.js rather than from a default pose, so
+  opening it does not throw away tuning that is already right.
+
+    - click a limb or a bar to select it; drag to move
+    - drag a limb's corner handle to resize it
+    - arrow keys nudge the selection by 1, shift for 10
+    - MOVE WHOLE FIGURE makes every drag and nudge apply to all of it at once
+    - SCALE grows or shrinks the whole figure about its own centre
+    - CRIPPLED previews the broken textures and the red the screen uses for them
+    - COPY writes a block to the clipboard; paste it over the matching one in web/app.js
 -->
 
 <style>
-  :root { --fg:#3cff88; --dim:#2aa85c; }
+  :root { --fg:#3cff88; --dim:#2aa85c; --bad:#ff5a3c; --warn:#ffd23c; }
   * { box-sizing: border-box; }
   body { margin:0; padding:1rem; background:#06100a; color:var(--fg);
          font:14px/1.4 Consolas,"DejaVu Sans Mono",monospace; display:flex; gap:1rem; align-items:flex-start; }
@@ -31,15 +47,31 @@
     background-size:10% 10%,10% 10%; opacity:.15; }
   #stage .mid { position:absolute; top:0; bottom:0; left:50%; width:1px; background:var(--dim); opacity:.4; pointer-events:none; }
 
-  .limb { position:absolute; cursor:move; user-select:none; }
-  .limb img { display:block; width:100%; height:auto; pointer-events:none;
-              filter:drop-shadow(0 0 3px var(--fg)); }
+  /* Drawn exactly as the screen draws them -- through the texture as a mask -- so what is being
+     lined up here is what will be rendered, colour included. */
+  .limb { position:absolute; cursor:move; user-select:none;
+          background-color:var(--fg);
+          -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+          -webkit-mask-position:center; mask-position:center;
+          -webkit-mask-size:contain; mask-size:contain;
+          filter:drop-shadow(0 0 3px var(--fg)); }
+  .limb.crippled { background-color:var(--bad); filter:drop-shadow(0 0 5px var(--bad)); }
   .limb.sel { outline:1px dashed var(--fg); outline-offset:2px; }
   .limb .handle { position:absolute; right:-5px; bottom:-5px; width:11px; height:11px;
                   background:var(--fg); cursor:nwse-resize; }
   .limb:not(.sel) .handle { display:none; }
 
-  aside { flex:1; min-width:22rem; }
+  /* 13% of the stage and centred on its coordinate, which is what .limbbar is on the real screen.
+     A bar drawn a different width here would be lined up against the wrong shape. */
+  .bar { position:absolute; transform:translate(-50%,-50%); cursor:move; user-select:none;
+         width:13%; }
+  .bar .track { height:7px; border:1px solid var(--fg); background:#08160c; }
+  .bar .fill { height:100%; width:62%; background:var(--fg); }
+  .bar .tag { font-size:9px; letter-spacing:.08em; color:var(--dim); text-align:center; }
+  .bar.sel .track { outline:1px dashed var(--fg); outline-offset:2px; }
+  .bar.sel .tag { color:var(--fg); }
+
+  aside { flex:1; min-width:24rem; }
   table { border-collapse:collapse; width:100%; font-size:12px; }
   th,td { text-align:right; padding:.15rem .35rem; border-bottom:1px solid #14401f; }
   th:first-child,td:first-child { text-align:left; }
@@ -47,24 +79,41 @@
   button { background:#0a1a0f; color:var(--fg); border:1px solid var(--dim); font:inherit;
            padding:.3rem .8rem; cursor:pointer; margin-right:.3rem; }
   button:hover { background:#12301c; }
+  button[aria-pressed="true"] { background:var(--fg); color:#06100a; }
   pre { background:#081409; border:1px solid #14401f; padding:.6rem; overflow:auto; font-size:12px;
-        max-height:16rem; white-space:pre; }
+        max-height:20rem; white-space:pre; }
   #status { color:var(--dim); }
+  label { color:var(--dim); margin-right:.6rem; }
 </style>
 
 <div>
   <h1>FIGURE ALIGNMENT</h1>
   <p class="hint">
-    Drag to move, corner to resize, arrows to nudge. The grid is 10% steps.
-    Art comes live from the running game — if it is blank, New Vegas is not running.
+    Click to select, drag to move, arrows to nudge (shift = 10). The grid is 10% steps.
+    Art comes live from the running game — if the limbs are blank, New Vegas is not running with
+    the mod loaded.
   </p>
   <div id="stage"><div class="grid"></div><div class="mid"></div></div>
-  <p><button id="reset">RESET</button><button id="fit">FIT TO ART</button><span id="status"></span></p>
+  <p>
+    <button id="whole" aria-pressed="false">MOVE WHOLE FIGURE</button>
+    <button id="crippled" aria-pressed="false">CRIPPLED</button>
+    <button id="bigger">SCALE +</button>
+    <button id="smaller">SCALE &minus;</button>
+    <button id="reset">RESET</button>
+  </p>
+  <p id="status"></p>
 </div>
 
 <aside>
-  <p><button id="copy">COPY FIGURE_LAYERS</button><button id="copyBars">COPY BAR SPOTS</button></p>
-  <table id="tbl"><thead><tr><th>limb</th><th>x</th><th>y</th><th>w</th><th>h</th></tr></thead><tbody></tbody></table>
+  <p>
+    <button id="copyAll">COPY BOTH BLOCKS</button>
+    <button id="copyFig">COPY FIGURE_LAYERS</button>
+    <button id="copyBars">COPY BAR_SPOTS</button>
+  </p>
+  <table id="tbl">
+    <thead><tr><th>limb</th><th>x</th><th>y</th><th>w</th><th>h</th><th>bar x%</th><th>bar y%</th></tr></thead>
+    <tbody></tbody>
+  </table>
   <pre id="out"></pre>
 </aside>
 
@@ -75,85 +124,213 @@ const HOST = "http://localhost:27303";
 const BOX = { w: 300, h: 340 };
 const SCALE = 1.8;                       // on-screen pixels per canvas unit
 
-// Starting positions and the measured opaque sizes of each texture.
-const START = [
-  ["rightArm", "right_arm",   2,  95,  99,  52],
-  ["leftArm",  "left_arm",  199,  95, 100,  52],
-  ["rightLeg", "right_leg", 100, 168,  85, 109],
-  ["leftLeg",  "left_leg",  150, 168,  70, 110],
-  ["torso",    "torso",     102,  82,  97,  92],
-  ["head",     "head",      109,   0,  83,  91],
+// The values currently in web/app.js. Starting from these rather than from a default pose means
+// opening the tool never silently discards work already done.
+const START_LAYERS = [
+  ["rightArm", "right_arm",    28,  77,  99,  50,  1],
+  ["leftArm",  "left_arm",    163,  81,  91,  46,  1],
+  ["rightLeg", "right_leg",    72, 145,  92,  92,  1],
+  ["leftLeg",  "left_leg",    136, 148,  84,  84,  1],
+  ["torso",    "torso",        97,  81,  97,  97,  2],
+  ["head",     "head",        111,  23,  89,  89,  3],
 ];
+
+const START_BARS = {
+  rightArm: [25.8, 30.0],
+  leftArm:  [69.5, 30.6],
+  rightLeg: [39.3, 56.2],
+  leftLeg:  [59.3, 55.9],
+  torso:    [48.5, 38.1],
+  head:     [51.8, 19.9],
+};
 
 const stage = document.getElementById("stage");
 stage.style.width = BOX.w * SCALE + "px";
 stage.style.height = BOX.h * SCALE + "px";
 
 let limbs = [];
+let bars = [];
 let selected = null;
+let wholeFigure = false;
+let showCrippled = false;
+
+function texture(file) {
+  return `${HOST}/asset/interface/stats/${file}${showCrippled ? "_broken" : ""}.png`;
+}
 
 function load() {
-  for (const el of document.querySelectorAll(".limb")) el.remove();
-  limbs = START.map(([key, file, x, y, w, h]) => {
+  for (const node of document.querySelectorAll(".limb,.bar")) node.remove();
+  selected = null;
+
+  limbs = START_LAYERS.map(([key, file, x, y, w, h, z]) => {
     const node = document.createElement("div");
     node.className = "limb";
-    const img = document.createElement("img");
-    img.src = `${HOST}/asset/interface/stats/${file}.png`;
-    img.onerror = () => { node.style.opacity = .25; };
+    node.style.zIndex = String(z);
     const handle = document.createElement("div");
     handle.className = "handle";
-    node.append(img, handle);
+    node.appendChild(handle);
     stage.appendChild(node);
-    const limb = { key, file, x, y, w, h, node, img, handle };
-    wire(limb);
+
+    const limb = { key, file, x, y, w, h, z, node, handle, aspect: null };
+
+    // The mask carries no intrinsic size, so the texture is probed for its aspect the same way the
+    // screen does it -- and for the same reason: the height has to come from the art, not a guess.
+    const probe = new Image();
+    probe.onload = () => {
+      if (probe.naturalWidth && probe.naturalHeight) {
+        limb.aspect = probe.naturalWidth / probe.naturalHeight;
+        layout();
+      }
+    };
+    probe.onerror = () => { node.style.opacity = .25; };
+    probe.src = texture(file);
+    node.style.webkitMaskImage = node.style.maskImage = `url("${texture(file)}")`;
+
+    wire(limb, "limb");
     return limb;
   });
+
+  bars = Object.entries(START_BARS).map(([key, [px, py]]) => {
+    const node = document.createElement("div");
+    node.className = "bar";
+    node.style.zIndex = "10";
+    node.innerHTML = '<div class="track"><div class="fill"></div></div>';
+    const tag = document.createElement("div");
+    tag.className = "tag";
+    tag.textContent = key;
+    node.appendChild(tag);
+    stage.appendChild(node);
+
+    const bar = { key, px, py, node };
+    wire(bar, "bar");
+    return bar;
+  });
+
   layout();
 }
 
 function layout() {
   for (const l of limbs) {
+    // Height follows the texture's aspect, exactly as the screen derives it.
+    if (l.aspect) l.h = Math.round(l.w / l.aspect);
     l.node.style.left   = l.x * SCALE + "px";
     l.node.style.top    = l.y * SCALE + "px";
     l.node.style.width  = l.w * SCALE + "px";
+    l.node.style.height = l.h * SCALE + "px";
     l.node.classList.toggle("sel", l === selected);
-    // Height follows the image's aspect; keep the model in step for the output.
-    if (l.img.naturalWidth) l.h = Math.round(l.w * l.img.naturalHeight / l.img.naturalWidth);
+    l.node.classList.toggle("crippled", showCrippled);
+  }
+  for (const b of bars) {
+    b.node.style.left = (b.px / 100) * BOX.w * SCALE + "px";
+    b.node.style.top  = (b.py / 100) * BOX.h * SCALE + "px";
+    b.node.classList.toggle("sel", b === selected);
   }
   table();
   output();
 }
 
-function wire(l) {
+/** Shift everything by a canvas-unit delta, bars included, so alignment is never lost. */
+function moveAll(dx, dy) {
+  for (const l of limbs) { l.x += dx; l.y += dy; }
+  for (const b of bars) {
+    b.px += 100 * dx / BOX.w;
+    b.py += 100 * dy / BOX.h;
+  }
+}
+
+/** Grow or shrink the whole figure about its own bounding-box centre. */
+function scaleAll(factor) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const l of limbs) {
+    minX = Math.min(minX, l.x); minY = Math.min(minY, l.y);
+    maxX = Math.max(maxX, l.x + l.w); maxY = Math.max(maxY, l.y + l.h);
+  }
+  const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+
+  for (const l of limbs) {
+    l.x = Math.round(cx + (l.x - cx) * factor);
+    l.y = Math.round(cy + (l.y - cy) * factor);
+    l.w = Math.max(8, Math.round(l.w * factor));
+  }
+  // Bars scale about the same point, converted into percentage space.
+  const pcx = 100 * cx / BOX.w, pcy = 100 * cy / BOX.h;
+  for (const b of bars) {
+    b.px = pcx + (b.px - pcx) * factor;
+    b.py = pcy + (b.py - pcy) * factor;
+  }
+  layout();
+}
+
+function wire(item, kind) {
   const down = (e, mode) => {
     e.preventDefault();
-    selected = l;
+    e.stopPropagation();
+    selected = item;
+
     const startX = e.clientX, startY = e.clientY;
-    const ox = l.x, oy = l.y, ow = l.w;
+    const origin = kind === "limb" ? { x: item.x, y: item.y, w: item.w } : { x: item.px, y: item.py };
+    // Snapshot everything, so a whole-figure drag is computed from where it started rather than
+    // accumulated frame by frame -- accumulating drifts.
+    const all = [
+      ...limbs.map(l => ({ ref: l, x: l.x, y: l.y })),
+      ...bars.map(b => ({ ref: b, x: b.px, y: b.py })),
+    ];
+
     const move = (m) => {
       const dx = (m.clientX - startX) / SCALE, dy = (m.clientY - startY) / SCALE;
-      if (mode === "move") { l.x = Math.round(ox + dx); l.y = Math.round(oy + dy); }
-      else { l.w = Math.max(8, Math.round(ow + dx)); }
+
+      if (mode === "resize") {
+        item.w = Math.max(8, Math.round(origin.w + dx));
+      } else if (wholeFigure) {
+        for (const s of all) {
+          if (s.ref.node.classList.contains("bar")) {
+            s.ref.px = s.x + 100 * dx / BOX.w;
+            s.ref.py = s.y + 100 * dy / BOX.h;
+          } else {
+            s.ref.x = Math.round(s.x + dx);
+            s.ref.y = Math.round(s.y + dy);
+          }
+        }
+      } else if (kind === "limb") {
+        item.x = Math.round(origin.x + dx);
+        item.y = Math.round(origin.y + dy);
+      } else {
+        item.px = origin.x + 100 * dx / BOX.w;
+        item.py = origin.y + 100 * dy / BOX.h;
+      }
       layout();
     };
+
     const up = () => { removeEventListener("pointermove", move); removeEventListener("pointerup", up); };
     addEventListener("pointermove", move);
     addEventListener("pointerup", up);
     layout();
   };
-  l.node.addEventListener("pointerdown", (e) => down(e, "move"));
-  l.handle.addEventListener("pointerdown", (e) => { e.stopPropagation(); down(e, "resize"); });
+
+  item.node.addEventListener("pointerdown", (e) => down(e, "move"));
+  if (kind === "limb")
+    item.handle.addEventListener("pointerdown", (e) => down(e, "resize"));
 }
 
 addEventListener("keydown", (e) => {
-  if (!selected) return;
   const step = e.shiftKey ? 10 : 1;
-  if (e.key === "ArrowLeft")  selected.x -= step;
-  else if (e.key === "ArrowRight") selected.x += step;
-  else if (e.key === "ArrowUp")    selected.y -= step;
-  else if (e.key === "ArrowDown")  selected.y += step;
+  let dx = 0, dy = 0;
+  if (e.key === "ArrowLeft") dx = -step;
+  else if (e.key === "ArrowRight") dx = step;
+  else if (e.key === "ArrowUp") dy = -step;
+  else if (e.key === "ArrowDown") dy = step;
   else return;
   e.preventDefault();
+
+  if (wholeFigure) moveAll(dx, dy);
+  else if (!selected) return;
+  else if (bars.includes(selected)) {
+    selected.px += 100 * dx / BOX.w;
+    selected.py += 100 * dy / BOX.h;
+  } else {
+    selected.x += dx;
+    selected.y += dy;
+  }
   layout();
 });
 
@@ -161,9 +338,12 @@ function table() {
   const body = document.querySelector("#tbl tbody");
   body.textContent = "";
   for (const l of limbs) {
+    const bar = bars.find(b => b.key === l.key);
     const tr = document.createElement("tr");
-    if (l === selected) tr.className = "sel";
-    for (const v of [l.key, l.x, l.y, l.w, l.h]) {
+    if (l === selected || bar === selected) tr.className = "sel";
+    const cells = [l.key, l.x, l.y, l.w, l.h,
+                   bar ? bar.px.toFixed(1) : "", bar ? bar.py.toFixed(1) : ""];
+    for (const v of cells) {
       const td = document.createElement("td");
       td.textContent = v;
       tr.appendChild(td);
@@ -174,40 +354,51 @@ function table() {
 }
 
 function figureBlock() {
-  const z = { rightArm:1, leftArm:1, rightLeg:1, leftLeg:1, torso:2, head:3 };
   const rows = limbs.map(l =>
-    `  ["${l.key}",${" ".repeat(Math.max(0,10-l.key.length))} "${l.file}",${" ".repeat(Math.max(0,11-l.file.length))}` +
-    `${String(l.x).padStart(3)}, ${String(l.y).padStart(3)}, ${String(l.w).padStart(3)}, ${String(l.h).padStart(3)},  ${z[l.key]}],`);
+    `  ["${l.key}",${" ".repeat(Math.max(0, 10 - l.key.length))} "${l.file}",${" ".repeat(Math.max(0, 11 - l.file.length))}` +
+    `${String(l.x).padStart(3)}, ${String(l.y).padStart(3)}, ${String(l.w).padStart(3)}, ${String(l.h).padStart(3)},  ${l.z}],`);
   return `const FIGURE_BOX = { w: ${BOX.w}, h: ${BOX.h} };\n\nconst FIGURE_LAYERS = [\n` +
          `  // key        file          x    y    w    h    z\n${rows.join("\n")}\n];`;
 }
 
 function barBlock() {
-  const rows = limbs.map(l => {
-    const cx = (100 * (l.x + l.w / 2) / BOX.w).toFixed(1);
-    const cy = (100 * (l.y + l.h / 2) / BOX.h).toFixed(1);
-    return `        ${l.key}:${" ".repeat(Math.max(0,9-l.key.length))} [${cx}, ${cy}],`;
-  });
-  return `const BAR_SPOTS = {\n${rows.join("\n")}\n      };`;
+  const rows = bars.map(b =>
+    `  ${b.key}:${" ".repeat(Math.max(0, 9 - b.key.length))} [${b.px.toFixed(1)}, ${b.py.toFixed(1)}],`);
+  return `const BAR_SPOTS = {\n${rows.join("\n")}\n};`;
 }
 
-function output() { document.getElementById("out").textContent = figureBlock() + "\n\n" + barBlock(); }
+function output() {
+  document.getElementById("out").textContent = figureBlock() + "\n\n" + barBlock();
+}
 
 async function copy(text, label) {
-  try { await navigator.clipboard.writeText(text); document.getElementById("status").textContent = label + " copied"; }
-  catch (e) { document.getElementById("status").textContent = "clipboard blocked — copy from the box below"; }
+  const status = document.getElementById("status");
+  try { await navigator.clipboard.writeText(text); status.textContent = label + " copied"; }
+  catch (e) { status.textContent = "clipboard blocked — select it out of the box below instead"; }
 }
 
-document.getElementById("copy").onclick = () => copy(figureBlock(), "FIGURE_LAYERS");
+document.getElementById("copyAll").onclick = () => copy(figureBlock() + "\n\n" + barBlock(), "both blocks");
+document.getElementById("copyFig").onclick = () => copy(figureBlock(), "FIGURE_LAYERS");
 document.getElementById("copyBars").onclick = () => copy(barBlock(), "BAR_SPOTS");
 document.getElementById("reset").onclick = load;
+document.getElementById("bigger").onclick = () => scaleAll(1.02);
+document.getElementById("smaller").onclick = () => scaleAll(1 / 1.02);
 
-// Size every limb to its texture's true pixel size, as a sane starting point.
-document.getElementById("fit").onclick = () => {
-  for (const l of limbs) if (l.img.naturalWidth) l.w = l.img.naturalWidth;
+document.getElementById("whole").onclick = (e) => {
+  wholeFigure = !wholeFigure;
+  e.currentTarget.setAttribute("aria-pressed", String(wholeFigure));
+  document.getElementById("status").textContent = wholeFigure
+    ? "dragging anywhere moves the whole figure and its bars together"
+    : "dragging moves one piece";
+};
+
+document.getElementById("crippled").onclick = (e) => {
+  showCrippled = !showCrippled;
+  e.currentTarget.setAttribute("aria-pressed", String(showCrippled));
+  for (const l of limbs)
+    l.node.style.webkitMaskImage = l.node.style.maskImage = `url("${texture(l.file)}")`;
   layout();
 };
 
 load();
-setTimeout(layout, 900);   // re-run once the images have their natural sizes
 </script>

@@ -399,16 +399,23 @@ h3:first-child { margin-top: .1rem; }
 }
 #figurelayers[hidden] { display: none; }
 
-/* The condition bars share the same box, so they track the limbs at every size. */
+/* The condition bars share the figure's box, so they track the limbs at every size.
+   "Share" has to mean identical, and it did not: this was 3/4 (0.750) against the figure's
+   300/340 (0.882), so a bar's percentage and a limb's percentage were measured against different
+   rectangles and the two drifted apart the further from centre they sat -- worst at the arms and
+   the head, which is exactly where they looked wrong. The ratio is now the same expression as
+   #figurelayers, and there is only one rule for this element; a second one further down was
+   setting `inset: 0` and fighting this one. */
 #limbbars {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   height: 100%;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 300 / 340;
   max-width: 100%;
   max-height: 100%;
+  pointer-events: none;
   /* No `inset` here: it is shorthand for all four offsets, so declaring it after top/left
      silently resets them and the bars scatter. */
 }
@@ -465,8 +472,6 @@ h3:first-child { margin-top: .1rem; }
 
 @keyframes pulse { 50% { opacity: .3; } }
 @media (prefers-reduced-motion: reduce) { #doll [data-limb] { animation: none !important; } }
-
-#limbbars { position: absolute; inset: 0; pointer-events: none; }
 
 /* One bar per limb, placed over the figure in percentages of the box so it tracks any size. */
 .limbbar {
