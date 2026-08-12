@@ -36,6 +36,7 @@ Config Config::Load(const std::string& path)
 
 	c.enableIcons = ReadBool("Assets", "EnableIcons", c.enableIcons, p);
 	c.radioInRangeOnly = ReadBool("Control", "RadioInRangeOnly", c.radioInRangeOnly, p);
+	c.dumpPipboyMenu = ReadBool("Debug", "DumpPipboyMenu", c.dumpPipboyMenu, p);
 
 	c.enableLocalMap = ReadBool("Map", "EnableLocalMap", c.enableLocalMap, p);
 	c.maxLocalRefs = GetPrivateProfileIntA("Map", "MaxLocalRefs", c.maxLocalRefs, p);

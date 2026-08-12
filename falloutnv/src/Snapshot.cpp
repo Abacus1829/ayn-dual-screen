@@ -9,6 +9,8 @@
 #include "nvse/GameExtraData.h"
 #include "nvse/GameData.h"
 #include "nvse/GameRTTI.h"
+#include "nvse/GameUI.h"            // InterfaceManager, Menu -- for reading the Pip-Boy's own menu
+#include "nvse/GameTiles.h"
 
 #include <windows.h>
 #include <algorithm>
@@ -747,6 +749,139 @@ namespace
 	/// What that costs: there is no way here to tell which station is currently tuned, so `active`
 	/// reflects what this mod last tuned rather than what the game thinks. Tune from the Pip-Boy
 	/// instead and the screen will not notice.
+	// ── the Pip-Boy's own radio list ────────────────────────────────────────
+	//
+	// Everything below reads the game's UI rather than its data, and it exists because the data
+	// route does not work. Five separate readings of the world were tried and each was falsified
+	// against a running game: transmitters in the worldspace's persistent cell, the radio-data
+	// block on those references, a sweep of every worldspace, stations found by broadcast sound,
+	// and a player-side field. Two of the stations the Pip-Boy lists are not discoverable as forms
+	// at all, which is what finally settled it -- the list simply is not derivable from what this
+	// SDK maps.
+	//
+	// The menu, on the other hand, is the answer by construction: those tiles ARE what the Pip-Boy
+	// draws. The cost is that a menu only exists while it is open, so this can read the list only
+	// when you have the Pip-Boy up, and what it reads is remembered for the times you do not.
+
+	/// One entry scraped from the menu.
+	struct MenuStation
+	{
+		std::string name;
+		bool active = false;
+	};
+
+	/// The last list the Pip-Boy was seen showing, and when.
+	std::vector<MenuStation> g_menuStations;
+	DWORD g_menuStationsAt = 0;
+
+	/// The game's menu table, and the Pip-Boy's root tile out of it.
+	///
+	/// InterfaceManager::GetMenuByType is declared by the SDK headers but implemented in NVSE's own
+	/// source, which this project does not compile -- linking against it fails. NVSE's version is
+	/// three data reads off a known address, so those are done here directly rather than calling
+	/// into the game: no game code runs, and a wrong address gives a null rather than a jump into
+	/// nowhere. Every step is null-checked because this is a bare address, not a promise.
+	Tile* PipboyRootTile()
+	{
+		auto* table = *reinterpret_cast<NiTArray<TileMenu*>**>(0x011F3508);
+		if (!table)
+			return nullptr;
+
+		UInt32 index = kMenuType_Stats - kMenuType_Min;   // the Pip-Boy is the Stats menu
+		if (index >= table->Length())
+			return nullptr;
+
+		TileMenu* tileMenu = table->Get(index);
+		return tileMenu ? reinterpret_cast<Tile*>(tileMenu) : nullptr;
+	}
+
+	/// A tile's string trait, or null.
+	const char* TileString(Tile* tile, UInt32 traitId)
+	{
+		if (!tile)
+			return nullptr;
+		Tile::Value* value = tile->GetValue(traitId);
+		return value ? value->str : nullptr;
+	}
+
+	/// Walk a tile subtree, collecting the text of every leaf that carries a string.
+	///
+	/// Deliberately not looking for a fixed path. Menu tile paths come from the game's own XML,
+	/// which a mod or a UI overhaul can rewrite -- and TTW does. Walking and matching on shape
+	/// survives that; a hardcoded path would work here and quietly break on someone else's setup.
+	void CollectTileText(Tile* tile, std::vector<std::string>& out, int depth, int& budget)
+	{
+		if (!tile || depth > 8 || budget <= 0)
+			return;
+		--budget;
+
+		if (const char* text = TileString(tile, Tile::kTileValue_string))
+		{
+			if (*text)
+				out.push_back(text);
+		}
+
+		for (auto iter = tile->childList.Begin(); !iter.End(); ++iter)
+		{
+			Tile::ChildNode* node = iter.Get();
+			if (node && node->child)
+				CollectTileText(node->child, out, depth + 1, budget);
+		}
+	}
+
+	/// Find the tile whose name matches, anywhere in the subtree.
+	Tile* FindTileNamed(Tile* tile, const char* wanted, int depth, int& budget)
+	{
+		if (!tile || depth > 10 || budget <= 0)
+			return nullptr;
+		--budget;
+
+		const char* name = tile->name.CStr();
+		if (name && _stricmp(name, wanted) == 0)
+			return tile;
+
+		for (auto iter = tile->childList.Begin(); !iter.End(); ++iter)
+		{
+			Tile::ChildNode* node = iter.Get();
+			if (!node || !node->child)
+				continue;
+			if (Tile* hit = FindTileNamed(node->child, wanted, depth + 1, budget))
+				return hit;
+		}
+		return nullptr;
+	}
+
+	/// Every tile in the subtree as "depth name = string", for finding what to match on.
+	///
+	/// This is a diagnostic, not a feature: the shape of the Pip-Boy's menu is not documented
+	/// anywhere this project can consult, so the only way to learn it is to look at the real one.
+	/// Guarded by the ini so it costs nothing unless asked for.
+	void DumpTiles(Tile* tile, std::vector<std::string>& out, int depth, int& budget)
+	{
+		if (!tile || depth > 8 || budget <= 0)
+			return;
+		--budget;
+
+		const char* name = tile->name.CStr();
+		const char* text = TileString(tile, Tile::kTileValue_string);
+
+		std::string line(static_cast<size_t>(depth) * 2, ' ');
+		line += name && *name ? name : "(unnamed)";
+		if (text && *text)
+		{
+			line += " = ";
+			line += text;
+		}
+		out.push_back(line);
+
+		for (auto iter = tile->childList.Begin(); !iter.End(); ++iter)
+		{
+			Tile::ChildNode* node = iter.Get();
+			if (node && node->child)
+				DumpTiles(node->child, out, depth + 1, budget);
+		}
+	}
+
 	/// A reference's radio data, which the SDK header lists only as "ExtraRadioData ???????? 68 1C".
 	///
 	/// The size is the useful clue: 0x1C total, and BSExtraData's own header is 0x0C, which leaves
@@ -1523,6 +1658,21 @@ namespace
 		WriteEffects(j, player);
 
 		WriteRadio(j, player, g_tunedStation, config);
+
+		// The Pip-Boy's own menu, while it is open. A diagnostic, off unless the ini asks.
+		if (config.dumpPipboyMenu)
+		{
+			j.BeginArray("menuDump");
+			if (Tile* root = PipboyRootTile())
+			{
+				std::vector<std::string> lines;
+				int budget = 4000;
+				DumpTiles(root, lines, 0, budget);
+				for (const std::string& line : lines)
+					j.Str(nullptr, line);
+			}
+			j.EndArray();
+		}
 		WriteCompanions(j, player);
 
 		// Notes and holotapes, pulled back out of the inventory walk above.

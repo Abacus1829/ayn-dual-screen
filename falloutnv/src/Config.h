@@ -46,6 +46,13 @@ struct Config
 	/// you no way to tell a quiet wasteland from a broken reader.
 	bool radioInRangeOnly = true;
 
+	/// Dump the Pip-Boy menu's tile tree into the snapshot while the Pip-Boy is open.
+	///
+	/// Purely a diagnostic. The menu's shape is not documented anywhere this project can consult,
+	/// so learning it means looking at a real one; this is how. Off by default -- it walks a tree
+	/// every snapshot and puts a few hundred lines into every response.
+	bool dumpPipboyMenu = false;
+
 	/// A shared secret every request must carry. Empty means no check, which is the default and
 	/// matches how the other mods in this repository behave.
 	///
