@@ -628,10 +628,20 @@ namespace
 			if (!activator || !activator->radioStation)
 				continue;
 
-			// The transmitter's own name. The station it points at would often read better, but
-			// BGSTalkingActivator is only forward-declared in this SDK -- testing the pointer for
-			// null is fine on an incomplete type, reading through it is not.
-			const char* name = activator->fullName.name.CStr();
+			// The station's name, not the transmitter's -- a transmitter is usually a mast or a
+			// terminal and is named like one, which is not what belongs on a radio dial.
+			//
+			// BGSTalkingActivator is only forward-declared here, so it cannot be dereferenced as
+			// itself. It can be read as a TESForm: every form class in this hierarchy is single
+			// inheritance rooted at TESForm, so the TESForm subobject sits at offset zero and the
+			// cast is a no-op rather than a reinterpretation of unrelated memory.
+			const char* name = nullptr;
+			if (auto* station = reinterpret_cast<TESForm*>(activator->radioStation))
+				name = station->GetTheName();
+
+			// Fall back to the transmitter if the station has no name of its own.
+			if (!name || !*name)
+				name = activator->fullName.name.CStr();
 			if (!name || !*name)
 				continue;
 

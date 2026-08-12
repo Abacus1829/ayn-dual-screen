@@ -661,6 +661,40 @@ h3:first-child { margin-top: .1rem; }
 .spacer { flex: 1; }
 .dim { color: var(--fg-dim); }
 
+/* Inventory search. Deliberately plain -- it sits in the action footer and must not read as
+   another button. */
+.invsearch {
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font: inherit;
+  font-size: .9em;
+  padding: .1rem .5rem;
+  width: 9rem;
+  min-width: 5rem;
+}
+.invsearch:focus { outline: 1px solid var(--fg); outline-offset: 1px; }
+.invsearch::placeholder { color: var(--fg-faint); }
+
+/* Brief message over the screen, for things with no other visible result. */
+#toast {
+  position: absolute;
+  left: 50%;
+  bottom: 3.2rem;
+  transform: translateX(-50%);
+  padding: .2rem .8rem;
+  background: var(--bg-deep);
+  border: 1px solid var(--fg-dim);
+  font-size: .85em;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity .18s;
+  pointer-events: none;
+  z-index: 45;
+}
+#toast.on { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
+
 .btn {
   appearance: none;
   border: 1px solid var(--line);

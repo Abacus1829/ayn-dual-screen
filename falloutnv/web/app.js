@@ -168,9 +168,54 @@ document.addEventListener("click", (e) => {
 
 addEventListener("keydown", (e) => {
   if (e.target.tagName === "INPUT") return;
+
+  // Escape closes the settings panel before anything else looks at the key.
+  if (e.key === "Escape") {
+    const panel = document.getElementById("settings");
+    if (!panel.hidden) { panel.hidden = true; return; }
+  }
+
   const n = parseInt(e.key, 10);
-  if (n >= 1 && n <= settings.tabs.length) setPage(settings.tabs[n - 1]);
+  if (n >= 1 && n <= settings.tabs.length) { setPage(settings.tabs[n - 1]); return; }
+
+  // Q and E step through the sub-tabs, so a whole page can be driven without aiming at anything.
+  const subs = SUBTABS[page] || [];
+  if ((e.key === "q" || e.key === "e") && subs.length) {
+    const at = subs.findIndex(([k]) => k === sub[page]);
+    const next = (at + (e.key === "e" ? 1 : subs.length - 1)) % subs.length;
+    sub[page] = subs[next][0];
+    buildSubtabs();
+    if (state) render(state);
+    return;
+  }
+
+  // Comma and period nudge the poll rate, for when the link is struggling.
+  if (e.key === "," || e.key === ".") {
+    const rates = [5, 10, 15, 20, 30];
+    const at = rates.indexOf(settings.rate);
+    const next = Math.max(0, Math.min(rates.length - 1, (at < 0 ? 1 : at) + (e.key === "." ? 1 : -1)));
+    settings.rate = rates[next];
+    save();
+    toast(settings.rate + " updates/sec");
+  }
 });
+
+/**
+ * A brief message over the screen. Used for things the user did that have no other visible
+ * result -- changing the poll rate, a refused action -- so nothing happens silently.
+ */
+function toast(text) {
+  let node = document.getElementById("toast");
+  if (!node) {
+    node = el("div", null, "");
+    node.id = "toast";
+    document.getElementById("screen").appendChild(node);
+  }
+  node.textContent = text;
+  node.classList.add("on");
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => node.classList.remove("on"), 1600);
+}
 
 // ── polling ───────────────────────────────────────────────────────────────
 
@@ -595,15 +640,28 @@ function renderStat(s) {
 
 // ── INV ───────────────────────────────────────────────────────────────────
 
+let invFilter = "";
+
 function renderInv(s) {
-  const bucket = (s.inventory || {})[sub.inv] || [];
+  const all = (s.inventory || {})[sub.inv] || [];
   const list = document.getElementById("items");
 
-  const key = sub.inv + "|" + bucket.map((i) =>
+  // Filter on name. A hoarder's misc tab runs to hundreds of lines and scrolling it on a handheld
+  // is the single most tedious thing about the screen.
+  const needle = invFilter.trim().toLowerCase();
+  const bucket = needle
+    ? all.filter((i) => (i.name || "").toLowerCase().includes(needle))
+    : all;
+
+  const key = sub.inv + "|" + needle + "|" + bucket.map((i) =>
     `${i.id}:${i.count}:${i.equipped ? 1 : 0}:${Math.round((i.health || 0) * 100)}`).join(",");
 
   fill(list, key, (n) => {
-    if (!bucket.length) { n.appendChild(el("li", "empty", "Nothing here.")); return; }
+    if (!bucket.length) {
+      n.appendChild(el("li", "empty",
+        needle ? `Nothing matching "${invFilter}".` : "Nothing here."));
+      return;
+    }
     for (const item of bucket) {
       const li = row(() => { selected.inv = item.id; renderInv(state); });
       li.classList.toggle("equipped", !!item.equipped);
@@ -622,7 +680,7 @@ function renderInv(s) {
 
   const item = bucket.find((i) => i.id === selected.inv);
   renderItemCard(s, item);
-  renderInvFoot(s, item);
+  renderInvFoot(s, item, bucket.length);
 }
 
 /** The app rates a stat against the rest of your kit; without that comparison the honest version
@@ -679,7 +737,7 @@ function renderItemCard(s, item) {
   if (item.desc) card.appendChild(el("p", null, item.desc));
 }
 
-function renderInvFoot(s, item) {
+function renderInvFoot(s, item, shown) {
   const foot = document.getElementById("invfoot");
   const perms = s.perms || {};
 
@@ -690,7 +748,16 @@ function renderInvFoot(s, item) {
     perms.equip, perms.use, perms.drop,
     ((s.inventory || {})[sub.inv] || []).length,
   ].join("|");
-  if (foot.dataset.key === key) return;
+  // The count changes on every keystroke in the search box, but rebuilding the footer would
+  // destroy the box being typed into. So the count is updated in place and left out of the key.
+  const updateCount = () => {
+    const label = foot.querySelector(".invcount");
+    if (!label) return;
+    const total = ((s.inventory || {})[sub.inv] || []).length;
+    label.textContent = invFilter.trim() ? `${shown} of ${total}` : `${total} entries`;
+  };
+
+  if (foot.dataset.key === key) { updateCount(); return; }
   foot.dataset.key = key;
 
   foot.textContent = "";
@@ -714,7 +781,21 @@ function renderInvFoot(s, item) {
       () => confirmThen(foot, () => act("drop", { id: item.id, count: 1 })), "danger");
 
   foot.appendChild(el("span", "spacer"));
-  foot.appendChild(el("span", "dim", `${((s.inventory || {})[sub.inv] || []).length} entries`));
+
+  // Search. Rebuilt with the footer, so it carries its value across and keeps focus while typing.
+  const search = el("input");
+  search.type = "search";
+  search.placeholder = "search…";
+  search.className = "invsearch";
+  search.value = invFilter;
+  search.oninput = () => {
+    invFilter = search.value;
+    if (state) renderInv(state);   // the footer survives this; only the count is touched
+  };
+  foot.appendChild(search);
+
+  foot.appendChild(el("span", "dim invcount", ""));
+  updateCount();
 }
 
 /** Two-tap confirmation, so a stray touch never throws a weapon on the ground. */
