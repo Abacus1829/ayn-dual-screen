@@ -33,9 +33,13 @@ the first one in this repository that isn't a managed mod — see *Why this one 
 | Equip, use and drop | **Live**, applied on the game thread. |
 | Icons, from your own archives | **Live.** Every `.bsa` in `Data` is indexed — 15 on a full install, DLC included. |
 | The status figure | **Live**, composited from the game's own limb textures with crippled variants. |
-| Fast travel, radio, set active quest | **Not applied.** The buttons grey out regardless of the ini. |
-| Notes, misc stats, active effects, map markers | Sent as empty arrays. Readers not written. |
-| Condition bars on the figure | Positions still wrong. The figure itself is right. |
+| Notes, misc stats, active effects, map markers | **Live.** |
+| The world map | **Live**, drawn on the game's own Mojave texture, with your position and bearing. |
+| The local map | **Approximate**, and off by default (`EnableLocalMap`). It is sketched from the objects in the cell — it is not the game's own local map, and the screen says so rather than passing it off as one. |
+| Companions | **Live** — name, health and how far away they are. |
+| Fast travel, set active quest | **Live**, through NVSE's console interface, and refused unless the marker is both discovered and travellable. |
+| Radio | Written, **not yet confirmed in play.** Stations are found by looking for activators that carry a radio station, not by the `ExtraRadioData` the name suggests. Treat it as the least-tested thing here. |
+| Condition bars on the figure | **Live**, on hand-tuned positions. |
 
 ### What "live" is and isn't
 
@@ -44,23 +48,20 @@ a hardcore run, or a heavily modded load order. Every value comes from a structu
 xNVSE project reverse-engineered, so the failure mode for a wrong one is a crash rather than a
 wrong number. Treat it as early.
 
-### Why the last four are not done
+### How the write operations are done
 
-Not oversight, and each for its own reason:
+Every one of them goes through NVSE's console interface — the plugin takes `RunScriptLine` at load
+and logs whether it got it — and never through a direct write to the player's structures:
 
-- **Fast travel** needs the map-marker reader first — it cannot move you to a marker the mod has
-  never read. That is a prerequisite, not a shortcut.
-- **Set active quest** has no vanilla console command, and the tempting version — writing
-  `player->quest` directly — skips the game's own bookkeeping and is exactly how a save desyncs.
-  It needs the game's routine, found properly.
-- **Radio** has no clean route verified yet.
-- **Active effects and map markers** read structures the SDK has mapped only partly.
+- **Fast travel** issues `player.MoveTo` at a map marker, and only after checking the marker is
+  both *visible* and *can-travel*. Moving you to somewhere you have not discovered is a save state
+  the game never produces on its own.
+- **Set active quest** issues `SetCurrentQuest`. The tempting version — assigning `player->quest`
+  directly — skips the game's own bookkeeping and is exactly how a save desyncs.
+- **Equip, use and drop** are queued from the web page and applied on the game thread, never from
+  the socket thread that received them.
 
-All three write operations would go through NVSE's console interface, which is already wired up:
-the plugin takes `RunScriptLine` at load and logs whether it got it. The command queue and the
-permission checks are in place. What is missing is the commands themselves.
-
-Nothing in the snapshot is invented: a reader that doesn't exist yet sends an empty list, and the
+Nothing in the snapshot is invented: a reader that finds nothing sends an empty list, and the
 screen renders an empty tab, rather than showing a plausible lie about your character.
 
 ---
@@ -250,9 +251,9 @@ same PC, and two mods fighting over one port fails in a way that looks like the 
 | Tab | What's on it |
 | --- | --- |
 | **STAT** | Status (a limb-condition doll, health, AP, rads, and hardcore's H2O/food/sleep), SPECIAL, all thirteen skills, and perks. |
-| **INV** | Weapons, apparel, aid, misc and ammo, with condition, weight, value and what's equipped. Select an item for its stats; equip, use or drop it from the footer. |
+| **INV** | Weapons, apparel, aid, misc and ammo, with condition, weight, value and what's equipped. Each tab totals its own weight and worth in the footer, so you can see which one to raid when you're over the cap. Select an item for its stats; equip, use or drop it from the footer. |
 | **DATA** | Quests with their objectives ticked off, notes and holotapes, and the misc stats page. |
-| **MAP** | Your position and heading against the local area or the whole worldspace, with discovered markers. |
+| **MAP** | Your position and heading against the local area or the whole worldspace, with discovered markers. The heading is given as a bearing as well as an arrow — a compass point is what directions are actually spoken in, and it stays readable when the arrow is a few pixels across. |
 | **RADIO** | Stations in range, and which one is playing. |
 
 Number keys 1–5 jump between them.

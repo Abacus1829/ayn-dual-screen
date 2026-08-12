@@ -583,7 +583,7 @@ function render(s) {
   document.getElementById("loc").textContent =
     [s.map && s.map.cell, s.map && s.map.world].filter(Boolean).join(" — ");
 
-  checkWarnings(p);
+  checkWarnings(p, s);
 
   if (page === "stat") renderStat(s);
   else if (page === "inv") renderInv(s);
@@ -1008,8 +1008,22 @@ function renderInvFoot(s, item, shown) {
   const updateCount = () => {
     const label = foot.querySelector(".invcount");
     if (!label) return;
-    const total = ((s.inventory || {})[sub.inv] || []).length;
-    label.textContent = invFilter.trim() ? `${shown} of ${total}` : `${total} entries`;
+    const bucket = (s.inventory || {})[sub.inv] || [];
+    const total = bucket.length;
+
+    // What this tab is costing you, and what it is worth. Deciding what to drop when you are over
+    // the cap means comparing a tab against the others, and the Pip-Boy never totals them for you.
+    let wg = 0, val = 0;
+    for (const i of bucket) {
+      const n = i.count || 1;
+      wg += (i.weight || 0) * n;
+      val += (i.value || 0) * n;
+    }
+
+    const count = invFilter.trim() ? `${shown} of ${total}` : `${total} entries`;
+    // num() rounds, and a tab of ten light items reading "0 wg" would look broken, so weight keeps
+    // its decimal here even though everywhere else it does not.
+    label.textContent = `${count} · ${wg.toFixed(1)} wg · ${num(val)} caps`;
   };
 
   if (foot.dataset.key === key) { updateCount(); return; }
@@ -1462,6 +1476,10 @@ function renderMap(s) {
   where.textContent = "";
   where.appendChild(el("h4", null, m.cell || m.world || "Unknown"));
   if (m.x != null) where.appendChild(el("p", "hint", `${Math.round(m.x)}, ${Math.round(m.y)}`));
+  // Which way you are facing, in words. The arrow on the map already shows it, but a bearing is
+  // what directions are actually given in -- and it stays readable when the arrow is a few pixels.
+  if (m.angle != null)
+    where.appendChild(el("p", "hint", `facing ${heading(m.angle)} · ${Math.round(m.angle)}°`));
 
   const visited = (m.markers || []).filter((x) => x.visited);
   const mlist = document.getElementById("markers");
@@ -1691,9 +1709,9 @@ function beep(frequency = 440, duration = 0.18, level = 0.06) {
 // Only on the transition, never on the state. A tone every tenth of a second while you happen to
 // be hurt would be unbearable and would train you to ignore it.
 
-const warned = { health: false, limbs: {} };
+const warned = { health: false, limbs: {}, gear: {} };
 
-function checkWarnings(p) {
+function checkWarnings(p, s) {
   const fraction = pct(p.hp, p.hpMax);
 
   if (fraction > 0 && fraction <= 0.25) {
@@ -1713,6 +1731,42 @@ function checkWarnings(p) {
       warned.limbs[key] = false;
     }
   }
+
+  // Equipped gear wearing out. A weapon that breaks mid-fight is worse than a weapon you knew was
+  // about to, and the game itself says nothing until it has already jammed.
+  //
+  // Keyed by item id and not by slot, so swapping to a second worn-out gun warns again rather than
+  // staying silent because the slot was already flagged.
+  for (const slot of ["weapons", "apparel"]) {
+    // The worst of what is worn, not the first -- apparel is several slots at once, and the piece
+    // about to fall apart is rarely the one the list happens to start with.
+    const item = (((s || {}).inventory || {})[slot] || [])
+      .filter((i) => i.equipped && i.health != null)
+      .sort((a, b) => a.health - b.health)[0];
+    if (!item) { warned.gear[slot] = null; continue; }
+
+    if (item.health <= 0.25) {
+      if (warned.gear[slot] !== item.id) {
+        warned.gear[slot] = item.id;
+        beep(180, 0.3, 0.06);
+        toast(`${item.name} at ${Math.round(item.health * 100)}%`);
+      }
+    } else if (item.health > 0.35) {
+      // Whatever is worn now is fine, so forget what was flagged. This has to clear regardless of
+      // which item is worn: keying the reset on the flagged id meant swapping to a healthy weapon
+      // left the flag set, and swapping back to the broken one then warned about nothing.
+      warned.gear[slot] = null;
+    }
+  }
+}
+
+/** Sixteen-point compass label for a heading in degrees, as the game's own compass reads. */
+const COMPASS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+                 "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+
+function heading(degrees) {
+  const d = ((degrees % 360) + 360) % 360;
+  return COMPASS[Math.round(d / 22.5) % 16];
 }
 
 function startHum() {

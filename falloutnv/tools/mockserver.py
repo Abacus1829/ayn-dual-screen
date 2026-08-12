@@ -53,7 +53,9 @@ ITEMS = {
         dict(id="w3", name="Varmint Rifle", count=1, weight=6.0, value=200, health=0.91,
              damage=13, dps=25, clip=5, ammoName="5.56mm Round", spread=0.5),
         dict(id="w4", name="Frag Grenade", count=6, weight=0.5, value=50, damage=100),
-        dict(id="w5", name="Nine Iron", count=1, weight=4.0, value=125, health=0.66, damage=30),
+        # Deliberately about to break. Nothing else here is under a quarter condition, so without
+        # this there is no way to exercise the worn-gear warning without editing the mock first.
+        dict(id="w5", name="Nine Iron", count=1, weight=4.0, value=125, health=0.14, damage=30),
     ],
     "apparel": [
         dict(id="a1", name="Combat Armor, Reinforced", count=1, weight=25.0, value=1200,
