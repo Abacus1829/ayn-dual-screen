@@ -141,6 +141,10 @@ QUESTS = [
         dict(text="Complete Sunny Smiles' training.", done=True)]),
 ]
 
+# World units to the nearest outstanding objective, per quest. Deliberately out of list order so
+# sorting by distance visibly reorders things rather than looking like a no-op.
+QUEST_DISTANCE = {"q2": 128000, "q4": 21000}
+
 NOTES = [
     dict(id="t1", name="Mysterious Broadcast", type="holotape",
          text="…repeating. This is an automated message.\nAll personnel report to the vault door."),
@@ -255,7 +259,12 @@ def snapshot():
             {"name": "Well Rested", "duration": "1:04"},
         ],
         "inventory": inv,
-        "quests": [dict(q, active=(q["id"] == world["activeQuest"])) for q in QUESTS],
+        # Distance to the nearest outstanding objective, in world units, as the plugin reports it.
+        # Omitted on completed quests and on q3, to exercise the "no distance known" path.
+        "quests": [dict(q, active=(q["id"] == world["activeQuest"]),
+                        **({} if q["completed"] or q["id"] == "q3"
+                           else {"distance": QUEST_DISTANCE.get(q["id"], 50000)}))
+                   for q in QUESTS],
         "notes": NOTES,
         "stats": [{"group": g, "name": n, "value": v} for g, n, v in STATS],
         "radio": [{"id": i, "name": n, "inRange": r, "active": i == world["station"]}

@@ -748,6 +748,9 @@ const SORTS = [
 
 let invSort = 0;
 
+// Quest ordering: the game's own, or nearest outstanding objective first.
+let questSort = "game";
+
 // ── hotkeys ───────────────────────────────────────────────────────────────
 
 /** Every item in the snapshot, whatever tab it lives on. Hotkeys ignore tabs. */
@@ -1046,13 +1049,48 @@ function renderData(s) {
   else if (sub.data === "mods") renderLoadOrder(s);
 }
 
+/** World units to something readable. The game's unit is about an inch and a half. */
+function distanceText(units) {
+  if (units == null) return "";
+  const metres = units * 0.0143;
+  return metres < 1000 ? `${Math.round(metres)}m` : `${(metres / 1000).toFixed(1)}km`;
+}
+
 function renderQuests(s) {
-  const quests = s.quests || [];
+  const quests = (s.quests || []).slice();
   const list = document.getElementById("quests");
-  const key = quests.map((q) => `${q.id}:${q.active ? 1 : 0}:${q.completed ? 1 : 0}:${(q.objectives || []).length}`).join(",");
+
+  // Nearest first among the unfinished, when a distance is known. Standing in the Mojave with
+  // twenty quests open, "which of these can I do from here" is the question being asked.
+  if (questSort === "near") {
+    quests.sort((a, b) => {
+      if (!!a.completed !== !!b.completed) return a.completed ? 1 : -1;
+      const da = a.distance == null ? Infinity : a.distance;
+      const db = b.distance == null ? Infinity : b.distance;
+      if (da !== db) return da - db;
+      return (a.name || "").localeCompare(b.name || "");
+    });
+  }
+
+  const key = questSort + "|" + quests.map((q) =>
+    `${q.id}:${q.active ? 1 : 0}:${q.completed ? 1 : 0}:${(q.objectives || []).length}:${Math.round((q.distance || 0) / 500)}`).join(",");
 
   fill(list, key, (n) => {
     if (!quests.length) { n.appendChild(el("li", "empty", "No quests yet.")); return; }
+
+    // The ordering toggle rides at the top of the list, since QUESTS has no footer of its own.
+    const head = el("li", "grouphead");
+    const toggle = el("button", "btn", questSort === "near" ? "NEAREST FIRST" : "GAME ORDER");
+    toggle.title = "Order by the nearest outstanding objective, or leave the game's own order.";
+    toggle.onclick = (e) => {
+      e.stopPropagation();
+      questSort = questSort === "near" ? "game" : "near";
+      if (state) renderData(state);
+      toast(questSort === "near" ? "Nearest objective first" : "Game order");
+    };
+    head.appendChild(toggle);
+    n.appendChild(head);
+
     for (const [label, items] of [["Active", quests.filter((q) => !q.completed)],
                                   ["Completed", quests.filter((q) => q.completed)]]) {
       if (!items.length) continue;
@@ -1063,6 +1101,8 @@ function renderQuests(s) {
         li.classList.toggle("done", !!q.completed);
         li.appendChild(el("span", "name", q.name));
         if (q.active) li.appendChild(el("span", "tag", "◆"));
+        if (!q.completed && q.distance != null)
+          li.appendChild(el("span", "val", distanceText(q.distance)));
         n.appendChild(li);
       }
     }
@@ -1078,6 +1118,8 @@ function renderQuests(s) {
 
   card.appendChild(el("h4", null, q.name));
   if (q.completed) card.appendChild(el("p", "hint", "Completed."));
+  else if (q.distance != null)
+    card.appendChild(el("p", "hint", "Nearest objective " + distanceText(q.distance) + " away."));
   for (const o of q.objectives || [])
     card.appendChild(el("p", o.done ? "dim" : null, (o.done ? "☑ " : "☐ ") + o.text));
   if (!(q.objectives || []).length) card.appendChild(el("p", "hint", "No objectives recorded."));

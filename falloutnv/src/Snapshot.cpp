@@ -359,6 +359,60 @@ namespace
 
 namespace
 {
+	/// How far the nearest marker for this quest's outstanding objectives is, in world units.
+	///
+	/// Objectives carry target references, and a reference knows where it is -- so "which of these
+	/// is nearest" is answerable without any guesswork. Returns -1 when nothing can be measured:
+	/// an objective with no target, or one pointing somewhere in another worldspace, where a
+	/// straight-line distance would be a meaningless number rather than a useful one.
+	float NearestObjectiveDistance(TESQuest* quest, PlayerCharacter* player)
+	{
+		TESObjectCELL* playerCell = player->parentCell;
+		TESWorldSpace* playerWorld = playerCell ? playerCell->worldSpace : nullptr;
+
+		float best = -1.f;
+
+		for (auto oiter = quest->lVarOrObjectives.Begin(); !oiter.End(); ++oiter)
+		{
+			BGSQuestObjective* objective = oiter.Get() ? oiter.Get()->objective : nullptr;
+			if (!objective || objective->quest != quest)
+				continue;
+
+			// Only objectives you are actually being asked to do.
+			if (!(objective->status & BGSQuestObjective::eQObjStatus_displayed))
+				continue;
+			if (objective->status & BGSQuestObjective::eQObjStatus_completed)
+				continue;
+
+			for (auto titer = objective->targets.Begin(); !titer.End(); ++titer)
+			{
+				// targets is tList<Target*>, so the iterator hands back a Target** -- a pointer to
+				// the list's slot, not the target itself.
+				BGSQuestObjective::Target** slot = titer.Get();
+				BGSQuestObjective::Target* target = slot ? *slot : nullptr;
+				TESObjectREFR* ref = target ? target->target : nullptr;
+				if (!ref)
+					continue;
+
+				// Comparing across worldspaces is meaningless -- the Sierra Madre is not "nine
+				// miles away" from the Mojave in any sense worth sorting on.
+				TESObjectCELL* cell = ref->parentCell;
+				TESWorldSpace* world = cell ? cell->worldSpace : nullptr;
+				if (world != playerWorld)
+					continue;
+
+				float dx = ref->posX - player->posX;
+				float dy = ref->posY - player->posY;
+				float distance = std::sqrt(dx * dx + dy * dy);
+
+				if (best < 0.f || distance < best)
+					best = distance;
+			}
+		}
+
+		return best;
+	}
+
 	void WriteQuests(Json& j, PlayerCharacter* player)
 	{
 		j.BeginArray("quests");
@@ -399,12 +453,20 @@ namespace
 					objectives.push_back(objective);
 			}
 
+			float distance = completed ? -1.f : NearestObjectiveDistance(quest, player);
+
 			j.BeginObject()
 				.Str("id", FormIdText(quest->refID))
 				.Str("name", name)
 				.Bool("active", quest == active)
-				.Bool("completed", completed)
-				.BeginArray("objectives");
+				.Bool("completed", completed);
+
+			// Omitted rather than sent as -1 when there is nothing to measure, so the screen can
+			// tell "far away" apart from "no idea".
+			if (distance >= 0.f)
+				j.Num("distance", distance, 0);
+
+			j.BeginArray("objectives");
 
 			for (BGSQuestObjective* objective : objectives)
 			{
