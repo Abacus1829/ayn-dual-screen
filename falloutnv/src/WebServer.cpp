@@ -225,6 +225,7 @@ void WebServer::Serve(unsigned long long clientHandle)
 		body.resize(std::min<size_t>(body.size(), declared));
 	}
 	req.body = std::move(body);
+	req.header = head;
 
 	HttpResponse res;
 	if (req.method == "OPTIONS")

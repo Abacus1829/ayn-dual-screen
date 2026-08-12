@@ -257,9 +257,42 @@ function restartPolling() {
   timer = setInterval(poll, 1000 / settings.rate);
 }
 
+// ── access token ──────────────────────────────────────────────────────────
+//
+// Kept apart from `settings` on purpose: settings are copied between screens through the profile
+// export, and a shared secret should not ride along in something meant to be pasted around.
+
+let token = "";
+try { token = localStorage.getItem("aynToken") || ""; } catch (e) {}
+
+/** Every request carries it as a header; images cannot set one, so they get a query parameter. */
+function authHeaders() {
+  return token ? { "X-Ayn-Token": token } : {};
+}
+
+function withToken(url) {
+  if (!token) return url;
+  return url + (url.includes("?") ? "&" : "?") + "t=" + encodeURIComponent(token);
+}
+
+/** Ask once, remember, and reload. A wrong answer just asks again on the next poll. */
+function askForToken() {
+  if (askForToken.pending) return;
+  askForToken.pending = true;
+
+  const given = prompt("This screen needs the access token set in AynDualScreen.ini:", "");
+  askForToken.pending = false;
+  if (given === null) return;
+
+  token = given.trim();
+  try { localStorage.setItem("aynToken", token); } catch (e) {}
+  location.reload();
+}
+
 async function poll() {
   try {
-    const res = await fetch("state", { cache: "no-store" });
+    const res = await fetch("state", { cache: "no-store", headers: authHeaders() });
+    if (res.status === 401) { askForToken(); return; }
     if (!res.ok) throw new Error(res.status);
     state = await res.json();
     lastOk = Date.now();
@@ -283,7 +316,7 @@ async function act(action, payload) {
   try {
     await fetch("action", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
       body: JSON.stringify(Object.assign({ action }, payload || {})),
     });
     poll();
@@ -467,7 +500,7 @@ function loadDeviceTextures() {
     return;
   }
   for (const [variable, path] of Object.entries(DEVICE_TEXTURES)) {
-    const url = "asset/" + path.replace(/\.dds$/i, ".png");
+    const url = withToken("asset/" + path.replace(/\.dds$/i, ".png"));
     const probe = new Image();
     probe.onload = () => {
       document.documentElement.style.setProperty(variable, `url("${url}")`);
@@ -1194,7 +1227,7 @@ function renderMap(s) {
     // The 1024 mip, not the 2048. The larger one decodes to 16 MB and the encoder needs roughly
     // triple that at once, which a 32-bit game cannot reliably find -- the mod refuses it above a
     // megapixel for that reason. Scaled up to a panel this size the difference is invisible.
-    renderMap.art.src = "asset/interface/worldmap/wasteland_nv_1024_no_map.png";
+    renderMap.art.src = withToken("asset/interface/worldmap/wasteland_nv_1024_no_map.png");
   }
   if (!bounds) {
     ctx.fillStyle = dim;
@@ -1715,7 +1748,7 @@ let modConfig = null;
 
 async function loadModConfig() {
   try {
-    const res = await fetch("config", { cache: "no-store" });
+    const res = await fetch("config", { cache: "no-store", headers: authHeaders() });
     modConfig = (await res.json()).settings || [];
   } catch (e) {
     modConfig = null;      // mod not reachable, or an older build without the endpoint
@@ -1726,7 +1759,7 @@ async function setModSetting(key, value) {
   try {
     const res = await fetch("config", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
       body: JSON.stringify({ key, value: String(value) }),
     });
     const out = await res.json();

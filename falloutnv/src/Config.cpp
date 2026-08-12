@@ -43,6 +43,10 @@ Config Config::Load(const std::string& path)
 	GetPrivateProfileStringA("Paths", "WebRootOverride", "", buf, sizeof buf, p);
 	c.webRootOverride = buf;
 
+	char token[128]{};
+	GetPrivateProfileStringA("Server", "AccessToken", "", token, sizeof token, p);
+	c.accessToken = token;
+
 	// A poll faster than the game's own frame rate just burns CPU for no extra information.
 	if (c.updatesPerSecond < 1) c.updatesPerSecond = 1;
 	if (c.updatesPerSecond > 30) c.updatesPerSecond = 30;
@@ -96,6 +100,16 @@ std::string Config::ToJson() const
 	boolRow("AllowRadio", allowRadio, "Allow radio",
 		"Tune stations from the RADIO tab.", false);
 
+	// Reported as set-or-not, never echoed. The panel is behind the token, but a settings page
+	// that prints the password back is a habit worth not having.
+	if (out.back() != '[') out += ',';
+	out += "{\"key\":\"AccessToken\",\"type\":\"secret\",\"value\":";
+	out += accessToken.empty() ? "false" : "true";
+	out += ",\"label\":\"Access token\",\"help\":\"A shared secret every request must carry. "
+		"Empty means no check. Worth setting on a network you do not fully trust -- LAN access is "
+		"on by default and the screen can equip, drop and fast travel. It is a doorlock, not "
+		"encryption: the traffic is still plain HTTP.\",\"restart\":false}";
+
 	boolRow("EnableIcons", enableIcons, "Icons",
 		"Read icons out of your own game archives. Off skips opening them entirely.", true);
 	intRow("MaxMapMarkers", maxMapMarkers, 10, 1000, "Max map markers",
@@ -136,6 +150,19 @@ bool Config::Set(const std::string& key, const std::string& value)
 	if (key == "EnableIcons")      { enableIcons = asBool(); return true; }
 	if (key == "EnableLocalMap")   { enableLocalMap = asBool(); return true; }
 
+	if (key == "AccessToken")
+	{
+		// Rejected rather than truncated if it is unreasonable, and no whitespace: it travels in a
+		// query string, and a token you cannot paste reliably is a token you will disable.
+		if (value.size() > 96)
+			return false;
+		for (unsigned char c : value)
+			if (c <= ' ' || c > '~' || c == '&' || c == '=' || c == '#' || c == '%')
+				return false;
+		accessToken = value;
+		return true;
+	}
+
 	if (key == "UpdatesPerSecond")  return asInt(1, 30, updatesPerSecond);
 	if (key == "MaxMapMarkers")     return asInt(10, 1000, maxMapMarkers);
 	if (key == "MaxLocalRefs")      return asInt(20, 500, maxLocalRefs);
@@ -175,6 +202,13 @@ void Config::WriteDefaults(const std::string& path) const
 		"; How often the snapshot is rebuilt. Lower it if you see a frame-rate cost.\n"
 		"UpdatesPerSecond=%d\n"
 		"\n"
+		"; A shared secret every request must carry. Empty means no check.\n"
+		"; Worth setting on a network you do not fully trust: LAN access is on by default and the\n"
+		"; screen can equip, use, drop and fast travel. It is a doorlock, not encryption -- the\n"
+		"; traffic is still plain HTTP, so it stops a curious device, not someone reading the wire.\n"
+		"; The screen asks for it once and remembers it.\n"
+		"AccessToken=%s\n"
+		"\n"
 		"[Control]\n"
 		"; What the touch screen is allowed to do. Everything that can lose you an item, move\n"
 		"; your character or burn game hours is off until you turn it on.\n"
@@ -208,7 +242,7 @@ void Config::WriteDefaults(const std::string& path) const
 		"[Paths]\n"
 		"; Serve web/ from somewhere else, so the UI can be edited without rebuilding the DLL.\n"
 		"WebRootOverride=\n",
-		static_cast<unsigned>(port), allowLan ? 1 : 0, updatesPerSecond,
+		static_cast<unsigned>(port), allowLan ? 1 : 0, updatesPerSecond, accessToken.c_str(),
 		allowEquip ? 1 : 0, allowUse ? 1 : 0, allowSetQuest ? 1 : 0, allowRadio ? 1 : 0,
 		allowDrop ? 1 : 0, allowFastTravel ? 1 : 0,
 		maxMapMarkers, maxInventoryItems,

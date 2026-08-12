@@ -20,6 +20,10 @@ struct HttpRequest
 	std::string path;
 	std::string query;
 	std::string body;
+
+	/// The raw header block, request line included. Kept whole rather than parsed into a map,
+	/// because exactly one thing looks at it -- the access-token check.
+	std::string header;
 };
 
 struct HttpResponse

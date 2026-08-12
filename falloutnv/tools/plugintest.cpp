@@ -105,6 +105,11 @@ static const char* GetRuntimeDirectory() { return g_runtimeDirectory.c_str(); }
 
 // ── a tiny HTTP client, so the harness carries no dependencies either ───────
 
+/// Sent as X-Ayn-Token on every request when set, so the harness can exercise a server that has
+/// an access token configured. Without this, a token in the ini makes every check fail with 401
+/// and the run tells you nothing about anything else.
+static std::string g_token;
+
 static bool Get(const char* host, int port, const std::string& path, std::string& out, std::string& status)
 {
 	out.clear();
@@ -128,7 +133,10 @@ static bool Get(const char* host, int port, const std::string& path, std::string
 		return false;
 	}
 
-	std::string request = "GET " + path + " HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n";
+	std::string request = "GET " + path + " HTTP/1.1\r\nHost: localhost\r\n";
+	if (!g_token.empty())
+		request += "X-Ayn-Token: " + g_token + "\r\n";
+	request += "Connection: close\r\n\r\n";
 	send(s, request.data(), static_cast<int>(request.size()), 0);
 
 	char buffer[8192];
@@ -169,7 +177,10 @@ int main(int argc, char** argv)
 	WSADATA wsa;
 	WSAStartup(MAKEWORD(2, 2), &wsa);
 
+	g_token = argc > 2 ? argv[2] : "";
 	g_runtimeDirectory = argc > 3 ? argv[3] : "";
+	if (!g_token.empty())
+		std::printf("sending access token on every request\n");
 
 	std::printf("loading %s\n", argv[1]);
 	HMODULE dll = LoadLibraryA(argv[1]);

@@ -38,6 +38,15 @@ struct Config
 	/// written anywhere; set false to skip opening the archives at all.
 	bool enableIcons = true;
 
+	/// A shared secret every request must carry. Empty means no check, which is the default and
+	/// matches how the other mods in this repository behave.
+	///
+	/// Worth setting on a network you do not fully trust: LAN access is on by default and the
+	/// screen can equip, use, drop and fast travel. This is a doorlock, not encryption -- the
+	/// traffic is still plain HTTP, so it stops the neighbour's laptop, not someone reading the
+	/// wire.
+	std::string accessToken;
+
 	/// A folder to serve web/ from instead of the one beside the DLL. Set it to this project's
 	/// web/ folder and a CSS change is live on the next refresh, with no rebuild.
 	std::string webRootOverride;

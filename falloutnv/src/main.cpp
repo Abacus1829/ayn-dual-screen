@@ -171,8 +171,71 @@ static std::string FieldOf(const std::string& body, const char* name)
 	return out;
 }
 
+/// Does this request carry the shared secret, if one is set at all?
+///
+/// Accepted three ways because the page fetches JSON, loads images, and is itself a page: fetch()
+/// can set a header, an <img> cannot, and a bookmarked URL can carry neither. A constant-time
+/// comparison would be theatre here -- this is plain HTTP on a LAN, and anyone positioned to time
+/// it can already read the token off the wire.
+static bool Authorised(const HttpRequest& req, const std::string& token)
+{
+	if (token.empty())
+		return true;                         // no token configured: unchanged behaviour
+
+	// Header, for fetch().
+	if (req.header.find(token) != std::string::npos)
+	{
+		std::string needle = "x-ayn-token:";
+		std::string lower;
+		lower.reserve(req.header.size());
+		for (char c : req.header)
+			lower += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+
+		size_t at = lower.find(needle);
+		if (at != std::string::npos)
+		{
+			size_t start = lower.find_first_not_of(" \t", at + needle.size());
+			size_t end = lower.find("\r\n", start);
+			if (start != std::string::npos)
+			{
+				std::string given = req.header.substr(start, (end == std::string::npos ? req.header.size() : end) - start);
+				while (!given.empty() && (given.back() == '\r' || given.back() == ' '))
+					given.pop_back();
+				if (given == token)
+					return true;
+			}
+		}
+	}
+
+	// Query string, for <img src> and for pasting a URL straight into a browser.
+	std::string wanted = "t=" + token;
+	size_t at = req.query.find(wanted);
+	if (at != std::string::npos)
+	{
+		bool startOk = (at == 0) || req.query[at - 1] == '&';
+		size_t after = at + wanted.size();
+		bool endOk = (after >= req.query.size()) || req.query[after] == '&';
+		if (startOk && endOk)
+			return true;
+	}
+
+	return false;
+}
+
 static HttpResponse Route(const HttpRequest& req)
 {
+	// Everything behind the token, including the page itself -- a screen that loads and then
+	// fails every request is worse than one that says plainly it needs a key.
+	const std::string token = ConfigSnapshot().accessToken;
+	if (!Authorised(req, token))
+	{
+		HttpResponse denied;
+		denied.status = 401;
+		denied.contentType = "application/json; charset=utf-8";
+		denied.body = R"({"ok":false,"error":"token required"})";
+		return denied;
+	}
+
 	if (req.path == "/state")
 		return HttpResponse::Json(Snapshot::Current());
 
