@@ -671,6 +671,31 @@ function renderStat(s) {
       }
     });
 
+    // Companions. The Pip-Boy will not show you this at all -- their health is only on the
+    // companion wheel, which you open mid-fight, which is exactly when you cannot read it.
+    const crew = s.companions || [];
+    const crewHead = document.getElementById("crewhead");
+    const crewList = document.getElementById("companions");
+    crewHead.hidden = !crew.length;
+    crewList.hidden = !crew.length;
+
+    if (crew.length) {
+      fill(crewList, crew.map((c) => `${c.name}:${Math.round(c.hp)}:${Math.round(c.distance / 200)}`).join(","), (n) => {
+        for (const mate of crew) {
+          const li = row();
+          li.appendChild(el("span", "name", mate.name));
+          // Far enough away that they have probably lost you.
+          if (mate.distance > 4000) li.appendChild(el("span", "tag", distanceText(mate.distance)));
+          const hp = el("span", "val", `${num(mate.hp)}/${num(mate.hpMax)}`);
+          const f = pct(mate.hp, mate.hpMax);
+          if (f <= 0.25) hp.classList.add("bad");
+          else if (f <= 0.6) hp.classList.add("warn");
+          li.appendChild(hp);
+          n.appendChild(li);
+        }
+      });
+    }
+
     const hc = document.getElementById("hardcore");
     hc.textContent = "";
     document.getElementById("survivalhead").hidden = false;
@@ -841,7 +866,13 @@ function renderInv(s) {
 
   // Hotkey bindings are part of the key: without them, pinning an item changed the settings but
   // the list never rebuilt, so the tag did not appear until something else forced a redraw.
-  const key = sub.inv + "|" + needle + "|" + invSort
+  // Ammo counts appear on weapon rows, so they belong in the key -- firing a few shots must
+  // redraw the list, not leave a stale count sitting there.
+  const ammoKey = sub.inv === "weapons"
+    ? ((s.inventory || {}).ammo || []).map((a) => a.name + a.count).join(",")
+    : "";
+
+  const key = sub.inv + "|" + needle + "|" + invSort + "|" + ammoKey
     + "|" + HOTKEY_SLOTS.map((k) => (settings.hotkeys[k] || {}).id || "").join(",")
     + "|" + bucket.map((i) =>
     `${i.id}:${i.count}:${i.equipped ? 1 : 0}:${Math.round((i.health || 0) * 100)}`).join(",");
@@ -859,6 +890,18 @@ function renderInv(s) {
       const art = icon(item.icon);
       if (art) li.appendChild(art);
       li.appendChild(el("span", "name", item.name));
+
+      // How many rounds you have for this weapon, on its own row. Without it, deciding what to
+      // carry means selecting each gun in turn and reading its ammo type off the card.
+      if (sub.inv === "weapons" && item.ammoName) {
+        const round = ((s.inventory || {}).ammo || []).find((a) => a.name === item.ammoName);
+        const left = round ? round.count : 0;
+        const tag = el("span", "tag", "⁃" + num(left));
+        tag.title = `${num(left)} × ${item.ammoName}`;
+        if (left === 0) tag.classList.add("bad");
+        else if (left < (item.clip || 10)) tag.classList.add("warn");
+        li.appendChild(tag);
+      }
 
       const bound = hotkeyFor(item.id);
       if (bound) li.appendChild(el("span", "hotkeytag", bound));

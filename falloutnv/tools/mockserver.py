@@ -269,6 +269,13 @@ def snapshot():
         "stats": [{"group": g, "name": n, "value": v} for g, n, v in STATS],
         "radio": [{"id": i, "name": n, "inRange": r, "active": i == world["station"]}
                   for i, n, r in RADIO],
+        # One healthy, one badly hurt, one wandered off -- so every state the row can show gets
+        # exercised rather than just the happy one.
+        "companions": [
+            {"name": "Boone", "hp": 310, "hpMax": 340, "distance": 420},
+            {"name": "ED-E", "hp": 38, "hpMax": 210, "distance": 900},
+            {"name": "Rex", "hp": 180, "hpMax": 200, "distance": 12000},
+        ],
         "map": {
             "world": "Mojave Wasteland",
             "cell": "Goodsprings",

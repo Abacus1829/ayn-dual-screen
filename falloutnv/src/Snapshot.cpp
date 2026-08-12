@@ -645,6 +645,54 @@ namespace
 	}
 }
 
+// ── companions ──────────────────────────────────────────────────────────────
+
+namespace
+{
+	/// Whoever is travelling with you, and how they are holding up.
+	///
+	/// PlayerCharacter keeps its teammates in a mapped list, so this needs no offset hunting. It
+	/// is the one thing the Pip-Boy itself will not tell you -- companion health is only visible
+	/// from the companion wheel, mid-fight, which is exactly when you cannot look at it.
+	void WriteCompanions(Json& j, PlayerCharacter* player)
+	{
+		j.BeginArray("companions");
+
+		int written = 0;
+		for (auto iter = player->teammates.Begin(); !iter.End(); ++iter)
+		{
+			if (written >= 8)
+				break;                       // more than this and something else is wrong
+
+			Actor* mate = iter.Get();
+			if (!mate)
+				continue;
+
+			const char* name = mate->GetTheName();
+			if (!name || !*name)
+				continue;
+
+			float hp = mate->avOwner.Fn_03(eActorVal_Health);
+			float hpMax = mate->avOwner.Fn_08(eActorVal_Health);
+
+			// Distance, so you know whether they are still with you or stuck on a rock somewhere.
+			float dx = mate->posX - player->posX;
+			float dy = mate->posY - player->posY;
+
+			j.BeginObject()
+				.Str("name", name)
+				.Num("hp", hp, 0)
+				.Num("hpMax", hpMax, 0)
+				.Num("distance", std::sqrt(dx * dx + dy * dy), 0)
+				.EndObject();
+
+			++written;
+		}
+
+		j.EndArray();
+	}
+}
+
 // ── radio ───────────────────────────────────────────────────────────────────
 
 namespace
@@ -1113,6 +1161,7 @@ namespace
 		WriteEffects(j, player);
 
 		WriteRadio(j, player, g_tunedStation);
+		WriteCompanions(j, player);
 
 		// Notes and holotapes, pulled back out of the inventory walk above.
 		j.BeginArray("notes");
