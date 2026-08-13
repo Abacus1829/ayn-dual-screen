@@ -69,3 +69,30 @@ already finished; commands from the page go into a concurrent queue and are drai
 Reading the game from a request thread will appear to work on your machine and corrupt somebody else's
 save. If a change needs new data on the second screen, add it to the snapshot — do not reach for it
 from the server.
+
+## The one rule that matters when releasing
+
+**Every GitHub release must carry all five assets, under exactly these names:**
+
+```
+AynDualScreen-Stardew.zip
+AynDualScreen-Terraria.tmod
+AynDualScreen-Minecraft-mc1.21.1.jar
+AynDualScreen-FalloutNV.zip
+AynDualScreen-App.apk
+```
+
+The README's download links are `releases/latest/download/<name>`, which GitHub serves from whichever
+release is newest. So a release that carries only the project you happened to change becomes "latest"
+and **every download link in the README breaks at once** — including the four projects you didn't
+touch. There is no warning; the links simply start returning 404.
+
+This has happened. Publishing three Stardew-only releases in a row took down all five links until
+somebody tried to download one.
+
+Version numbers go in the release title and the notes, never in these filenames — a version-stamped
+filename can't be linked to from a README that doesn't know the version yet. Keep an extra
+version-stamped copy alongside if you want one, but the stable name has to be there too.
+
+Re-uploading the unchanged four is cheap: pull them off the previous release with
+`gh release download <previous-tag>` and upload them again with the new one.
