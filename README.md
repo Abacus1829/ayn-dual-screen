@@ -25,10 +25,14 @@ from here:
 | **Minecraft** (Forge 1.21.1) | [`.jar`](https://github.com/Abacus1829/ayn-dual-screen/releases/latest/download/AynDualScreen-Minecraft-mc1.21.1.jar) | — | [`minecraft/`](minecraft) | 27302 |
 | **Fallout: New Vegas** (xNVSE) | [`.zip`](https://github.com/Abacus1829/ayn-dual-screen/releases/latest/download/AynDualScreen-FalloutNV.zip) | — | [`falloutnv/`](falloutnv) | 27303 |
 | **Skyrim Special Edition** (SKSE64) | *not released yet* | — | [`skyrimse/`](skyrimse) | 27305 |
-| The Android app *(optional)* | [`.apk`](https://github.com/Abacus1829/ayn-dual-screen/releases/latest/download/AynDualScreen-App.apk) | — | [`android/`](android) | — |
+| The Android app *(optional)* | [`.apk`](https://github.com/Abacus1829/ayn-dual-screen/raw/main/dist/latest/AynDualScreen-App.apk) | — | [`android/`](android) | — |
 
 Install steps for each are in the [release notes](https://github.com/Abacus1829/ayn-dual-screen/releases/latest).
 Every file there is built from the source in this repository.
+
+The app's `.apk` comes straight out of `dist/latest/` on `main` rather than off a release, so it is
+whatever was last built and pushed — no waiting for a tagged release to try a new build. The mods
+still come from releases, where their install notes live.
 
 The app is **optional** — any browser pointed at the address the mod prints gives you the same second
 screen.

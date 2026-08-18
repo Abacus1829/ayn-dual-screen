@@ -253,7 +253,9 @@ class AppearanceActivity : AppCompatActivity() {
         binding.toolToggles.removeAllViews()
         val hidden = settings.hiddenTools
 
-        for (tool in Tool.entries) {
+        // Tools flagged hidden are not on the grid to begin with, so a checkbox promising to put
+        // one there would simply lie.
+        for (tool in Tool.entries.filter { !it.hidden }) {
             val check = CheckBox(this).apply {
                 text = getString(tool.label)
                 isChecked = tool.id !in hidden
@@ -339,7 +341,9 @@ class AppearanceActivity : AppCompatActivity() {
     /** A miniature of the home grid, in the chosen icon set and column count. */
     private fun buildPreviewGrid(accent: Int) {
         binding.previewGrid.removeAllViews()
-        val shown = Tool.entries.filter { it.id !in settings.hiddenTools }.take(settings.gridColumns)
+        val shown = Tool.entries
+            .filter { it.id !in settings.hiddenTools && !it.hidden }
+            .take(settings.gridColumns)
 
         for (tool in shown) {
             val cell = LinearLayout(this).apply {

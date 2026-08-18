@@ -34,6 +34,10 @@ class MacrosActivity : AppCompatActivity() {
     private lateinit var settings: Settings
     private lateinit var store: MacroStore
 
+    /** Tools a macro can jump to. Hidden ones are left out: a shortcut to a tile nobody can see
+     *  is a confusing thing to offer in a picker. */
+    private val macroTools = Tool.entries.filter { !it.hidden }
+
     private var suppressSpinner = false
     private var moving = false
 
@@ -281,7 +285,7 @@ class MacrosActivity : AppCompatActivity() {
             val kind = kinds[kindSpinner.selectedItemPosition]
             val fixed = when (kind) {
                 Macro.Kind.KEY -> Macro.KEYS.map { it.first }
-                Macro.Kind.TOOL -> Tool.entries.map { it.id }
+                Macro.Kind.TOOL -> macroTools.map { it.id }
                 else -> null
             }
 
@@ -291,7 +295,7 @@ class MacrosActivity : AppCompatActivity() {
             if (fixed != null) {
                 choices.adapter = ArrayAdapter(
                     this@MacrosActivity, android.R.layout.simple_spinner_item,
-                    if (kind == Macro.Kind.TOOL) Tool.entries.map { getString(it.label) } else fixed
+                    if (kind == Macro.Kind.TOOL) macroTools.map { getString(it.label) } else fixed
                 ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
                 val at = fixed.indexOf(existing?.payload).takeIf { it >= 0 } ?: 0
                 choices.setSelection(at)
@@ -320,7 +324,7 @@ class MacrosActivity : AppCompatActivity() {
                 val kind = kinds[kindSpinner.selectedItemPosition]
                 val value = when (kind) {
                     Macro.Kind.KEY -> Macro.KEYS.getOrNull(choices.selectedItemPosition)?.first.orEmpty()
-                    Macro.Kind.TOOL -> Tool.entries.getOrNull(choices.selectedItemPosition)?.id.orEmpty()
+                    Macro.Kind.TOOL -> macroTools.getOrNull(choices.selectedItemPosition)?.id.orEmpty()
                     else -> payload.text.toString()
                 }
 
