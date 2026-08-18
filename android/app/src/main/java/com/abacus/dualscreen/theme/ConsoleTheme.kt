@@ -282,7 +282,7 @@ data class ConsoleTheme(
             tileLabel = 0xFF32404E.toInt(),
             tileSelected = 0xFF4F9BD8.toInt(),
             columns = 3,
-            tileScale = 0.80f,
+            tileScale = 0.92f,      // big chunky tiles: a DS menu has very few, very large ones
             showLabels = true,
         )
 
@@ -309,12 +309,12 @@ data class ConsoleTheme(
             showBattery = true,
             tileFace = 0xFFFFFFFF.toInt(),
             tileBorder = 0xFFE0E0E0.toInt(),
-            tileCorner = 14,
+            tileCorner = 20,
             tileGlyph = 0xFF4A4A4A.toInt(),
             tileLabel = 0xFF3C3C3C.toInt(),
             tileSelected = 0xFF29B6F6.toInt(),
             columns = 5,
-            tileScale = 0.80f,
+            tileScale = 0.86f,
             showLabels = true,
             trayBackground = 0xFFFFFFFF.toInt(),
             trayIcon = 0xFF2196F3.toInt(),
@@ -337,11 +337,13 @@ data class ConsoleTheme(
             background = 0xFFE3EEF7.toInt(),
             backgroundEnd = 0xFFF7FBFD.toInt(),
             slotColor = 0xFFD2E1EE.toInt(),
-            statusBackground = 0xFFF7F9FA.toInt(),
+            // No top strip at all: the Wii Menu puts its clock at the BOTTOM, and having no bar
+            // where the 3DS and Wii U have one is half of what tells the three apart at a glance.
+            statusBackground = 0,
             statusText = 0xFF46545F.toInt(),
             statusPill = 0,
             showSignal = false,
-            showDate = true,
+            showDate = false,
             showBattery = false,        // a Wii is mains-powered; a battery readout would be a lie
             tileFace = 0xFFF2F5F7.toInt(),
             tileBorder = 0xFFC9D3D9.toInt(),

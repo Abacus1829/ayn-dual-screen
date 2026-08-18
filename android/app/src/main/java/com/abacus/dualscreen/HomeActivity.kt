@@ -253,7 +253,11 @@ class HomeActivity : AppCompatActivity() {
             val cell = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                setPadding(0, dp(14), 0, dp(12))
+                // Height follows the skin. tileScale was being read by nothing on this screen, so
+                // a DS Lite's three chunky tiles and a Wii U's five small ones came out identical
+                // -- which is most of why the skins still looked alike.
+                val pad = if (skinned) skin.tileScale else 1f
+                setPadding(0, dp((16 * pad).toInt()), 0, dp((14 * pad).toInt()))
                 background = if (skinned) {
                     com.abacus.dualscreen.theme.ConsoleSkin.tileFace(this@HomeActivity, skin)
                 } else {
@@ -283,7 +287,9 @@ class HomeActivity : AppCompatActivity() {
 
             val glyph = TextView(this).apply {
                 text = Appearance.iconFor(settings, tool)
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, if (settings.iconSet == "text") 13f else 22f)
+                // Glyphs scale with the skin too, so a chunky-tile skin gets a chunky icon.
+                val base = if (settings.iconSet == "text") 13f else 22f
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, if (skinned) base * skin.tileScale * 1.15f else base)
                 setTextColor(
                     when {
                         // A skin's glyph colour, not the app accent: dark glyphs on a 3DS's white
@@ -451,6 +457,20 @@ class HomeActivity : AppCompatActivity() {
     }
 
     /**
+     * Remove EVERY view carrying a tag, not just the first one.
+     *
+     * findViewWithTag returns one match. The tray adds two views under the same tag -- a hairline
+     * and the strip itself -- so a single removal per rebuild left one behind, and buildTools()
+     * runs on every resume: the bars stacked up and marched off the bottom of the screen.
+     */
+    private fun removeTagged(parent: ViewGroup, tag: String) {
+        while (true) {
+            val found = parent.findViewWithTag<View>(tag) ?: return
+            parent.removeView(found)
+        }
+    }
+
+    /**
      * The strip of round shortcuts along the bottom, as the Wii and Wii U have.
      *
      * Not decoration: on those machines the tray is where the things you actually use live, so it
@@ -462,7 +482,7 @@ class HomeActivity : AppCompatActivity() {
      */
     private fun addTray(skin: com.abacus.dualscreen.theme.ConsoleTheme) {
         val parent = binding.toolGrid.parent as? ViewGroup ?: return
-        parent.findViewWithTag<View>(TRAY_TAG)?.let { parent.removeView(it) }
+        removeTagged(parent, TRAY_TAG)
 
         if (skin.trayBackground == 0) return
 
@@ -582,7 +602,7 @@ class HomeActivity : AppCompatActivity() {
     private fun addStatusBar(skin: com.abacus.dualscreen.theme.ConsoleTheme) {
         val parent = binding.toolGrid.parent as? ViewGroup ?: return
 
-        parent.findViewWithTag<View>(STATUS_BAR_TAG)?.let { parent.removeView(it) }
+        removeTagged(parent, STATUS_BAR_TAG)
 
         val battery = runCatching {
             getSystemService(android.os.BatteryManager::class.java)
