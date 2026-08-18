@@ -76,6 +76,57 @@ class ThemeStore(private val context: Context) {
     }
 
     /**
+     * The theme's background image, ready to use, or null.
+     *
+     * Tiled or stretched as the theme asked. Tiling is what a repeating pattern wants and
+     * stretching is what a photograph wants, and getting it wrong makes either look broken — so it
+     * is the theme's call, not a guess from the image size.
+     */
+    fun background(theme: ConsoleTheme): Drawable? {
+        if (theme.iconFolder.isEmpty() || theme.backgroundImage.isEmpty()) return null
+
+        val file = File(theme.iconFolder, theme.backgroundImage).takeIf { it.isFile } ?: return null
+
+        return runCatching {
+            val bitmap = BitmapFactory.decodeFile(file.path) ?: return null
+
+            if (theme.backgroundTiled) {
+                BitmapDrawable(context.resources, bitmap).apply {
+                    setTileModeXY(android.graphics.Shader.TileMode.REPEAT, android.graphics.Shader.TileMode.REPEAT)
+                }
+            } else {
+                BitmapDrawable(context.resources, bitmap).apply {
+                    gravity = android.view.Gravity.FILL
+                }
+            }
+        }.getOrNull()
+    }
+
+    /**
+     * The theme's typeface: a file in its folder if there is one, otherwise a platform family name,
+     * otherwise null to leave the app's own font alone.
+     *
+     * A broken font file returns null rather than throwing. A theme with a bad .ttf should look
+     * ordinary, not take the home screen down.
+     */
+    fun typeface(theme: ConsoleTheme): android.graphics.Typeface? {
+        if (theme.fontFile.isEmpty()) return null
+
+        if (theme.iconFolder.isNotEmpty()) {
+            val file = File(theme.iconFolder, theme.fontFile)
+            if (file.isFile) {
+                return runCatching { android.graphics.Typeface.createFromFile(file) }.getOrNull()
+            }
+        }
+
+        // Not a file — treat it as a family name, which is how a theme asks for "monospace"
+        // without shipping one.
+        return runCatching {
+            android.graphics.Typeface.create(theme.fontFile, android.graphics.Typeface.NORMAL)
+        }.getOrNull()
+    }
+
+    /**
      * Lay down the folder, a README and a working example, once.
      *
      * Called when the theme picker is first opened rather than at startup: an app that creates

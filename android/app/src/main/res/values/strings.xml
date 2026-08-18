@@ -102,6 +102,7 @@
     <string name="tool_themes">Themes</string>
 
     <!-- Themes -->
+    <string name="appearance_console_themes">Console themes — 3DS, Vita, PSP…</string>
     <string name="themes_title">Console themes</string>
     <string name="themes_blurb">Dress the home screen as a handheld. Tap one to switch; tap Ayn Dual Screen to go back to the app\'s own look.</string>
     <string name="theme_applied">%1$s applied</string>

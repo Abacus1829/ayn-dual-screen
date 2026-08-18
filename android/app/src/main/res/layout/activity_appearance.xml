@@ -108,6 +108,20 @@
                     android:layout_marginTop="10dp"
                     android:orientation="horizontal" />
 
+                <!--
+                    Console themes live here as well as on their own tile.
+                    They belong under Appearance because that is where anyone looking to
+                    change how the app looks goes first; reachable only from a separate
+                    tile was the inconsistency.
+                -->
+                <Button
+                    android:id="@+id/themesButton"
+                    style="@style/Action"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/appearance_console_themes" />
+
                 <Button
                     android:id="@+id/previewButton"
                     android:layout_width="match_parent"

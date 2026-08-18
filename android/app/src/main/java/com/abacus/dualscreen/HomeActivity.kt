@@ -203,8 +203,10 @@ class HomeActivity : AppCompatActivity() {
          * and every one of those would then need fixing twice. A skin decides how a tile looks; it
          * has no business deciding what a tile does.
          */
-        val skin = com.abacus.dualscreen.theme.ThemeStore(this).byId(settings.consoleTheme)
+        val themes = com.abacus.dualscreen.theme.ThemeStore(this)
+        val skin = themes.byId(settings.consoleTheme)
         val skinned = skin.id != "default"
+        val skinFont = if (skinned) themes.typeface(skin) else null
 
         binding.toolGrid.columnCount =
             if (skinned) skin.columns else settings.gridColumns.coerceIn(2, 5)
@@ -212,10 +214,18 @@ class HomeActivity : AppCompatActivity() {
         if (skinned) {
             // The skin owns the whole surface, not just the tiles — a 3DS on a black page would
             // look like a mistake rather than a 3DS, and a Vita needs its blue gradient.
-            binding.root.background = com.abacus.dualscreen.theme.ConsoleSkin.backdrop(skin)
+            // A theme's own wallpaper wins over its colours — for most 3DS and Luma themes the
+            // wallpaper IS the theme, and the palette exists to sit on top of it.
+            val store = com.abacus.dualscreen.theme.ThemeStore(this)
+            binding.root.background = store.background(skin)
+                ?: com.abacus.dualscreen.theme.ConsoleSkin.backdrop(skin)
+
             binding.backgroundImage.visibility = View.GONE
             addStatusBar(skin)
         }
+
+        // Do this after the status bar exists, so it survives the sweep that hides everything else.
+        applyChrome(skinned)
 
         val accent = Appearance.accentOf(settings)
         val hidden = settings.hiddenTools
@@ -283,6 +293,10 @@ class HomeActivity : AppCompatActivity() {
                 gravity = Gravity.CENTER
             }
 
+            // A theme's font, if it ships one. Applied to the glyph as well as the label because a
+            // themed icon font is a real thing people do.
+            skinFont?.let { glyph.typeface = it }
+
             val label = TextView(this).apply {
                 // A live dot on the FTP tile while the server is up. Without it the only way to
                 // know is to open the screen, and "did I leave that running?" is a question worth
@@ -315,6 +329,40 @@ class HomeActivity : AppCompatActivity() {
                 })
             }
         }
+    }
+
+    /**
+     * With a skin on, the home screen IS the console menu — everything else goes.
+     *
+     * Recolouring the app's own layout was never going to look like a 3DS: the header, the connect
+     * card, the address fields and the status row are all still there, and a console home menu has
+     * none of that. So when a skin is chosen every sibling of the tool grid is hidden, leaving the
+     * status strip and the tiles, which is what the hardware actually shows.
+     *
+     * Hidden by walking the children rather than by id, because several of those containers have no
+     * id at all — and because a layout that grows another card later should not need this function
+     * updated to keep working.
+     *
+     * Everything is restored when the skin is turned off: visibility is the only thing touched.
+     */
+    private fun applyChrome(skinned: Boolean) {
+        val parent = binding.toolGrid.parent as? ViewGroup ?: return
+
+        for (index in 0 until parent.childCount) {
+            val child = parent.getChildAt(index)
+
+            val keep = child === binding.toolGrid || child.tag == STATUS_BAR_TAG
+            child.visibility = if (!skinned || keep) View.VISIBLE else View.GONE
+        }
+
+        // The scroller's own padding frames the app's cards; a console menu wants the grid to run
+        // to the edges.
+        (parent as? ViewGroup)?.setPadding(
+            if (skinned) 0 else dp(16),
+            if (skinned) 0 else dp(16),
+            if (skinned) 0 else dp(16),
+            if (skinned) 0 else dp(16),
+        )
     }
 
     /**

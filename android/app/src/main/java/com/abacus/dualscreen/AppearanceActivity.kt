@@ -60,6 +60,9 @@ class AppearanceActivity : AppCompatActivity() {
         }
         binding.resetButton.setOnClickListener { resetAll() }
         binding.previewButton.setOnClickListener { /* preview only */ }
+        binding.themesButton.setOnClickListener {
+            startActivity(android.content.Intent(this, ThemesActivity::class.java))
+        }
 
         buildSliders()
         rebuild()

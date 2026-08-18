@@ -98,7 +98,28 @@ data class ConsoleTheme(
     val trayBackground: Int = 0,
     val trayIcon: Int = Color.DKGRAY,
 
-    /** Where the user's icons live, once loaded. Never written by a theme file. */
+    /**
+     * A background image, by filename, inside the theme's own folder.
+     *
+     * The thing that makes a console theme feel like a *theme* rather than a palette: the 3DS's
+     * themes are mostly a wallpaper, and Luma users expect to drop in an image. Tiled or stretched
+     * per [backgroundTiled]. Empty means use the colours.
+     */
+    val backgroundImage: String = "",
+
+    /** Tile the image at its own size instead of stretching it to the screen. */
+    val backgroundTiled: Boolean = false,
+
+    /**
+     * A font file in the theme's folder — "font.ttf" — or a platform family name such as
+     * "monospace" or "sans-serif-condensed".
+     *
+     * A file wins if it exists; otherwise the string is handed to the platform, so a theme can ask
+     * for a stock family without shipping anything.
+     */
+    val fontFile: String = "",
+
+    /** Where the user's icons, image and font live. Never written by a theme file. */
     val iconFolder: String = "",
 
     /** True for the four shipped skins; false for anything read off the filesystem. */
@@ -450,6 +471,9 @@ data class ConsoleTheme(
                 showLabels = root.optBoolean("showLabels", base.showLabels),
                 trayBackground = color("trayBackground", base.trayBackground),
                 trayIcon = color("trayIcon", base.trayIcon),
+                backgroundImage = root.optString("backgroundImage", ""),
+                backgroundTiled = root.optBoolean("backgroundTiled", false),
+                fontFile = root.optString("font", ""),
                 iconFolder = iconFolder,
                 builtIn = false,
             )
@@ -468,7 +492,12 @@ data class ConsoleTheme(
               "subtitle": "an example to copy",
 
               "_icons": "Put PNGs in a folder with the same name as this file, minus .json.",
-              "_iconNames": "screen.png notes.png volume.png brightness.png appearance.png keyboard.png mirror.png macros.png ftp.png stream.png",
+              "_iconNames": "screen.png notes.png volume.png brightness.png appearance.png keyboard.png mirror.png macros.png ftp.png stream.png themes.png",
+
+              "_assets": "background.png and font.ttf go in that same folder.",
+              "backgroundImage": "background.png",
+              "backgroundTiled": false,
+              "font": "font.ttf",
 
               "background":       "#F2F2F2",
               "slotColor":        "#E4E4E4",
