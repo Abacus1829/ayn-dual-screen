@@ -103,7 +103,7 @@
     <string name="beta_suffix">(beta)</string>
 
     <!-- Themes -->
-    <string name="appearance_console_themes">Console themes (beta) — 3DS, Vita, PSP…</string>
+    <string name="appearance_console_themes">Console themes (beta) — handheld and console looks</string>
     <string name="themes_title">Console themes</string>
     <string name="themes_blurb">Beta. These skins work but are rough and still changing. Pick Ayn Dual Screen at any time to return to the standard look.</string>
     <string name="theme_applied">%1$s applied</string>
@@ -137,7 +137,7 @@
 
     <!-- FTP -->
     <string name="ftp_title">FTP server</string>
-    <string name="ftp_blurb">Shares this device over the network so a PC can browse and copy its files, the way ftpd does on a 3DS. Plain FTP, on your own network — no encryption.</string>
+    <string name="ftp_blurb">Shares this device over the network so a PC can browse and copy its files, the way a homebrew FTP server does on a handheld console. Plain FTP, on your own network — no encryption.</string>
     <string name="ftp_start">Start server</string>
     <string name="ftp_stop">Stop server</string>
     <string name="ftp_off">Server is off</string>

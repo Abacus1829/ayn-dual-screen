@@ -205,46 +205,46 @@ $c = New-Canvas $Width $Height
 # No vignette on the light skins: a soft radial over a near-white field shows as visible
 # concentric banding at 8-bit colour, which looks like a rendering fault rather than depth.
 Set-Gradient $c.Graphics $Width $Height "#FAFAFA" "#EBEBEB"
-Save-Art $c "3ds"
+Save-Art $c "clamshell"
 
 # ── Wii U: brighter and cooler than the 3DS, same restraint ─────────────────
 $c = New-Canvas $Width $Height
 Set-Gradient $c.Graphics $Width $Height "#FDFBF6" "#F1EEE7"
-Save-Art $c "wiiu"
+Save-Art $c "tabletpad"
 
 # ── Wii: white with the faintest blue toward the bottom ─────────────────────
 $c = New-Canvas $Width $Height
 Set-Gradient $c.Graphics $Width $Height "#E1EDF8" "#F8FBFD"
-Save-Art $c "wii"
+Save-Art $c "channels"
 
 # ── Switch: charcoal, strong vignette, nothing else ─────────────────────────
 $c = New-Canvas $Width $Height
 # Flat, not a gradient. A soft radial or a long ramp over a dark flat field bands into visible
 # rings at 8-bit colour -- which is exactly what the first Switch background did. Flat cannot band.
 Set-Solid $c.Graphics $Width $Height "#2B2B2B"
-Save-Art $c "switch"
+Save-Art $c "hybrid"
 
 # ── PSP: the XMB ribbon, but as atmosphere rather than as a subject ─────────
 $c = New-Canvas $Width $Height
 Set-Gradient $c.Graphics $Width $Height "#0C1A38" "#05080F"
 Add-Waves $c.Graphics $Width $Height "#4E8FE0" 18 5
-Save-Art $c "psp"
+Save-Art $c "crossbar"
 
 # ── Vita: the blue wash. A few soft bubbles, not a bubble bath ──────────────
 $c = New-Canvas $Width $Height
 Set-Gradient $c.Graphics $Width $Height "#2A7CC0" "#A6D6EF"
 Add-Bubbles $c.Graphics $Width $Height "#FFFFFF" 10 9
-Save-Art $c "vita"
+Save-Art $c "bubbles"
 
 # ── PlayStation: dark blue with one slow wave ──────────────────────────────
 $c = New-Canvas $Width $Height
 Set-Gradient $c.Graphics $Width $Height "#191D2C" "#2C3350"
 Add-Waves $c.Graphics $Width $Height "#8FA0D0" 12 3
-Save-Art $c "ps1"
+Save-Art $c "greybox"
 
 # ── DS Lite: silver, almost flat ───────────────────────────────────────────
 $c = New-Canvas $Width $Height
 Set-Gradient $c.Graphics $Width $Height "#D7DDE4" "#EEF1F4"
-Save-Art $c "dslite"
+Save-Art $c "silver"
 
 Write-Host "Done." -ForegroundColor Green

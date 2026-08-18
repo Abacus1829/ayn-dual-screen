@@ -49,7 +49,7 @@ object ConsoleSkin {
         }
 
         // The tile edge, from the screen width and the theme's column count. Measured rather than
-        // fixed so a 3DS skin looks the same on the Thor's panel as on a phone.
+        // fixed so a skin looks the same on the Thor's panel as on a phone.
         val screen = context.resources.displayMetrics.widthPixels
         val cell = (screen - dp(context, 20)) / theme.columns
         val tile = (cell * theme.tileScale).toInt()
@@ -81,8 +81,8 @@ object ConsoleSkin {
             setOnClickListener { onTap(tool) }
         }
 
-        // The face: a rounded rectangle with a hairline border, which is what makes a 3DS tile read
-        // as a 3DS tile rather than as a flat square.
+        // The face: a rounded rectangle with a hairline border, which is what makes a console tile read
+        // as one rather than as a flat square.
         val face = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             setColor(theme.tileFace)
@@ -143,7 +143,7 @@ object ConsoleSkin {
     /**
      * The status bar across the top: signal, connection pill, date, battery.
      *
-     * Each piece is optional because each console shows a different subset — a DS has no status bar
+     * Each piece is optional because each console shows a different subset — the sparsest skins have no status bar
      * at all, and a theme that turns all three off gets a bare strip rather than a broken one.
      */
     fun buildStatusBar(context: Context, theme: ConsoleTheme, connection: String, battery: Int): View? {
@@ -195,7 +195,7 @@ object ConsoleSkin {
     }
 
     /**
-     * The pale empty slots a 3DS, Wii and Wii U show behind their apps.
+     * The pale empty slots the clamshell, channel and tablet skins show behind their apps.
      *
      * Filled to the end of the row rather than only behind real tiles: on the hardware the grid is
      * a fixed shape and the empty places are visible, which is most of what makes it read as a
@@ -228,9 +228,9 @@ object ConsoleSkin {
     /**
      * One tile's face: rounded rectangle, hairline border, theme colours.
      *
-     * A transparent face is a real answer, not a missing one — the PSP draws its icons straight on
+     * A transparent face is a real answer, not a missing one — the crossbar skin draws its icons straight on
      * the background with nothing behind them, and a very large radius turns the square into the
-     * Vita's round bubble.
+     * bubble skin's round icon.
      */
     fun tileFace(context: Context, theme: ConsoleTheme): GradientDrawable =
         GradientDrawable().apply {

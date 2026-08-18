@@ -7,14 +7,14 @@ import org.json.JSONObject
  * A console skin: what the home screen looks like when it is pretending to be a handheld.
  *
  * This is a layer above [com.abacus.dualscreen.Appearance], which decides accent, font and corner
- * radius. A skin decides the *shape* of the thing — a 3DS home menu is not the stock grid with
+ * radius. A skin decides the *shape* of the thing — a twin-screen handheld menu is not the stock grid with
  * different colours, it is white tiles with coloured glyphs on a pale grid, a status bar with
  * signal and battery, and a folder row above it.
  *
  * ## Why it is data rather than code
  *
  * Because the second, third and fourth skins are the same screen with different numbers. Writing
- * the 3DS one as a layout would mean writing a PSP one as another layout, and a Vita one as a
+ * the clamshell one as a layout would mean writing a crossbar one as another layout, and a bubble one as a
  * third. Written as data, each new console is a few dozen values — and the same fact makes user
  * themes possible at all: if a built-in skin is just a [ConsoleTheme], a user's file can be one too.
  *
@@ -46,13 +46,13 @@ data class ConsoleTheme(
     /**
      * The far end of a vertical gradient, or 0 for a flat fill.
      *
-     * Added because two of the shipped skins genuinely need it: a Vita home screen is a blue wash
+     * Added because two of the shipped skins genuinely need it: a bubble-style home screen is a blue wash
      * from deep at the top to pale at the bottom, and rendering it flat loses most of what makes it
      * recognisable. Themes that want a plain colour simply leave it out.
      */
     val backgroundEnd: Int = 0,
 
-    /** The faint grid of empty tile slots a 3DS draws behind its apps. 0 to omit it. */
+    /** The faint grid of empty tile slots those skins draw behind their apps. 0 to omit it. */
     val slotColor: Int = 0,
 
     // ── the status bar ──────────────────────────────────────────────────────
@@ -61,7 +61,7 @@ data class ConsoleTheme(
     val statusBackground: Int = 0,
     val statusText: Int = Color.BLACK,
 
-    /** The blue pill a 3DS puts around the connection name. 0 for none. */
+    /** The blue pill the clamshell skin puts around the connection name. 0 for none. */
     val statusPill: Int = 0,
 
     /** Show signal bars, the date, and a battery. Each console shows a different subset. */
@@ -76,33 +76,33 @@ data class ConsoleTheme(
     val tileBorder: Int = 0,
     val tileCorner: Int = 8,
 
-    /** Glyph and label colours. A 3DS puts dark glyphs on white; a PSP does the opposite. */
+    /** Glyph and label colours. The clamshell skin puts dark glyphs on white; the crossbar skin does the opposite. */
     val tileGlyph: Int,
     val tileLabel: Int,
 
-    /** Highlight around the selected tile — the 3DS's green corner brackets. */
+    /** Highlight around the selected tile — the clamshell skin's green corner brackets. */
     val tileSelected: Int,
 
-    /** Tiles across the grid. A 3DS shows four, a Vita shows three big ones. */
+    /** Tiles across the grid. Four for the clamshell, three big ones for the bubble skin. */
     val columns: Int = 4,
 
     /** Tile edge as a fraction of the column width, so tiles can be square-ish or roomy. */
     val tileScale: Float = 0.78f,
 
-    /** Draw the label under the tile at all. A Vita puts names under bubbles; a PSP does not. */
+    /** Draw the label under the tile at all. The bubble skin puts names under its icons; the crossbar skin does not. */
     val showLabels: Boolean = true,
 
     // ── the bottom bar ──────────────────────────────────────────────────────
 
-    /** The strip of folder icons a 3DS keeps along the top of its bottom screen. 0 for none. */
+    /** The strip of folder icons the console skins keep along the bottom. 0 for none. */
     val trayBackground: Int = 0,
     val trayIcon: Int = Color.DKGRAY,
 
     /**
      * A background image, by filename, inside the theme's own folder.
      *
-     * The thing that makes a console theme feel like a *theme* rather than a palette: the 3DS's
-     * themes are mostly a wallpaper, and Luma users expect to drop in an image. Tiled or stretched
+     * The thing that makes a console theme feel like a *theme* rather than a palette: these skins'
+     * are mostly a wallpaper, and people expect to drop their own image in. Tiled or stretched
      * per [backgroundTiled]. Empty means use the colours.
      */
     val backgroundImage: String = "",
@@ -150,18 +150,18 @@ data class ConsoleTheme(
         )
 
         /**
-         * Nintendo 3DS home menu.
+         * Clamshell — a twin-screen handheld home menu.
          *
-         * The details that make it read as a 3DS rather than "a white theme": the pale grid of
+         * The details that make it read as that machine rather than "a white theme": the pale grid of
          * empty slots showing through behind the apps, white tiles with a hairline border and a
          * soft corner, dark glyphs, and the green corner-bracket selection. The status bar is its
          * own thing — signal bars on the left, a blue pill with the connection, the date, and a
          * battery on the right.
          */
-        val THREE_DS = ConsoleTheme(
-            id = "3ds",
-            name = "Nintendo 3DS",
-            subtitle = "Home Menu",
+        val CLAMSHELL = ConsoleTheme(
+            id = "clamshell",
+            name = "Clamshell",
+            subtitle = "Twin-screen handheld",
             background = 0xFFF2F2F2.toInt(),
             slotColor = 0xFFE4E4E4.toInt(),
             statusBackground = 0xFFF7F7F7.toInt(),
@@ -184,17 +184,17 @@ data class ConsoleTheme(
         )
 
         /**
-         * Sony PSP — the XMB.
+         * Crossbar — a horizontal media-bar menu.
          *
-         * The XMB is a cross-media bar, not a grid, and pretending otherwise would be a lie. What
+         * A cross-media bar is not a grid, and pretending otherwise would be a lie. What
          * carries across is its *look*: a deep blue-black wash, icons with no tile behind them at
          * all, and thin white labels. So the tile face is transparent, the border is off, and the
-         * columns drop to five because XMB icons are small and close together.
+         * columns drop to five because those icons are small and close together.
          */
-        val PSP = ConsoleTheme(
-            id = "psp",
-            name = "Sony PSP",
-            subtitle = "XMB",
+        val CROSSBAR = ConsoleTheme(
+            id = "crossbar",
+            name = "Crossbar",
+            subtitle = "Media bar",
             background = 0xFF0A1428.toInt(),
             slotColor = 0,
             statusBackground = 0xFF091223.toInt(),
@@ -215,19 +215,19 @@ data class ConsoleTheme(
         )
 
         /**
-         * PlayStation Vita — LiveArea bubbles.
+         * Bubbles — round icons on a blue wash.
          *
-         * Round icons on a pale blue field, three across, and no labels: the Vita puts the name
+         * Round icons on a pale blue field, three across, and no labels: the hardware puts the name
          * inside the bubble art rather than under it, so labels off is the accurate choice and the
          * tiles get bigger to compensate.
          */
-        val VITA = ConsoleTheme(
-            id = "vita",
-            name = "PS Vita",
-            subtitle = "LiveArea",
+        val BUBBLES = ConsoleTheme(
+            id = "bubbles",
+            name = "Bubbles",
+            subtitle = "Rounded deck",
 
             // The home screen is a blue wash, deep at the top and pale toward the bottom. Flat
-            // blue reads as "a blue theme"; the gradient is what reads as a Vita.
+            // blue reads as "a blue theme"; the gradient is what makes it read as that hardware.
             background = 0xFF2E7CBF.toInt(),
             backgroundEnd = 0xFF8FC7E8.toInt(),
             slotColor = 0,
@@ -237,7 +237,7 @@ data class ConsoleTheme(
             statusText = 0xFFFFFFFF.toInt(),
             statusPill = 0,
             showSignal = true,
-            showDate = false,        // the Vita bar shows the time, not the date
+            showDate = false,        // that hardware shows the time, not the date
             showBattery = true,
 
             // Round bubbles. A very large corner radius on a square is a circle.
@@ -256,16 +256,16 @@ data class ConsoleTheme(
         )
 
         /**
-         * Nintendo DS Lite — the original two-screen menu.
+         * Silver — the sparse two-screen menu of an early handheld.
          *
          * Silver-white with a soft blue wash, chunky rounded tiles and a thin blue selection. No
          * status bar: the DS menu has none, so [statusBackground] is 0 and the strip is skipped
          * entirely rather than drawn empty.
          */
-        val DS_LITE = ConsoleTheme(
-            id = "dslite",
-            name = "Nintendo DS Lite",
-            subtitle = "DS Menu",
+        val SILVER = ConsoleTheme(
+            id = "silver",
+            name = "Silver",
+            subtitle = "Twin-screen menu",
             background = 0xFFD9DEE4.toInt(),
             backgroundEnd = 0xFFEFF2F5.toInt(),
             slotColor = 0xFFC6CDD6.toInt(),
@@ -287,17 +287,17 @@ data class ConsoleTheme(
         )
 
         /**
-         * Nintendo Wii U — the GamePad home menu.
+         * Tablet Pad — a living-room console tablet menu.
          *
-         * Close cousin of the 3DS and worth keeping distinct: the field is lighter and faintly warm
+         * Close cousin of the clamshell skin and worth keeping distinct: the field is lighter and faintly warm
          * rather than flat grey, the tiles are larger and softer with barely any border, there are
          * five across instead of four, and the empty slots behind them are more visible. The blue
-         * selection is the Wii U's, not the 3DS's green.
+         * selection is blue, not the clamshell skin's green.
          */
-        val WII_U = ConsoleTheme(
-            id = "wiiu",
-            name = "Nintendo Wii U",
-            subtitle = "GamePad menu",
+        val TABLET_PAD = ConsoleTheme(
+            id = "tabletpad",
+            name = "Tablet Pad",
+            subtitle = "Living-room tablet",
             background = 0xFFFDFBF6.toInt(),
             backgroundEnd = 0xFFF2EFE8.toInt(),
             slotColor = 0xFFE7E2D7.toInt(),
@@ -321,30 +321,30 @@ data class ConsoleTheme(
         )
 
         /**
-         * Nintendo Wii — the channel grid.
+         * Channels — a grid of channel tiles.
          *
-         * The Wii Menu rather than the black System Settings screens, because the menu is the part
+         * The channel grid rather than the dark settings screens, because the grid is the part
          * that is a home screen. Near-white field, channel tiles in the palest grey with a
          * blue-grey hairline, four across, and the empty channels showing faintly behind them.
          *
-         * Distinct from the Wii U despite the family resemblance: the Wii's tiles are wider and
+         * Distinct from the tablet skin despite the family resemblance: these tiles are wider and
          * flatter, the palette is cooler, and its selection blue is lighter.
          */
-        val WII = ConsoleTheme(
-            id = "wii",
-            name = "Nintendo Wii",
-            subtitle = "Channel menu",
+        val CHANNELS = ConsoleTheme(
+            id = "channels",
+            name = "Channels",
+            subtitle = "Channel grid",
             background = 0xFFE3EEF7.toInt(),
             backgroundEnd = 0xFFF7FBFD.toInt(),
             slotColor = 0xFFD2E1EE.toInt(),
-            // No top strip at all: the Wii Menu puts its clock at the BOTTOM, and having no bar
-            // where the 3DS and Wii U have one is half of what tells the three apart at a glance.
+            // No top strip at all: this hardware puts its clock at the BOTTOM, and having no bar
+            // where the other two have one is half of what tells the three apart at a glance.
             statusBackground = 0,
             statusText = 0xFF46545F.toInt(),
             statusPill = 0,
             showSignal = false,
             showDate = false,
-            showBattery = false,        // a Wii is mains-powered; a battery readout would be a lie
+            showBattery = false,        // mains-powered hardware; a battery readout would be a lie
             tileFace = 0xFFF2F5F7.toInt(),
             tileBorder = 0xFFC9D3D9.toInt(),
             tileCorner = 10,
@@ -359,16 +359,16 @@ data class ConsoleTheme(
         )
 
         /**
-         * Nintendo Switch — the modern home menu.
+         * Hybrid — a modern dockable console menu.
          *
          * Near-black with square-ish tiles and a thin white selection ring. Twelve games across a
          * row on the hardware, which would be unreadable here, so five: the point is the palette
          * and the shape, not the exact count.
          */
-        val SWITCH = ConsoleTheme(
-            id = "switch",
-            name = "Nintendo Switch",
-            subtitle = "Home menu",
+        val HYBRID = ConsoleTheme(
+            id = "hybrid",
+            name = "Hybrid",
+            subtitle = "Dockable console",
             background = 0xFF2D2D2D.toInt(),
             backgroundEnd = 0xFF1A1A1A.toInt(),
             slotColor = 0xFF3A3A3A.toInt(),
@@ -390,16 +390,16 @@ data class ConsoleTheme(
         )
 
         /**
-         * PlayStation Portable Go / PS1 — the older, darker XMB.
+         * Grey Box — an older, darker memory-card menu.
          *
-         * Kept apart from [PSP] because the two really do look different: this is the deep
-         * blue-to-black wave of the original PlayStation menus rather than the PSP's flatter field,
+         * Kept apart from [CROSSBAR] because the two really do look different: this is the deep
+         * blue-to-black wave of an older console menu rather than the crossbar skin's flatter field,
          * and the icons sit larger and further apart.
          */
-        val PS1 = ConsoleTheme(
-            id = "ps1",
-            name = "PlayStation",
-            subtitle = "Memory card menu",
+        val GREY_BOX = ConsoleTheme(
+            id = "greybox",
+            name = "Grey Box",
+            subtitle = "Memory-card menu",
             background = 0xFF10131C.toInt(),
             backgroundEnd = 0xFF272B3A.toInt(),
             slotColor = 0,
@@ -421,7 +421,7 @@ data class ConsoleTheme(
         )
 
         /** Every skin that ships with the app. */
-        val BUILT_IN = listOf(DEFAULT, THREE_DS, WII_U, WII, SWITCH, PSP, VITA, PS1, DS_LITE)
+        val BUILT_IN = listOf(DEFAULT, CLAMSHELL, TABLET_PAD, CHANNELS, HYBRID, CROSSBAR, BUBBLES, GREY_BOX, SILVER)
 
         fun byId(id: String?): ConsoleTheme = BUILT_IN.firstOrNull { it.id == id } ?: DEFAULT
 
