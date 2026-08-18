@@ -195,18 +195,33 @@ object ConsoleSkin {
     }
 
     /**
-     * The pale grid of empty slots a 3DS shows behind its apps.
+     * The pale empty slots a 3DS, Wii and Wii U show behind their apps.
      *
-     * Drawn as a repeating layer rather than a bitmap so it costs nothing and takes the theme's own
-     * colour. Returns null when the theme does not want one.
+     * Filled to the end of the row rather than only behind real tiles: on the hardware the grid is
+     * a fixed shape and the empty places are visible, which is most of what makes it read as a
+     * console home menu rather than a list of icons. Returns an empty list when the theme does not
+     * want any.
+     *
+     * The count is rounded up to a whole number of rows, plus one spare row, because a grid that
+     * stops exactly at the last app looks accidental.
      */
-    fun slotBackdrop(context: Context, theme: ConsoleTheme): GradientDrawable? {
-        if (theme.slotColor == 0) return null
+    fun slotFillers(context: Context, theme: ConsoleTheme, tileCount: Int): List<View> {
+        if (theme.slotColor == 0) return emptyList()
 
-        return GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            setColor(theme.slotColor)
-            cornerRadius = dp(context, theme.tileCorner).toFloat()
+        val perRow = theme.columns
+        val rows = (tileCount + perRow - 1) / perRow + 1
+        val wanted = (rows * perRow) - tileCount
+
+        return (0 until wanted).map {
+            View(context).apply {
+                // A new drawable per slot: they share state otherwise, and one of them being given
+                // a different bound later would silently change all of them.
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    setColor(theme.slotColor)
+                    cornerRadius = dp(context, theme.tileCorner).toFloat()
+                }
+            }
         }
     }
 

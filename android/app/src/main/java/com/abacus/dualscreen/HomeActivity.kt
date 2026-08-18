@@ -302,6 +302,19 @@ class HomeActivity : AppCompatActivity() {
             cell.addView(label)
             binding.toolGrid.addView(cell)
         }
+
+        // The empty slots behind the apps, for the skins that have them. Added after the tools so
+        // they fill the rest of the row and one spare row below, the way the hardware does.
+        if (skinned) {
+            for (slot in com.abacus.dualscreen.theme.ConsoleSkin.slotFillers(this, skin, tools.size)) {
+                binding.toolGrid.addView(slot, GridLayout.LayoutParams().apply {
+                    width = 0
+                    height = dp(56)
+                    columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
+                    setMargins(dp(3), dp(3), dp(3), dp(3))
+                })
+            }
+        }
     }
 
     /**
