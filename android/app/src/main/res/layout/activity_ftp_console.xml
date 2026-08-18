@@ -80,6 +80,30 @@
             android:textSize="12sp" />
 
         <Button
+            android:id="@+id/smallerButton"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="0dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:text="@string/console_smaller"
+            android:textColor="#D0D0D0"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/biggerButton"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="0dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:text="@string/console_bigger"
+            android:textColor="#D0D0D0"
+            android:textSize="12sp" />
+
+        <Button
             android:id="@+id/clearButton"
             style="?android:attr/borderlessButtonStyle"
             android:layout_width="wrap_content"

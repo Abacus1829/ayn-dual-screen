@@ -5,6 +5,7 @@ import android.os.BatteryManager
 import android.os.Bundle
 import android.os.Environment
 import android.os.StatFs
+import android.util.TypedValue
 import android.view.WindowManager
 import android.text.SpannableStringBuilder
 import android.text.Spanned
@@ -59,6 +60,43 @@ class FtpConsoleActivity : AppCompatActivity() {
             FtpService.live?.clearConsole()
             draw()
         }
+
+        // Text size, kept in settings rather than per-window: the Thor's panel and a phone want
+        // different sizes, and having to set it again every time the console opens would be worse
+        // than not offering it.
+        binding.smallerButton.setOnClickListener { resize(-1) }
+        binding.biggerButton.setOnClickListener { resize(+1) }
+
+        // Tap the title to copy the address. Same reasoning as the FTP screen: this is the number
+        // you are about to type into a PC, and it is right there.
+        binding.consoleTitle.setOnClickListener { copyAddress() }
+
+        applyTextSize()
+    }
+
+    private fun resize(by: Int) {
+        val settings = Settings(this)
+        settings.consoleTextSize = settings.consoleTextSize + by
+        applyTextSize()
+    }
+
+    private fun applyTextSize() {
+        val size = Settings(this).consoleTextSize.toFloat()
+        binding.consoleText.setTextSize(TypedValue.COMPLEX_UNIT_SP, size)
+        binding.sessionsText.setTextSize(TypedValue.COMPLEX_UNIT_SP, size)
+    }
+
+    private fun copyAddress() {
+        val address = FtpServer.localAddresses().firstOrNull() ?: return
+        val url = "ftp://$address:${Settings(this).ftpPort}"
+
+        getSystemService(android.content.ClipboardManager::class.java)?.setPrimaryClip(
+            android.content.ClipData.newPlainText("FTP address", url)
+        )
+
+        android.widget.Toast.makeText(
+            this, getString(R.string.ftp_copied, url), android.widget.Toast.LENGTH_SHORT
+        ).show()
     }
 
     override fun onResume() {

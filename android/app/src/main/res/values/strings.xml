@@ -146,6 +146,8 @@
     <string name="ftp_stop_short">Stop</string>
     <string name="ftp_copied">Copied %1$s</string>
     <string name="ftp_autostart">Start the server when the app opens</string>
+    <string name="console_smaller">A−</string>
+    <string name="console_bigger">A+</string>
     <string name="ftp_sessions">Sessions</string>
     <string name="ftp_menu">Menu</string>
     <string name="ftp_console_stopped">Server stopped.</string>
