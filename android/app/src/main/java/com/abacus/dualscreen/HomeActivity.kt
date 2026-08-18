@@ -16,6 +16,7 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.CheckBox
+import android.widget.ImageView
 import android.widget.GridLayout
 import android.widget.LinearLayout
 import android.widget.RadioButton
@@ -230,7 +231,10 @@ class HomeActivity : AppCompatActivity() {
         // not, so rather than debug a comparison, the strip is simply added after the sweep has
         // finished — nothing can hide something that is not there yet.
         applyChrome(skinned)
-        if (skinned) addStatusBar(skin)
+        if (skinned) {
+            addStatusBar(skin)
+            addTray(skin)
+        }
 
         val accent = Appearance.accentOf(settings)
         val hidden = settings.hiddenTools
@@ -317,7 +321,29 @@ class HomeActivity : AppCompatActivity() {
                 setPadding(dp(2), dp(4), dp(2), 0)
             }
 
-            cell.addView(glyph)
+            /*
+             * A theme's own icon for this tool, if it ships one.
+             *
+             * Looked up by the tool's id -- ftp.png, notes.png -- so a theme can replace as many or
+             * as few as it likes: three icons and seven glyphs is a perfectly good theme, and the
+             * ones it does not cover keep the built-in glyph rather than showing a gap.
+             *
+             * This is the half of "custom icons" that was missing. The loader existed; nothing on
+             * the home screen called it.
+             */
+            val custom = if (skinned) themes.icon(skin, tool.id) else null
+
+            if (custom != null) {
+                cell.addView(ImageView(this).apply {
+                    setImageDrawable(custom)
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    alpha = if (tool.available) 1f else 0.45f
+                    layoutParams = LinearLayout.LayoutParams(dp(40), dp(40))
+                })
+            } else {
+                cell.addView(glyph)
+            }
+
             cell.addView(label)
             binding.toolGrid.addView(cell)
         }
@@ -381,6 +407,58 @@ class HomeActivity : AppCompatActivity() {
             if (skinned) 0 else dp(16),
             if (skinned) 0 else dp(16),
         )
+    }
+
+    /**
+     * The strip of round shortcuts along the bottom, as the Wii and Wii U have.
+     *
+     * Not decoration: on those machines the tray is where the things you actually use live, so it
+     * carries real shortcuts — the second screen, the FTP server, and the theme picker — rather
+     * than a row of dead icons pretending to be a console.
+     *
+     * Only drawn for skins that ask for it ([ConsoleTheme.trayBackground] non-zero), which is why
+     * the 3DS and PSP do not get one.
+     */
+    private fun addTray(skin: com.abacus.dualscreen.theme.ConsoleTheme) {
+        val parent = binding.toolGrid.parent as? ViewGroup ?: return
+        parent.findViewWithTag<View>(TRAY_TAG)?.let { parent.removeView(it) }
+
+        if (skin.trayBackground == 0) return
+
+        val tray = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setBackgroundColor(skin.trayBackground)
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+            tag = TRAY_TAG
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            )
+        }
+
+        val shortcuts = listOf(
+            Tool.SECOND_SCREEN to "▣",
+            Tool.FTP to "⇅",
+            Tool.THEMES to "◐",
+            Tool.APPEARANCE to "◈",
+        )
+
+        for ((tool, glyph) in shortcuts) {
+            tray.addView(TextView(this).apply {
+                text = glyph
+                gravity = Gravity.CENTER
+                setTextColor(skin.trayIcon)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
+                setPadding(dp(14), dp(4), dp(14), dp(4))
+                setOnClickListener {
+                    performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    openTool(tool)
+                }
+            })
+        }
+
+        parent.addView(tray)
     }
 
     /**
@@ -841,5 +919,8 @@ class HomeActivity : AppCompatActivity() {
 
         /** Marks the skin's status strip so a rebuild replaces it instead of stacking another. */
         const val STATUS_BAR_TAG = "console-status-bar"
+
+        /** Same idea for the bottom shortcut strip. */
+        const val TRAY_TAG = "console-tray"
     }
 }
