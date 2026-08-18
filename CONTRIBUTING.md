@@ -51,6 +51,8 @@ Each project builds independently; they share no code and no build.
 | Terraria | `dotnet build -c Release` in `AynDualScreen`. Needs tModLoader installed. |
 | Stardew | `dotnet build -c Release` in `AynDualScreen`. Needs SMAPI. |
 | Minecraft | `gradlew build` in `AynDualScreen`. First run downloads and decompiles Minecraft — several minutes. |
+| Fallout: NV | `.\fetch-nvse.ps1` then `.\build.ps1` in `falloutnv`. Visual Studio 2022, **Win32** — the game is 32-bit. |
+| Skyrim SE | `.\fetch-deps.ps1` then `.\build.ps1` in `skyrimse`. Visual Studio 2022, **x64**. The first build compiles CommonLibSSE and takes a while. |
 | App | `gradlew assembleDebug`. Android SDK, API 34. |
 
 The Minecraft mod targets **1.21.1 only**. It is version-selectable
@@ -62,7 +64,7 @@ ForgeGradle or NeoForge's ModDevGradle. That is a genuinely useful contribution 
 
 **Game state is only ever touched on the game thread.**
 
-All three mods work the same way: the game thread builds a finished JSON snapshot and publishes it to a
+All of them work the same way: the game thread builds a finished JSON snapshot and publishes it to a
 `volatile` field; the web server answers on other threads and only ever hands out strings that were
 already finished; commands from the page go into a concurrent queue and are drained on the next tick.
 
@@ -72,13 +74,14 @@ from the server.
 
 ## The one rule that matters when releasing
 
-**Every GitHub release must carry all five assets, under exactly these names:**
+**Every GitHub release must carry all six assets, under exactly these names:**
 
 ```
 AynDualScreen-Stardew.zip
 AynDualScreen-Terraria.tmod
 AynDualScreen-Minecraft-mc1.21.1.jar
 AynDualScreen-FalloutNV.zip
+AynDualScreen-SkyrimSE.zip
 AynDualScreen-App.apk
 ```
 

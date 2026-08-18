@@ -1,0 +1,546 @@
+/*
+  Ayn Dual Screen — Skyrim Special Edition
+
+  The look is SkyUI's, redrawn: cold slate, a thin gold rule, and one accent that shifts with the
+  time of day. Nothing here is extracted from the game. Skyrim's interface is a set of Flash movies
+  and textures there is no licence to ship, and a dark panel with a gold border is simple enough to
+  reproduce honestly.
+
+  Sized in rem throughout, so the whole page scales from one root font size — that is what the
+  size control in the settings sheet moves.
+*/
+
+:root {
+	--bg:        #0d1014;
+	--bg-raised: #151a20;
+	--bg-sunk:   #090b0e;
+	--line:      #2a333d;
+	--gold:      #c8a84b;
+	--gold-dim:  #7d6a30;
+	--ink:       #d9e2ea;
+	--ink-dim:   #8b98a5;
+	--ink-faint: #5d6975;
+
+	--health:  #a33b3b;
+	--magicka: #3b6ea3;
+	--stamina: #3f8a53;
+
+	--radius: 3px;
+	--pad: 0.75rem;
+
+	font-size: 16px;
+}
+
+/* Night shifts the accent cooler. The game's own map does this, and on a handheld propped next to
+   a monitor in a dark room it is the difference between a companion and a torch. */
+body.is-night {
+	--gold:     #9fb4c8;
+	--gold-dim: #566b7e;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+	margin: 0;
+	height: 100%;
+	overflow: hidden;
+	background: var(--bg);
+	color: var(--ink);
+	font-family: "Segoe UI", Roboto, system-ui, sans-serif;
+	-webkit-text-size-adjust: 100%;
+	-webkit-tap-highlight-color: transparent;
+	overscroll-behavior: none;
+}
+
+button, input { font: inherit; color: inherit; }
+
+/* ── waiting ──────────────────────────────────────────────────────────── */
+
+.waiting {
+	position: fixed;
+	inset: 0;
+	display: grid;
+	place-content: center;
+	justify-items: center;
+	gap: 0.5rem;
+	text-align: center;
+	padding: 2rem;
+}
+
+.waiting-mark {
+	width: 4rem;
+	height: 4rem;
+	border: 2px solid var(--gold-dim);
+	border-top-color: var(--gold);
+	border-radius: 50%;
+	animation: spin 1.6s linear infinite;
+	margin-bottom: 1rem;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .waiting-mark { animation: none; } }
+
+.waiting-title { font-size: 1.25rem; margin: 0; letter-spacing: 0.08em; text-transform: uppercase; }
+.waiting-hint  { margin: 0; color: var(--ink-dim); }
+.waiting-error { margin: 1rem 0 0; color: var(--health); min-height: 1.2em; }
+
+/* ── frame ────────────────────────────────────────────────────────────── */
+
+.app {
+	display: grid;
+	grid-template-rows: auto auto auto 1fr;
+	height: 100%;
+	padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.topbar {
+	display: flex;
+	align-items: center;
+	gap: var(--pad);
+	padding: 0.5rem var(--pad);
+	border-bottom: 1px solid var(--line);
+	background: var(--bg-raised);
+}
+
+.who { display: flex; align-items: baseline; gap: 0.6rem; min-width: 0; flex: 1; }
+.who-name  { font-size: 1.05rem; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.who-race  { color: var(--ink-dim); font-size: 0.85rem; }
+.who-level { color: var(--ink-dim); font-size: 0.85rem; white-space: nowrap; }
+
+.clock { display: flex; align-items: center; gap: 0.5rem; }
+.dial { width: 2rem; height: 2rem; }
+.dial-face { fill: var(--bg-sunk); stroke: var(--gold-dim); stroke-width: 1.5; }
+.dial-hand { stroke: var(--gold); stroke-width: 2; stroke-linecap: round; transform-origin: 20px 20px; }
+.clock-text { display: flex; flex-direction: column; line-height: 1.1; font-size: 0.8rem; }
+.clock-text span { color: var(--ink-faint); }
+
+.gear {
+	background: none;
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	color: var(--ink-dim);
+	width: 2.25rem;
+	height: 2.25rem;
+	cursor: pointer;
+}
+.gear:hover { color: var(--gold); border-color: var(--gold-dim); }
+
+/* ── vitals ───────────────────────────────────────────────────────────── */
+
+.vitals {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 1px;
+	background: var(--line);
+	border-bottom: 1px solid var(--line);
+}
+
+.vital {
+	position: relative;
+	background: var(--bg-sunk);
+	height: 1.4rem;
+	overflow: hidden;
+}
+
+.vital-fill {
+	position: absolute;
+	inset: 0 auto 0 0;
+	width: 0;
+	transition: width 120ms linear;
+}
+
+/* The bars are flat colour rather than a gradient on purpose: on a small panel a gradient reads as
+   a highlight, and a half-empty health bar has to be unmistakable at a glance. */
+.vital-h .vital-fill { background: var(--health); }
+.vital-m .vital-fill { background: var(--magicka); }
+.vital-s .vital-fill { background: var(--stamina); }
+
+.vital span {
+	position: relative;
+	display: block;
+	text-align: center;
+	line-height: 1.4rem;
+	font-size: 0.75rem;
+	font-variant-numeric: tabular-nums;
+	text-shadow: 0 1px 2px #000;
+}
+
+/* ── tabs ─────────────────────────────────────────────────────────────── */
+
+.tabs {
+	display: flex;
+	background: var(--bg-raised);
+	border-bottom: 1px solid var(--line);
+	overflow-x: auto;
+	scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+
+.tab {
+	flex: 1;
+	min-width: 5rem;
+	padding: 0.6rem 0.5rem;
+	background: none;
+	border: 0;
+	border-bottom: 2px solid transparent;
+	color: var(--ink-dim);
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	font-size: 0.8rem;
+	cursor: pointer;
+}
+.tab.is-on { color: var(--gold); border-bottom-color: var(--gold); }
+.tab[hidden] { display: none; }
+
+/* ── pages ────────────────────────────────────────────────────────────── */
+
+.pane { position: relative; overflow: hidden; }
+
+.page {
+	display: none;
+	position: absolute;
+	inset: 0;
+	grid-template-columns: auto 1fr minmax(0, 20rem);
+	gap: 1px;
+	background: var(--line);
+}
+.page.is-on { display: grid; }
+.page[data-page="map"]    { grid-template-columns: 1fr minmax(0, 20rem); }
+.page[data-page="skills"],
+.page[data-page="status"] { grid-template-columns: 1fr minmax(0, 20rem); }
+
+body.no-detail .detail,
+body.no-detail .map-side { display: none; }
+body.no-detail .page { grid-template-columns: auto 1fr; }
+body.no-detail .page[data-page="map"] { grid-template-columns: 1fr; }
+
+/* categories rail */
+
+.cats {
+	display: flex;
+	flex-direction: column;
+	background: var(--bg-raised);
+	overflow-y: auto;
+	min-width: 7.5rem;
+}
+
+.cat {
+	display: flex;
+	justify-content: space-between;
+	gap: 0.5rem;
+	padding: 0.55rem 0.7rem;
+	background: none;
+	border: 0;
+	border-left: 3px solid transparent;
+	color: var(--ink-dim);
+	text-align: left;
+	font-size: 0.85rem;
+	cursor: pointer;
+	white-space: nowrap;
+}
+.cat.is-on { color: var(--gold); border-left-color: var(--gold); background: var(--bg); }
+.cat.is-empty { color: var(--ink-faint); }
+.cat b { font-variant-numeric: tabular-nums; font-weight: 400; color: var(--ink-faint); }
+
+/* listing */
+
+.listing { display: grid; grid-template-rows: auto 1fr auto; background: var(--bg); min-width: 0; }
+
+.listing-head {
+	display: flex;
+	gap: 0.5rem;
+	align-items: center;
+	padding: 0.5rem var(--pad);
+	border-bottom: 1px solid var(--line);
+	flex-wrap: wrap;
+}
+
+.search {
+	flex: 1;
+	min-width: 7rem;
+	background: var(--bg-sunk);
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	padding: 0.35rem 0.5rem;
+	font-size: 0.85rem;
+}
+.search:focus { outline: none; border-color: var(--gold-dim); }
+
+.sorts { display: flex; gap: 0.25rem; }
+
+.sort {
+	background: none;
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	color: var(--ink-dim);
+	padding: 0.3rem 0.5rem;
+	font-size: 0.75rem;
+	cursor: pointer;
+}
+.sort.is-on { color: var(--gold); border-color: var(--gold-dim); }
+
+.rows { margin: 0; padding: 0; list-style: none; overflow-y: auto; }
+
+.row {
+	display: grid;
+	grid-template-columns: 1fr auto auto;
+	gap: 0.75rem;
+	align-items: center;
+	padding: 0.5rem var(--pad);
+	border-bottom: 1px solid var(--bg-raised);
+	cursor: pointer;
+	font-size: 0.9rem;
+}
+.row:hover { background: var(--bg-raised); }
+.row.is-on { background: var(--bg-raised); box-shadow: inset 3px 0 0 var(--gold); }
+
+.row-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row-num  { color: var(--ink-dim); font-variant-numeric: tabular-nums; font-size: 0.8rem; }
+
+/* The marks that carry meaning in SkyUI's list: worn, favourited, stolen, enchanted. */
+.mark { color: var(--gold); margin-right: 0.35rem; }
+.mark-stolen { color: var(--health); }
+.mark-ench   { color: var(--magicka); }
+
+.listing-foot {
+	display: flex;
+	justify-content: space-between;
+	padding: 0.4rem var(--pad);
+	border-top: 1px solid var(--line);
+	color: var(--ink-faint);
+	font-size: 0.75rem;
+	font-variant-numeric: tabular-nums;
+}
+
+/* detail card */
+
+.detail {
+	background: var(--bg-raised);
+	padding: var(--pad);
+	overflow-y: auto;
+	font-size: 0.85rem;
+}
+.detail h3 { margin: 0 0 0.25rem; color: var(--gold); font-size: 1rem; font-weight: 500; }
+.detail .sub { color: var(--ink-faint); margin: 0 0 0.75rem; font-size: 0.8rem; }
+.detail dl { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 0.75rem; margin: 0 0 0.75rem; }
+.detail dt { color: var(--ink-faint); }
+.detail dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.detail .desc { color: var(--ink-dim); line-height: 1.45; margin: 0 0 0.75rem; }
+.detail .empty { color: var(--ink-faint); }
+
+.acts { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+.act {
+	flex: 1 1 5.5rem;
+	background: var(--bg-sunk);
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	color: var(--ink);
+	padding: 0.5rem;
+	font-size: 0.8rem;
+	cursor: pointer;
+}
+.act:hover:not(:disabled) { border-color: var(--gold-dim); color: var(--gold); }
+.act:disabled { color: var(--ink-faint); cursor: not-allowed; }
+.act-danger:hover:not(:disabled) { border-color: var(--health); color: var(--health); }
+
+/* ── map ──────────────────────────────────────────────────────────────── */
+
+.map-wrap { position: relative; background: var(--bg-sunk); overflow: hidden; }
+.map { width: 100%; height: 100%; display: block; touch-action: none; }
+
+.marker { cursor: pointer; }
+.marker-dot   { fill: var(--ink-faint); }
+.marker.is-visited .marker-dot { fill: var(--gold); }
+.marker.is-on    .marker-dot   { fill: #fff; }
+.marker-label {
+	fill: var(--ink-dim);
+	font-size: 11px;
+	paint-order: stroke;
+	stroke: var(--bg-sunk);
+	stroke-width: 3px;
+	pointer-events: none;
+}
+
+.you-halo  { fill: none; stroke: var(--gold); stroke-width: 1.5; opacity: 0.5; }
+.you-arrow { fill: var(--gold); }
+
+.map-empty {
+	position: absolute;
+	inset: 0;
+	display: grid;
+	place-content: center;
+	text-align: center;
+	color: var(--ink-dim);
+}
+
+.map-side { background: var(--bg-raised); display: grid; grid-template-rows: auto auto 1fr auto; overflow: hidden; }
+.where { padding: var(--pad); border-bottom: 1px solid var(--line); }
+.where-cell    { color: var(--gold); font-size: 1rem; }
+.where-world   { color: var(--ink-faint); font-size: 0.8rem; }
+.where-bearing { margin-top: 0.4rem; font-size: 0.8rem; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+
+.map-side .search { margin: 0.5rem var(--pad); }
+.marker-list { margin: 0; padding: 0; list-style: none; overflow-y: auto; }
+.marker-list li {
+	padding: 0.45rem var(--pad);
+	border-bottom: 1px solid var(--bg);
+	cursor: pointer;
+	font-size: 0.85rem;
+	display: flex;
+	justify-content: space-between;
+	gap: 0.5rem;
+}
+.marker-list li:hover { background: var(--bg); }
+.marker-list .far { color: var(--ink-faint); font-variant-numeric: tabular-nums; font-size: 0.75rem; }
+
+.note { padding: var(--pad); margin: 0; color: var(--ink-faint); font-size: 0.7rem; line-height: 1.5; border-top: 1px solid var(--line); }
+
+/* ── skills ───────────────────────────────────────────────────────────── */
+
+.skill-cols {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+	gap: var(--pad);
+	padding: var(--pad);
+	background: var(--bg);
+	overflow-y: auto;
+	align-content: start;
+}
+
+.skill-col h3 {
+	margin: 0 0 0.5rem;
+	color: var(--gold);
+	font-size: 0.8rem;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	font-weight: 500;
+	border-bottom: 1px solid var(--line);
+	padding-bottom: 0.3rem;
+}
+
+.skill {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: 0.25rem 0.5rem;
+	padding: 0.35rem 0;
+	font-size: 0.85rem;
+	cursor: pointer;
+}
+.skill:hover { color: var(--gold); }
+.skill-val { font-variant-numeric: tabular-nums; }
+.skill-val.is-up   { color: var(--stamina); }   /* fortified above the base */
+.skill-val.is-down { color: var(--health); }    /* drained below it */
+
+.skill-track { grid-column: 1 / -1; height: 2px; background: var(--bg-sunk); }
+.skill-bar   { height: 100%; background: var(--gold-dim); }
+
+/* ── status ───────────────────────────────────────────────────────────── */
+
+.status-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+	gap: var(--pad);
+	padding: var(--pad);
+	background: var(--bg);
+	overflow-y: auto;
+	align-content: start;
+}
+
+.card {
+	background: var(--bg-raised);
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	padding: var(--pad);
+}
+.card h3 { margin: 0 0 0.5rem; color: var(--gold); font-size: 0.85rem; font-weight: 500; }
+.card dl { display: grid; grid-template-columns: auto 1fr; gap: 0.3rem 0.5rem; margin: 0; font-size: 0.85rem; }
+.card dt { color: var(--ink-faint); }
+.card dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+
+.effect { padding: 0.4rem 0; border-bottom: 1px solid var(--bg); font-size: 0.85rem; }
+.effect-buff    { border-left: 3px solid var(--stamina); padding-left: 0.5rem; }
+.effect-debuff  { border-left: 3px solid var(--health);  padding-left: 0.5rem; }
+.effect-blessing{ border-left: 3px solid var(--gold);    padding-left: 0.5rem; }
+.effect .time { color: var(--ink-faint); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+
+/* ── settings sheet ───────────────────────────────────────────────────── */
+
+.sheet {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.65);
+	display: grid;
+	place-items: center;
+	padding: 1rem;
+	z-index: 10;
+}
+
+.sheet-card {
+	background: var(--bg-raised);
+	border: 1px solid var(--gold-dim);
+	border-radius: var(--radius);
+	padding: 1.25rem;
+	width: min(30rem, 100%);
+	max-height: 90vh;
+	overflow-y: auto;
+}
+.sheet-card h2 { margin: 0 0 0.5rem; color: var(--gold); font-size: 0.9rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; }
+.sheet-card .dim { color: var(--ink-faint); font-size: 0.75rem; margin: 0 0 0.5rem; }
+.sheet-rows { display: grid; gap: 0.5rem; margin-bottom: 1.25rem; }
+
+.setting { display: flex; justify-content: space-between; align-items: center; gap: 1rem; font-size: 0.85rem; }
+.setting-choices { display: flex; gap: 0.25rem; flex-wrap: wrap; }
+
+.choice {
+	background: var(--bg-sunk);
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	color: var(--ink-dim);
+	padding: 0.3rem 0.55rem;
+	font-size: 0.75rem;
+	cursor: pointer;
+}
+.choice.is-on { color: var(--gold); border-color: var(--gold-dim); }
+
+.close {
+	width: 100%;
+	background: var(--bg-sunk);
+	border: 1px solid var(--gold-dim);
+	border-radius: var(--radius);
+	color: var(--gold);
+	padding: 0.6rem;
+	cursor: pointer;
+}
+
+/* ── toast ────────────────────────────────────────────────────────────── */
+
+.toast {
+	position: fixed;
+	left: 50%;
+	bottom: 2rem;
+	transform: translateX(-50%);
+	background: var(--bg-raised);
+	border: 1px solid var(--gold-dim);
+	border-radius: var(--radius);
+	padding: 0.5rem 1rem;
+	font-size: 0.85rem;
+	z-index: 20;
+	max-width: 90vw;
+	text-align: center;
+}
+
+/* ── narrow screens ───────────────────────────────────────────────────── */
+
+@media (max-width: 40rem) {
+	:root { --pad: 0.5rem; }
+
+	/* The detail card becomes a bottom sheet rather than a column: a phone has no room for three
+	   columns, and the alternative — shrinking all three — makes none of them readable. */
+	.page { grid-template-columns: auto 1fr; }
+	.page[data-page="map"] { grid-template-columns: 1fr; }
+	.detail:empty { display: none; }
+	.map-side { display: none; }
+	.cats { min-width: 5.5rem; }
+	.cat b { display: none; }
+}

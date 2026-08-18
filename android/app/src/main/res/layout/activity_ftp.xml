@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Laid out the way ftpd does it on a 3DS: the address at the top, the console filling everything
+    below it.
+
+    That is why this is a LinearLayout with a weighted middle rather than one long ScrollView. A
+    console inside a scrolling page is a box you have to find and then scroll within — two scrollers
+    fighting each other — and it can never be more than a few hundred pixels tall. Here the console
+    IS the screen once the server is running, and the setup fields are what gets hidden.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg">
+
+    <ImageView
+        android:id="@+id/backgroundImage"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@null"
+        android:scaleType="centerCrop"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <!-- Header: title and Done. -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:tag="accent"
+                android:text="@string/ftp_title"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/backButton"
+                style="@style/Action"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/action_done" />
+        </LinearLayout>
+
+        <!-- The address. Always visible, running or not: it is what the PC needs. -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="vertical"
+            android:padding="12dp"
+            android:tag="accentEdge">
+
+            <TextView
+                android:id="@+id/ftpAddress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:lineSpacingExtra="2dp"
+                android:tag="accent"
+                android:textIsSelectable="true"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/ftpStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:lineSpacingExtra="2dp"
+                android:textColor="@color/text_dim"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!--
+            THE CONSOLE — the whole point, and it takes all the space left over.
+
+            weight=1 on a zero height is what makes it fill: it gets whatever the header, the
+            address and the buttons do not use, at any screen size and in either orientation.
+        -->
+        <LinearLayout
+            android:id="@+id/consoleCard"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="8dp"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:padding="10dp"
+            android:tag="card"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/clientsText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="@color/text_dim"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/clearButton"
+                    style="@style/Action"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/ftp_clear" />
+            </LinearLayout>
+
+            <ScrollView
+                android:id="@+id/consoleScroll"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginTop="6dp"
+                android:layout_weight="1"
+                android:background="@color/bg"
+                android:padding="8dp"
+                android:scrollbars="vertical">
+
+                <TextView
+                    android:id="@+id/consoleText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:lineSpacingExtra="2dp"
+                    android:textColor="@color/text_dim"
+                    android:textIsSelectable="true"
+                    android:textSize="11sp" />
+            </ScrollView>
+        </LinearLayout>
+
+        <!--
+            Setup. Takes the same weighted space when the server is NOT running, and disappears
+            entirely once it is — a running server is a console, not a settings page.
+        -->
+        <ScrollView
+            android:id="@+id/setupGroup"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/ftp_blurb"
+                    android:textSize="12sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="vertical"
+                    android:padding="12dp"
+                    android:tag="card">
+
+                    <TextView
+                        style="@style/Label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/ftp_scope" />
+
+                    <TextView
+                        android:id="@+id/scopeText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textColor="@color/text_dim"
+                        android:textSize="13sp" />
+
+                    <Button
+                        android:id="@+id/grantButton"
+                        style="@style/Action"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/ftp_grant"
+                        android:visibility="gone" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="vertical"
+                    android:padding="12dp"
+                    android:tag="card">
+
+                    <TextView
+                        style="@style/Label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/ftp_settings" />
+
+                    <EditText
+                        android:id="@+id/portField"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:autofillHints="off"
+                        android:hint="@string/ftp_port_hint"
+                        android:importantForAutofill="no"
+                        android:inputType="number"
+                        android:maxLength="5" />
+
+                    <EditText
+                        android:id="@+id/userField"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:autofillHints="username"
+                        android:hint="@string/ftp_user_hint"
+                        android:inputType="text"
+                        android:maxLines="1" />
+
+                    <EditText
+                        android:id="@+id/passField"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:autofillHints="password"
+                        android:hint="@string/ftp_pass_hint"
+                        android:inputType="textPassword"
+                        android:maxLines="1" />
+
+                    <CheckBox
+                        android:id="@+id/autoStartCheck"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/ftp_autostart"
+                        android:textSize="13sp" />
+
+                    <TextView
+                        style="@style/Caption"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/ftp_plain_warning"
+                        android:textSize="12sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- Start and Stop stay pinned at the bottom, where a thumb is. -->
+        <Button
+            android:id="@+id/startButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp"
+            android:tag="accentFill"
+            android:text="@string/ftp_start"
+            android:textAllCaps="false"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <!-- Reopen the console window after backing out of it; the server is still running. -->
+        <Button
+            android:id="@+id/openConsoleButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp"
+            android:tag="accentFill"
+            android:text="@string/ftp_open_console"
+            android:textAllCaps="false"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/stopButton"
+            style="@style/Action"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/ftp_stop" />
+    </LinearLayout>
+</FrameLayout>

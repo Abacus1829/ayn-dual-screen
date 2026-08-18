@@ -98,7 +98,77 @@
     <string name="tool_keyboard">Keyboard</string>
     <string name="tool_macros">Macros</string>
     <string name="tool_mirror">Mirror</string>
+    <string name="tool_ftp">FTP</string>
+    <string name="tool_themes">Themes</string>
+
+    <!-- Themes -->
+    <string name="themes_title">Console themes</string>
+    <string name="themes_blurb">Dress the home screen as a handheld. Tap one to switch; tap Ayn Dual Screen to go back to the app\'s own look.</string>
+    <string name="theme_applied">%1$s applied</string>
+    <string name="theme_from_file">from a file</string>
+    <string name="theme_make_own">Make your own</string>
+    <string name="theme_make_own_hint">A theme is one small JSON file, plus a folder of PNG icons if you want them. Every field is optional. The quickest way to get files onto the device is this app\'s own FTP server.</string>
+    <string name="theme_folder_button">Create the themes folder</string>
+    <string name="theme_folder_ready">Ready: %1$s\n\nexample.json and README.txt are in there. Copy the example, rename it, and it appears in this list.</string>
+    <string name="theme_folder_denied">Could not create the folder. Grant all-files access on the FTP screen first.</string>
+    <string name="tool_stream">Stream</string>
+    <string name="tool_stream_blocked">Not finished — the app can pair with a PC, but nothing decodes video yet.</string>
+
+    <!-- Streaming -->
+    <string name="stream_title">Game streaming</string>
+    <string name="stream_blurb">Pairs this device with a PC running Sunshine or GeForce Experience. Pairing works and is remembered — but nothing decodes video yet, so there is no game to watch here. This is the groundwork, not the feature.</string>
+    <string name="stream_host">PC address</string>
+    <string name="stream_host_hint">192.168.0.10</string>
+    <string name="stream_connect">Find the PC</string>
+    <string name="stream_pair">Pair with this PC</string>
+    <string name="stream_unpair">Forget this PC</string>
+    <string name="stream_state_paired">Paired — this PC knows this device.</string>
+    <string name="stream_state_unpaired">Not paired yet.</string>
+    <string name="stream_detail_software">Running %1$s</string>
+    <string name="stream_detail_version">Protocol %1$s</string>
+    <string name="stream_detail_hevc">HEVC supported</string>
+    <string name="stream_detail_busy">Something is already streaming from this PC.</string>
+    <string name="stream_pin_label">Type this on the PC</string>
+    <string name="stream_pin_hint">Sunshine shows a PIN page in its web interface. GeForce Experience pops up a box on the desktop.</string>
+    <string name="stream_log">What happened</string>
     <string name="blocked_needs_agent">Needs a companion program on the PC — not built yet.</string>
+
+    <!-- FTP -->
+    <string name="ftp_title">FTP server</string>
+    <string name="ftp_blurb">Shares this device over the network so a PC can browse and copy its files, the way ftpd does on a 3DS. Plain FTP, on your own network — no encryption.</string>
+    <string name="ftp_start">Start server</string>
+    <string name="ftp_stop">Stop server</string>
+    <string name="ftp_off">Server is off</string>
+    <string name="ftp_off_hint">Server is off. Start it, then type this address into your PC\'s file manager.</string>
+    <string name="ftp_clients">Connections</string>
+    <string name="ftp_console">Console</string>
+    <string name="ftp_clear">Clear</string>
+    <string name="ftp_stop_short">Stop</string>
+    <string name="ftp_copied">Copied %1$s</string>
+    <string name="ftp_autostart">Start the server when the app opens</string>
+    <string name="ftp_sessions">Sessions</string>
+    <string name="ftp_menu">Menu</string>
+    <string name="ftp_console_stopped">Server stopped.</string>
+    <string name="ftp_console_stopped_hint">The server is not running. Go back and press Start server.</string>
+    <string name="ftp_console_failed">Server could not start</string>
+    <string name="ftp_start_failed">Could not start the server: %1$s</string>
+    <string name="ftp_failed_hint">Go back, change the port if that is the problem, and try again. If this keeps happening, the message above is the exact reason — send it on.</string>
+    <string name="ftp_open_console">Open console</string>
+    <string name="ftp_console_empty">Waiting for a connection…</string>
+    <string name="ftp_nobody">Waiting for a connection</string>
+    <string name="ftp_one_client">%1$s connected</string>
+    <string name="ftp_many_clients">%1$d clients connected</string>
+    <string name="ftp_no_network">No network</string>
+    <string name="ftp_no_network_hint">The server is running, but this device has no address a PC could reach. Connect to Wi-Fi.</string>
+    <string name="ftp_anonymous">Anonymous — any username and password will do.</string>
+    <string name="ftp_login_as">Log in as %1$s.</string>
+    <string name="ftp_scope">What the PC will see</string>
+    <string name="ftp_grant">Grant all-files access</string>
+    <string name="ftp_settings">Port and login</string>
+    <string name="ftp_port_hint">Port (2121)</string>
+    <string name="ftp_user_hint">Username (leave empty for anonymous)</string>
+    <string name="ftp_pass_hint">Password</string>
+    <string name="ftp_plain_warning">FTP sends the password in clear text. It is a doorlock for your own network, not a secret — don\'t reuse a real one.</string>
     <string name="blocked_toast">%1$s: %2$s</string>
 
     <string name="notes_title">Notes</string>

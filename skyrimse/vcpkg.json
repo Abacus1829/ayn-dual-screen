@@ -1,0 +1,19 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "ayn-dual-screen-skyrimse",
+  "version-string": "0.1.0",
+  "description": "Second-screen companion for Skyrim Special Edition",
+  "homepage": "https://github.com/Abacus1829/ayn-dual-screen",
+  "dependencies": [
+    "directxmath",
+    "directxtk",
+    "fmt",
+    "nlohmann-json",
+    "rapidcsv",
+    "simpleini",
+    "spdlog",
+    "toml11",
+    "xbyak"
+  ],
+  "builtin-baseline": "94a541197763a4f449a1b91478df48c0584a6256"
+}

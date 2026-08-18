@@ -14,13 +14,27 @@ android {
     defaultConfig {
         applicationId = "com.abacus.dualscreen"
 
-        // API 26 is the floor: launching an activity onto a chosen display needs
-        // ActivityOptions.setLaunchDisplayId, which arrived in Oreo.
-        minSdk = 26
+        /*
+         * API 26 is the floor: launching an activity onto a chosen display needs
+         * ActivityOptions.setLaunchDisplayId, which arrived in Oreo.
+         *
+         * `-PtestMinSdk=25` lowers it, and is for one thing only: getting a build onto an older
+         * emulator to exercise the parts that have nothing to do with displays — the FTP server,
+         * the certificate generation, the pairing handshake. BlueStacks ships Nougat by default,
+         * which is API 25, and that is otherwise a wall.
+         *
+         * A build made this way is NOT shippable. The second-screen feature — the entire point of
+         * the app — cannot work below Oreo, and on Nougat the app will crash the moment anything
+         * reaches for a display API. Never pass this flag for a release.
+         */
+        minSdk = (project.findProperty("testMinSdk") as String?)?.toInt() ?: 26
         targetSdk = 34
 
-        versionCode = 8
-        versionName = "0.8.0"
+        // Bumped from 8/0.8.0 because 0.8.0 is the version PUBLISHED on GitHub, and local builds
+        // carrying the same number are indistinguishable from it on a device — which cost a round
+        // of "the feature isn't there" when the installed APK was simply the older one.
+        versionCode = 9
+        versionName = "0.9.0-ftp"
     }
 
     signingConfigs {
@@ -29,6 +43,19 @@ android {
         // installable to test on the Thor. That fallback cannot reach the Play Store by accident —
         // Google rejects anything signed with the debug key outright.
         create("upload") {
+            /*
+             * Sign with every scheme, because this app is sideloaded rather than installed from a
+             * store, and the installer on the other end is not ours to predict.
+             *
+             * Gradle defaults to v2 only once minSdk is 24 or above, which is correct for a Play
+             * Store upload and needlessly narrow for an APK someone downloads and taps. v1 keeps
+             * older and third-party installers happy; v3 is what current Android prefers and what
+             * key rotation would need later. The cost is a few kilobytes.
+             */
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
+
             val properties = rootProject.file("keystore.properties")
             if (properties.exists()) {
                 val config = Properties().apply { properties.inputStream().use { load(it) } }
@@ -85,4 +112,17 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.activity:activity-ktx:1.9.0")
+
+    /*
+     * Unit tests, run on the desktop JVM by `gradlew test` — no device, no emulator.
+     *
+     * There is one thing here that genuinely earns a test, and it is the DER encoder in
+     * stream/Asn1.kt: it touches no Android API, it is the kind of code that is either exactly right
+     * or subtly wrong, and when it is wrong the symptom surfaces much later as a TLS failure against
+     * somebody's PC. A test that builds a certificate and makes the platform parse it turns that
+     * into a five-second answer.
+     *
+     * The rest of this app is UI and sockets, and is honestly tested by running it.
+     */
+    testImplementation("junit:junit:4.13.2")
 }

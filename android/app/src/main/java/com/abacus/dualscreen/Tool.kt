@@ -26,7 +26,22 @@ enum class Tool(
 
     // The pad itself is on-device. Its text and key macros go out through this app's own keyboard, which
     // is as far as Android lets one app reach into another without a signature-level permission.
-    MACROS("macros", R.string.tool_macros, "⚙");
+    MACROS("macros", R.string.tool_macros, "⚙"),
+
+    /** An FTP server on this device, so a PC can browse it over the network — like ftpd on a 3DS. */
+    FTP("ftp", R.string.tool_ftp, "⇅"),
+
+    /** Console skins for the home screen, and the folder where user-made ones live. */
+    THEMES("themes", R.string.tool_themes, "◐"),
+
+    /**
+     * Pairing with a PC that can stream games.
+     *
+     * Open rather than greyed, now that there is a screen behind it worth reaching: it finds a host
+     * and completes the pairing handshake, which is the hard half. It does NOT play anything, and
+     * the screen says so in its first paragraph rather than letting somebody discover it.
+     */
+    STREAM("stream", R.string.tool_stream, "▶");
 
     companion object {
         fun byId(id: String?): Tool? = entries.firstOrNull { it.id == id }

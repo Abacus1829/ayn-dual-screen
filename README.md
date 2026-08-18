@@ -24,6 +24,7 @@ from here:
 | **Terraria** (tModLoader) | [`.tmod`](https://github.com/Abacus1829/ayn-dual-screen/releases/latest/download/AynDualScreen-Terraria.tmod) | [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3778092427) | [`terraria/`](terraria) | 27301 |
 | **Minecraft** (Forge 1.21.1) | [`.jar`](https://github.com/Abacus1829/ayn-dual-screen/releases/latest/download/AynDualScreen-Minecraft-mc1.21.1.jar) | — | [`minecraft/`](minecraft) | 27302 |
 | **Fallout: New Vegas** (xNVSE) | [`.zip`](https://github.com/Abacus1829/ayn-dual-screen/releases/latest/download/AynDualScreen-FalloutNV.zip) | — | [`falloutnv/`](falloutnv) | 27303 |
+| **Skyrim Special Edition** (SKSE64) | *not released yet* | — | [`skyrimse/`](skyrimse) | 27305 |
 | The Android app *(optional)* | [`.apk`](https://github.com/Abacus1829/ayn-dual-screen/releases/latest/download/AynDualScreen-App.apk) | — | [`android/`](android) | — |
 
 Install steps for each are in the [release notes](https://github.com/Abacus1829/ayn-dual-screen/releases/latest).
@@ -32,9 +33,14 @@ Every file there is built from the source in this repository.
 The app is **optional** — any browser pointed at the address the mod prints gives you the same second
 screen.
 
-Minecraft uses 27302 and New Vegas 27303 rather than all sharing 27301 deliberately: they are likely
-to be installed on the same PC, and two mods fighting over one port fails in a way that looks like
-the app's fault.
+Minecraft uses 27302, New Vegas 27303 and Skyrim 27305 rather than all sharing 27301 deliberately:
+they are likely to be installed on the same PC, and two mods fighting over one port fails in a way
+that looks like the app's fault. (27304 is skipped because the New Vegas mock server uses it.)
+
+The **Skyrim Special Edition** mod is **not released**. The source is here and the second screen is
+finished, but the plugin has not yet been compiled or run in the game — see
+[`skyrimse/README.md`](skyrimse/README.md), which says exactly what is and isn't done. Nothing is
+linked above because there is nothing to download yet.
 
 The **Fallout: New Vegas** mod is the newest and the least proven. It runs — it loads under xNVSE
 and serves a live Pip-Boy off a real save — but it has had far less play than the other three, and

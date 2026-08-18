@@ -38,3 +38,18 @@ falloutnv/preview.html
 # the plugin writes this next to the DLL at runtime; it records the real install path
 # and the machine LAN addresses, neither of which belong in a public repository
 falloutnv/AynDualScreen.log
+
+# --- Skyrim SE (SKSE plugin) ---
+# Fetched, never vendored: fetch-deps.ps1 clones vcpkg and CommonLibSSE-NG into extern/, which
+# runs to gigabytes. vcpkg-configuration.json is written by that same script with a baseline
+# resolved on the machine it ran on, so it is local state rather than source.
+skyrimse/extern/
+skyrimse/build/
+skyrimse/build-debug/
+skyrimse/dist/
+skyrimse/vcpkg-configuration.json
+skyrimse/AynDualScreen-SkyrimSE.zip
+
+# same as the New Vegas one above, and for the same reason
+skyrimse/AynDualScreen.log
+skyrimse/AynDualScreen.boot.log

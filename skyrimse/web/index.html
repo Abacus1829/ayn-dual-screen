@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1014">
+<title>Ayn Dual Screen — Skyrim</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!--
+  The second screen.
+
+  Laid out the way SkyUI lays out Skyrim's menus, because that is the arrangement people already
+  know: a column of categories on the left, a sortable list of what's in the chosen one, and a
+  detail card on the right for whatever is selected. Nothing here is extracted from the game —
+  the frame, the dragon-scale border and the glyphs are drawn in CSS and SVG for this project.
+-->
+
+<div id="waiting" class="waiting">
+  <div class="waiting-mark" aria-hidden="true"></div>
+  <p class="waiting-title">Waiting for Skyrim</p>
+  <p class="waiting-hint">Load a save. This screen fills in by itself.</p>
+  <p class="waiting-error" id="waitingError"></p>
+</div>
+
+<div id="app" class="app" hidden>
+
+  <header class="topbar">
+    <div class="who">
+      <span class="who-name" id="playerName">—</span>
+      <span class="who-race" id="playerRace"></span>
+      <span class="who-level">Level <b id="playerLevel">—</b></span>
+    </div>
+
+    <div class="clock" id="clock" title="Time of day">
+      <svg class="dial" viewBox="0 0 40 40" aria-hidden="true">
+        <circle class="dial-face" cx="20" cy="20" r="18"/>
+        <line class="dial-hand" id="dialHand" x1="20" y1="20" x2="20" y2="6"/>
+      </svg>
+      <div class="clock-text">
+        <b id="timeText">--:--</b>
+        <span id="dateText"></span>
+      </div>
+    </div>
+
+    <button class="gear" id="gearButton" type="button" title="Settings for this screen"
+            aria-label="Settings">⚙</button>
+  </header>
+
+  <!-- The three bars, always visible: they are the reason to glance at a second screen at all. -->
+  <div class="vitals">
+    <div class="vital vital-h"><div class="vital-fill" id="hpFill"></div><span id="hpText">—</span></div>
+    <div class="vital vital-m"><div class="vital-fill" id="mpFill"></div><span id="mpText">—</span></div>
+    <div class="vital vital-s"><div class="vital-fill" id="spFill"></div><span id="spText">—</span></div>
+  </div>
+
+  <nav class="tabs" id="tabs" role="tablist">
+    <button class="tab" data-tab="map"     role="tab">Map</button>
+    <button class="tab" data-tab="items"   role="tab">Items</button>
+    <button class="tab" data-tab="magic"   role="tab">Magic</button>
+    <button class="tab" data-tab="skills"  role="tab">Skills</button>
+    <button class="tab" data-tab="journal" role="tab">Journal</button>
+    <button class="tab" data-tab="status"  role="tab">Status</button>
+  </nav>
+
+  <main class="pane">
+
+    <!-- MAP ────────────────────────────────────────────────────────────── -->
+    <section class="page" data-page="map">
+      <div class="map-wrap">
+        <svg id="mapSvg" class="map" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid meet">
+          <g id="mapMarkers"></g>
+          <g id="mapPlayer">
+            <circle class="you-halo" r="14"/>
+            <path class="you-arrow" d="M0,-11 L7,8 L0,4 L-7,8 Z"/>
+          </g>
+        </svg>
+        <div class="map-empty" id="mapEmpty" hidden>
+          <p>You are indoors.</p>
+          <p class="dim" id="mapCellName"></p>
+        </div>
+      </div>
+
+      <aside class="map-side">
+        <div class="where">
+          <div class="where-cell" id="whereCell">—</div>
+          <div class="where-world" id="whereWorld"></div>
+          <div class="where-bearing"><span id="bearingText">—</span></div>
+        </div>
+        <input class="search" id="markerSearch" type="search" placeholder="Find a place" autocomplete="off">
+        <ul class="marker-list" id="markerList"></ul>
+        <p class="note">
+          This is a chart of where things are, drawn from the game's own marker data — not a
+          picture of Skyrim. The game's map is a 3D scene, not an image a mod can read.
+        </p>
+      </aside>
+    </section>
+
+    <!-- ITEMS ──────────────────────────────────────────────────────────── -->
+    <section class="page" data-page="items">
+      <nav class="cats" id="itemCats"></nav>
+
+      <div class="listing">
+        <div class="listing-head">
+          <input class="search" id="itemSearch" type="search" placeholder="Search items" autocomplete="off">
+          <div class="sorts" id="itemSorts">
+            <button class="sort is-on" data-sort="name">Name</button>
+            <button class="sort" data-sort="weight">Weight</button>
+            <button class="sort" data-sort="value">Value</button>
+            <button class="sort" data-sort="ratio">Value / Weight</button>
+          </div>
+        </div>
+        <ul class="rows" id="itemRows"></ul>
+        <div class="listing-foot">
+          <span id="itemCount">—</span>
+          <span id="itemTotals"></span>
+        </div>
+      </div>
+
+      <aside class="detail" id="itemDetail"></aside>
+    </section>
+
+    <!-- MAGIC ──────────────────────────────────────────────────────────── -->
+    <section class="page" data-page="magic">
+      <nav class="cats" id="magicCats"></nav>
+
+      <div class="listing">
+        <div class="listing-head">
+          <input class="search" id="magicSearch" type="search" placeholder="Search spells" autocomplete="off">
+        </div>
+        <ul class="rows" id="magicRows"></ul>
+        <div class="listing-foot"><span id="magicCount">—</span></div>
+      </div>
+
+      <aside class="detail" id="magicDetail"></aside>
+    </section>
+
+    <!-- SKILLS ─────────────────────────────────────────────────────────── -->
+    <section class="page" data-page="skills">
+      <div class="skill-cols" id="skillCols"></div>
+      <aside class="detail" id="perkPanel"></aside>
+    </section>
+
+    <!-- JOURNAL ────────────────────────────────────────────────────────── -->
+    <section class="page" data-page="journal">
+      <div class="listing">
+        <div class="listing-head">
+          <input class="search" id="questSearch" type="search" placeholder="Search quests" autocomplete="off">
+          <div class="sorts" id="questFilters">
+            <button class="sort is-on" data-filter="active">Active</button>
+            <button class="sort" data-filter="all">All</button>
+            <button class="sort" data-filter="done">Completed</button>
+          </div>
+        </div>
+        <ul class="rows" id="questRows"></ul>
+        <div class="listing-foot"><span id="questCount">—</span></div>
+      </div>
+      <aside class="detail" id="questDetail"></aside>
+    </section>
+
+    <!-- STATUS ─────────────────────────────────────────────────────────── -->
+    <section class="page" data-page="status">
+      <div class="status-grid" id="statusGrid"></div>
+      <aside class="detail" id="effectPanel"></aside>
+    </section>
+
+  </main>
+
+  <!-- This screen's own settings, kept in the browser rather than in the mod's ini, so a phone
+       and a handheld panel can be laid out differently against the same game. -->
+  <div class="sheet" id="settingsSheet" hidden>
+    <div class="sheet-card">
+      <h2>This screen</h2>
+      <div class="sheet-rows" id="settingsRows"></div>
+      <h2>The mod</h2>
+      <p class="dim">Saved in AynDualScreen.ini, and shared by every screen.</p>
+      <div class="sheet-rows" id="modSettingsRows"></div>
+      <button class="close" id="settingsClose" type="button">Done</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

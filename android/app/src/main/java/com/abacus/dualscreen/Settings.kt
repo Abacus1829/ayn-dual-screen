@@ -42,6 +42,68 @@ class Settings(context: Context) {
         get() = prefs.getBoolean(KEY_REMEMBER_DISPLAY, true)
         set(value) = prefs.edit().putBoolean(KEY_REMEMBER_DISPLAY, value).apply()
 
+    /*********
+     * Console skin
+     *********/
+    /**
+     * Which console the home screen is dressed as, or "default" for the app's own look.
+     *
+     * Stored as an id rather than an index so a user theme keeps working when another is added
+     * beside it — the list is sorted by filename, and a position would silently point at somebody
+     * else's theme the moment a new file lands.
+     */
+    var consoleTheme: String
+        get() = prefs.getString(KEY_CONSOLE_THEME, "default") ?: "default"
+        set(value) = prefs.edit().putString(KEY_CONSOLE_THEME, value).apply()
+
+    /*********
+     * FTP
+     *********/
+    /** Ports below 1024 need root, so the default is the conventional unprivileged one. */
+    var ftpPort: Int
+        get() = prefs.getInt(KEY_FTP_PORT, FtpServer.DEFAULT_PORT)
+        set(value) = prefs.edit().putInt(KEY_FTP_PORT, value).apply()
+
+    /** Empty means anonymous, which is how ftpd behaves on a 3DS and what most people want on a LAN. */
+    var ftpUser: String
+        get() = prefs.getString(KEY_FTP_USER, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_FTP_USER, value).apply()
+
+    /**
+     * Stored in plain SharedPreferences, and that is not an oversight worth hiding: the protocol
+     * sends it in clear text over the network anyway, so encrypting it at rest would protect it
+     * from nobody. It is a doorlock for your own LAN, not a credential.
+     */
+    var ftpPassword: String
+        get() = prefs.getString(KEY_FTP_PASS, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_FTP_PASS, value).apply()
+
+    /** Serve from "/" rather than shared storage. Needs All files access; see [Storage]. */
+    var ftpWholeDevice: Boolean
+        get() = prefs.getBoolean(KEY_FTP_WHOLE, true)
+        set(value) = prefs.edit().putBoolean(KEY_FTP_WHOLE, value).apply()
+
+    /** Set by the service, read by the UI, so the button says Stop when a server is already up. */
+    var ftpRunning: Boolean
+        get() = prefs.getBoolean(KEY_FTP_RUNNING, false)
+        set(value) = prefs.edit().putBoolean(KEY_FTP_RUNNING, value).apply()
+
+    /**
+     * Start the FTP server as soon as the app opens.
+     *
+     * Off by default, and it should be: a server that starts itself is one somebody can leave
+     * running on a café network without ever having pressed a button. Worth having for the people
+     * who use this constantly on their own network, which is most of the point of the feature.
+     */
+    var ftpAutoStart: Boolean
+        get() = prefs.getBoolean(KEY_FTP_AUTOSTART, false)
+        set(value) = prefs.edit().putBoolean(KEY_FTP_AUTOSTART, value).apply()
+
+    /** Console text size in sp, so a handheld panel and a monitor can each be readable. */
+    var consoleTextSize: Int
+        get() = prefs.getInt(KEY_CONSOLE_TEXT, 12).coerceIn(8, 22)
+        set(value) = prefs.edit().putInt(KEY_CONSOLE_TEXT, value.coerceIn(8, 22)).apply()
+
     fun hostFor(game: Game): String =
         prefs.getString("${KEY_HOST}_${game.id}", "").orEmpty()
 
@@ -164,6 +226,16 @@ class Settings(context: Context) {
         const val KEY_RECONNECT = "auto_reconnect"
         const val KEY_KEEP_AWAKE = "keep_awake"
         const val KEY_REMEMBER_DISPLAY = "remember_display"
+
+        const val KEY_CONSOLE_THEME = "console_theme"
+
+        const val KEY_FTP_PORT = "ftp_port"
+        const val KEY_FTP_USER = "ftp_user"
+        const val KEY_FTP_PASS = "ftp_pass"
+        const val KEY_FTP_WHOLE = "ftp_whole_device"
+        const val KEY_FTP_RUNNING = "ftp_running"
+        const val KEY_FTP_AUTOSTART = "ftp_autostart"
+        const val KEY_CONSOLE_TEXT = "console_text_size"
         const val KEY_HOST = "host"
         const val KEY_PORT = "port"
         const val KEY_DISPLAY = "display"

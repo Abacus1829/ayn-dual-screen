@@ -11,6 +11,7 @@ import android.view.Display
 import android.view.HapticFeedbackConstants
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
@@ -77,6 +78,7 @@ class HomeActivity : AppCompatActivity() {
         // mode buttons are drawn in code, so they need rebuilding rather than just repainting
         Appearance.apply(this, binding.root, settings, binding.backgroundImage)
         binding.accentBar.setBackgroundColor(Appearance.accentOf(settings))
+        maybeAutoStartFtp()
         buildTools()
         applyMode()
 
@@ -193,7 +195,27 @@ class HomeActivity : AppCompatActivity() {
      */
     private fun buildTools() {
         binding.toolGrid.removeAllViews()
-        binding.toolGrid.columnCount = settings.gridColumns.coerceIn(2, 5)
+        /*
+         * A console skin, if one is chosen.
+         *
+         * The grid is styled rather than replaced. Rebuilding it from the skin would mean
+         * duplicating the tap, the long-press-to-hide and the ordering that already live here —
+         * and every one of those would then need fixing twice. A skin decides how a tile looks; it
+         * has no business deciding what a tile does.
+         */
+        val skin = com.abacus.dualscreen.theme.ThemeStore(this).byId(settings.consoleTheme)
+        val skinned = skin.id != "default"
+
+        binding.toolGrid.columnCount =
+            if (skinned) skin.columns else settings.gridColumns.coerceIn(2, 5)
+
+        if (skinned) {
+            // The skin owns the whole surface, not just the tiles — a 3DS on a black page would
+            // look like a mistake rather than a 3DS, and a Vita needs its blue gradient.
+            binding.root.background = com.abacus.dualscreen.theme.ConsoleSkin.backdrop(skin)
+            binding.backgroundImage.visibility = View.GONE
+            addStatusBar(skin)
+        }
 
         val accent = Appearance.accentOf(settings)
         val hidden = settings.hiddenTools
@@ -213,7 +235,11 @@ class HomeActivity : AppCompatActivity() {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
                 setPadding(0, dp(14), 0, dp(12))
-                background = Appearance.tile(this@HomeActivity, settings, accent, tool.available)
+                background = if (skinned) {
+                    com.abacus.dualscreen.theme.ConsoleSkin.tileFace(this@HomeActivity, skin)
+                } else {
+                    Appearance.tile(this@HomeActivity, settings, accent, tool.available)
+                }
                 alpha = if (tool.available) 1f else 0.45f
                 layoutParams = GridLayout.LayoutParams().apply {
                     width = 0
@@ -239,12 +265,33 @@ class HomeActivity : AppCompatActivity() {
             val glyph = TextView(this).apply {
                 text = Appearance.iconFor(settings, tool)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, if (settings.iconSet == "text") 13f else 22f)
-                setTextColor(if (tool.available) accent else getColor(R.color.text_faint))
+                setTextColor(
+                    when {
+                        // A skin's glyph colour, not the app accent: dark glyphs on a 3DS's white
+                        // tiles, pale ones on a PSP's near-black field.
+                        skinned && tool.available -> skin.tileGlyph
+                        skinned -> android.graphics.Color.argb(
+                            110,
+                            android.graphics.Color.red(skin.tileGlyph),
+                            android.graphics.Color.green(skin.tileGlyph),
+                            android.graphics.Color.blue(skin.tileGlyph),
+                        )
+                        tool.available -> accent
+                        else -> getColor(R.color.text_faint)
+                    }
+                )
                 gravity = Gravity.CENTER
             }
 
             val label = TextView(this).apply {
-                text = getString(tool.label)
+                // A live dot on the FTP tile while the server is up. Without it the only way to
+                // know is to open the screen, and "did I leave that running?" is a question worth
+                // answering from the home grid — especially for a thing that shares your files.
+                text = if (tool == Tool.FTP && FtpService.live != null) {
+                    "● " + getString(tool.label)
+                } else {
+                    getString(tool.label)
+                }
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
                 setTextColor(getColor(R.color.text_dim))
                 gravity = Gravity.CENTER
@@ -255,6 +302,56 @@ class HomeActivity : AppCompatActivity() {
             cell.addView(label)
             binding.toolGrid.addView(cell)
         }
+    }
+
+    /**
+     * Start the FTP server on launch, if that was asked for.
+     *
+     * Only when nothing is already running: coming back to the home screen from another app calls
+     * this again, and a second start on a live server would bind a port that is already bound and
+     * report a failure for something that is working perfectly.
+     */
+    private fun maybeAutoStartFtp() {
+        if (!settings.ftpAutoStart || FtpService.live != null) return
+
+        runCatching {
+            FtpService.start(
+                context = this,
+                port = settings.ftpPort,
+                user = settings.ftpUser,
+                pass = settings.ftpPassword,
+                wholeDevice = settings.ftpWholeDevice,
+            )
+        }
+    }
+
+    /**
+     * The console's own status strip, above the tools.
+     *
+     * Inserted into the grid's parent rather than added to the layout file, because it only exists
+     * for a skin — the app's own look has no such bar, and an empty strip taking up eighteen pixels
+     * on the default theme would be worse than none.
+     *
+     * Tagged so a rebuild can find and replace it: buildTools() runs again whenever a tool is
+     * hidden or a theme changes, and without the tag each pass would leave another bar behind.
+     */
+    private fun addStatusBar(skin: com.abacus.dualscreen.theme.ConsoleTheme) {
+        val parent = binding.toolGrid.parent as? ViewGroup ?: return
+
+        parent.findViewWithTag<View>(STATUS_BAR_TAG)?.let { parent.removeView(it) }
+
+        val battery = runCatching {
+            getSystemService(android.os.BatteryManager::class.java)
+                ?.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: 0
+        }.getOrDefault(0)
+
+        val connection = settings.hostFor(settings.lastGame).ifEmpty { getString(R.string.app_name) }
+
+        val bar = com.abacus.dualscreen.theme.ConsoleSkin
+            .buildStatusBar(this, skin, connection, battery) ?: return
+
+        bar.tag = STATUS_BAR_TAG
+        parent.addView(bar, parent.indexOfChild(binding.toolGrid))
     }
 
     /**
@@ -294,6 +391,9 @@ class HomeActivity : AppCompatActivity() {
             Tool.KEYBOARD -> startActivity(Intent(this, KeyboardActivity::class.java))
             Tool.MIRROR -> startActivity(Intent(this, MirrorActivity::class.java))
             Tool.MACROS -> startActivity(Intent(this, MacrosActivity::class.java))
+            Tool.FTP -> startActivity(Intent(this, FtpActivity::class.java))
+            Tool.STREAM -> startActivity(Intent(this, StreamActivity::class.java))
+            Tool.THEMES -> startActivity(Intent(this, ThemesActivity::class.java))
             else -> Unit
         }
     }
@@ -643,5 +743,8 @@ class HomeActivity : AppCompatActivity() {
 
     private companion object {
         val LOOPBACK_HOSTS = setOf("localhost", "127.0.0.1", "::1", "[::1]")
+
+        /** Marks the skin's status strip so a rebuild replaces it instead of stacking another. */
+        const val STATUS_BAR_TAG = "console-status-bar"
     }
 }

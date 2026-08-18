@@ -18,6 +18,23 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
+    <!--
+        All files access, for the FTP server.
+
+        This is what makes the server behave like the 3DS's ftpd — connect and the device is there —
+        rather than showing a handful of media folders. It is granted by the user in a system
+        settings screen, not by a prompt, and it is the reason this app is a sideloaded APK: Google
+        Play restricts this permission to file managers and backup tools. Distributing from GitHub,
+        as this project already does, that restriction does not apply.
+
+        Nothing else in the app uses it, and with the FTP server switched off nothing reads it.
+    -->
+    <uses-permission
+        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -75,6 +92,31 @@
             android:exported="false"
             android:resizeableActivity="true" />
 
+        <activity
+            android:name=".FtpActivity"
+            android:exported="false"
+            android:resizeableActivity="true" />
+
+        <activity
+            android:name=".StreamActivity"
+            android:exported="false"
+            android:resizeableActivity="true" />
+
+        <activity
+            android:name=".ThemesActivity"
+            android:exported="false"
+            android:resizeableActivity="true" />
+
+        <!--
+            The FTP console window. Launched by the setup screen when the server starts, and left on
+            the back stack behind it so Back returns to the settings rather than out of the app.
+        -->
+        <activity
+            android:name=".FtpConsoleActivity"
+            android:exported="false"
+            android:label="@string/ftp_console"
+            android:resizeableActivity="true" />
+
         <service
             android:name=".MirrorService"
             android:exported="false"
@@ -92,6 +134,15 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="An always-on overlay of user-placed shortcut buttons, which must survive leaving the app to be of any use." />
+        </service>
+
+        <service
+            android:name=".FtpService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="An FTP server for transferring files to and from the handheld over the local network, which must keep running while the user works on the PC at the other end." />
         </service>
 
         <service
