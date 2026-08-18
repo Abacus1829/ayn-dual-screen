@@ -108,7 +108,7 @@ class ThemesActivity : AppCompatActivity() {
             )
         }
 
-        // The status strip, for skins that have one. It is half of what separates a 3DS from a DS
+        // The status strip, for skins that have one. It is half of what separates one light skin from
         // Lite, and leaving it out of the preview hid exactly that difference.
         ConsoleSkin.buildStatusBar(this, theme, getString(R.string.app_name), 80)?.let {
             column.addView(

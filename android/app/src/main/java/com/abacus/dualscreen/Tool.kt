@@ -49,7 +49,7 @@ enum class Tool(
     // is as far as Android lets one app reach into another without a signature-level permission.
     MACROS("macros", R.string.tool_macros, "⚙"),
 
-    /** An FTP server on this device, so a PC can browse it over the network — like ftpd on a 3DS. */
+    /** An FTP server on this device, so a PC can browse it over the network, like a homebrew file server. */
     FTP("ftp", R.string.tool_ftp, "⇅"),
 
     /** Console skins for the home screen, and the folder where user-made ones live. */

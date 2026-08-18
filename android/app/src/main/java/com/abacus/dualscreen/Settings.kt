@@ -85,7 +85,7 @@ class Settings(context: Context) {
         get() = prefs.getInt(KEY_FTP_PORT, FtpServer.DEFAULT_PORT)
         set(value) = prefs.edit().putInt(KEY_FTP_PORT, value).apply()
 
-    /** Empty means anonymous, which is how ftpd behaves on a 3DS and what most people want on a LAN. */
+    /** Empty means anonymous, which is how homebrew FTP servers behave and what most people want on a LAN. */
     var ftpUser: String
         get() = prefs.getString(KEY_FTP_USER, "") ?: ""
         set(value) = prefs.edit().putString(KEY_FTP_USER, value).apply()

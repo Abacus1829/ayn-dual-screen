@@ -10,7 +10,7 @@ import android.provider.Settings as AndroidSettings
 /**
  * Whether this app may read the whole device, and how to ask.
  *
- * The FTP server exists to feel like the 3DS's ftpd, where you connect and the whole filesystem is
+ * The FTP server exists to feel like handheld homebrew file servers, where you connect and the whole filesystem is
  * there. Android has spent several versions making that deliberately hard, and the honest summary
  * is:
  *

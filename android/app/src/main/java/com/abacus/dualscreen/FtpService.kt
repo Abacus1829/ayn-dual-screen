@@ -70,7 +70,7 @@ class FtpService : android.app.Service() {
         val pass = intent.getStringExtra(EXTRA_PASS).orEmpty()
         val wholeDevice = intent.getBooleanExtra(EXTRA_WHOLE_DEVICE, false)
 
-        // Whole-device browsing is what makes this feel like the 3DS's ftpd, and it is also the part
+        // Whole-device browsing is what makes this feel like handheld homebrew FTP, and it is also the part
         // Android fights hardest. Without MANAGE_EXTERNAL_STORAGE granted, rooting at "/" produces a
         // tree that looks right and is empty everywhere that matters -- so fall back to shared
         // storage, which always works, rather than serving a convincing lie.

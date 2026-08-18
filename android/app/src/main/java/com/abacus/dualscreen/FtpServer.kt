@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 
 /**
- * An FTP server for the Thor, in the spirit of the 3DS's ftpd: point a file manager on your PC at the
+ * An FTP server for the Thor, in the spirit of handheld homebrew FTP servers: point a file manager on your PC at the
  * handheld and move files about, without a cable and without a desktop client to install.
  *
  * Hand-rolled rather than taken from a library, for the same reason every other server in this
@@ -33,7 +33,7 @@ import kotlin.concurrent.thread
  *
  * ## What it deliberately does not do
  *
- * **No encryption.** This is plain FTP, on your own network, exactly like the 3DS one. Anything you
+ * **No encryption.** This is plain FTP, on your own network, exactly like the homebrew ones it copies. Anything you
  * type at it — including the password, if you set one — goes over the air in the clear. It is off by
  * default and it is not something to leave running on a network you don't trust.
  */
@@ -44,7 +44,7 @@ class FtpServer(
     /** Where a client starts, and — unless [restrictToRoot] is false — the highest it can climb. */
     private val root: File,
 
-    /** Empty means anonymous: any username, any password. Matches ftpd's default on a 3DS. */
+    /** Empty means anonymous: any username, any password. Matches what those homebrew servers default to. */
     private val username: String = "",
     private val password: String = "",
 
@@ -181,7 +181,7 @@ class FtpServer(
         listener = socket
         running.set(true)
 
-        // The console opens with what a person needs to act on, the way ftpd's does: where to point
+        // The console opens with what a person needs to act on, the way a server banner does: where to point
         // the PC, and what it will find when it gets there.
         note("[INFO] Started server at [${addresses().firstOrNull() ?: "?"}]:$port")
         note("[INFO] Serving ${root.path}")

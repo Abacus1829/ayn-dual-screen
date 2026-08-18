@@ -6,7 +6,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.abacus.dualscreen.databinding.ActivityFtpBinding
 
 /**
- * Turn the Thor into an FTP server, the way ftpd does it on a 3DS.
+ * Turn the Thor into an FTP server, the way a homebrew FTP server does it on a handheld.
  *
  * The screen has one job above all others: show the address to type on the PC. Everything else —
  * port, login, what the server can see — is secondary and sits below it, because the moment after
@@ -187,7 +187,7 @@ class FtpActivity : AppCompatActivity() {
         binding.openConsoleButton.visibility = if (running) View.VISIBLE else View.GONE
 
         // Running, this screen IS the console: the setup fields go away entirely and the log takes
-        // the space, the way ftpd looks on a 3DS. Stopped, it is the other way round.
+        // the space, the way those homebrew consoles lay it out. Stopped, it is the other way round.
         binding.setupGroup.visibility = if (running) View.GONE else View.VISIBLE
 
         binding.scopeText.text = Storage.describe()

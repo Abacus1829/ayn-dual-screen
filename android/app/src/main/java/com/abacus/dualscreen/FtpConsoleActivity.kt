@@ -18,7 +18,7 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * The FTP console, laid out the way ftpd looks on a Switch.
+ * The FTP console, laid out like a homebrew file-server console.
  *
  * A blue status strip with the address, the clock and the free space; a menu row; the log with
  * `[COMMAND]` in green and `[RESPONSE]` in cyan; and a boxed panel at the bottom showing the
@@ -80,11 +80,11 @@ class FtpConsoleActivity : AppCompatActivity() {
      * Tint the console to match the chosen console skin.
      *
      * Only the chrome — the status strip and the panel behind the log. The log text itself keeps
-     * ftpd's colours, because [COMMAND] green and [RESPONSE] cyan are load-bearing: they are how
+     * the established colours, because [COMMAND] green and [RESPONSE] cyan are load-bearing: they are how
      * you read the thing at a glance, and a skin that recoloured them to match its palette would
      * be prettier and worse.
      *
-     * The stock theme leaves everything alone, so the ftpd look is the default rather than a mode.
+     * The stock theme leaves everything alone, so the plain terminal look is the default rather than a mode.
      */
     private fun applySkin() {
         val skin = com.abacus.dualscreen.theme.ThemeStore(this)
@@ -154,7 +154,7 @@ class FtpConsoleActivity : AppCompatActivity() {
         val port = Settings(this).ftpPort
         val address = server.addresses().firstOrNull()
 
-        // ftpd's strip reads:  ftpd v3.1.0 [10.10.200.224]:5000
+        // The strip reads like a server banner: name, version, address and port.
         binding.consoleTitle.text = if (address == null) {
             "AynFTP v$version  [no network]"
         } else {
@@ -276,7 +276,7 @@ class FtpConsoleActivity : AppCompatActivity() {
     companion object {
         private val CLOCK = SimpleDateFormat("HH:mm:ss", Locale.US)
 
-        /** ftpd's colours: commands green, responses cyan, trouble red. */
+        /** Terminal colours: commands green, responses cyan, trouble red. */
         private val TAGS = linkedMapOf(
             "[COMMAND]" to Color.parseColor("#5BD75B"),
             "[RESPONSE]" to Color.parseColor("#6FD3E8"),

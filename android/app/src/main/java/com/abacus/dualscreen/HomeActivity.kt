@@ -213,9 +213,9 @@ class HomeActivity : AppCompatActivity() {
             if (skinned) skin.columns else settings.gridColumns.coerceIn(2, 5)
 
         if (skinned) {
-            // The skin owns the whole surface, not just the tiles — a 3DS on a black page would
-            // look like a mistake rather than a 3DS, and a Vita needs its blue gradient.
-            // A theme's own wallpaper wins over its colours — for most 3DS and Luma themes the
+            // The skin owns the whole surface, not just the tiles — a light skin on a black page would
+            // look like a mistake, and the bubble skin needs its blue gradient.
+            // A theme's own wallpaper wins over its colours — for most of these looks the
             // wallpaper IS the theme, and the palette exists to sit on top of it.
             val store = com.abacus.dualscreen.theme.ThemeStore(this)
             binding.root.background = store.background(skin)
@@ -254,7 +254,7 @@ class HomeActivity : AppCompatActivity() {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
                 // Height follows the skin. tileScale was being read by nothing on this screen, so
-                // a DS Lite's three chunky tiles and a Wii U's five small ones came out identical
+                // the silver skin's three chunky tiles and the tablet skin's five small ones came out identical
                 // -- which is most of why the skins still looked alike.
                 val pad = if (skinned) skin.tileScale else 1f
                 setPadding(0, dp((16 * pad).toInt()), 0, dp((14 * pad).toInt()))
@@ -292,8 +292,8 @@ class HomeActivity : AppCompatActivity() {
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, if (skinned) base * skin.tileScale * 1.15f else base)
                 setTextColor(
                     when {
-                        // A skin's glyph colour, not the app accent: dark glyphs on a 3DS's white
-                        // tiles, pale ones on a PSP's near-black field.
+                        // A skin's glyph colour, not the app accent: dark glyphs on a light skin's white
+                        // tiles, pale ones on a near-black field.
                         skinned && tool.available -> skin.tileGlyph
                         skinned -> android.graphics.Color.argb(
                             110,
@@ -398,7 +398,7 @@ class HomeActivity : AppCompatActivity() {
     /**
      * With a skin on, the home screen IS the console menu — everything else goes.
      *
-     * Recolouring the app's own layout was never going to look like a 3DS: the header, the connect
+     * Recolouring the app's own layout was never going to look like a console menu: the header, the connect
      * card, the address fields and the status row are all still there, and a console home menu has
      * none of that. So when a skin is chosen every sibling of the tool grid is hidden, leaving the
      * status strip and the tiles, which is what the hardware actually shows.
@@ -436,7 +436,7 @@ class HomeActivity : AppCompatActivity() {
         /*
          * Repaint the connect card in the skin's colours.
          *
-         * Left alone it keeps the app's dark card style, and a charcoal panel sitting on a 3DS's
+         * Left alone it keeps the app's dark card style, and a charcoal panel sitting on a light skin's
          * white field is the single most jarring thing on the themed home screen — it reads as a
          * bug, because it looks like one part of the app failed to notice the theme.
          */
@@ -477,14 +477,14 @@ class HomeActivity : AppCompatActivity() {
     }
 
     /**
-     * The strip of round shortcuts along the bottom, as the Wii and Wii U have.
+     * The strip of round shortcuts along the bottom, as the console-style skins have.
      *
      * Not decoration: on those machines the tray is where the things you actually use live, so it
      * carries real shortcuts — the second screen, the FTP server, and the theme picker — rather
      * than a row of dead icons pretending to be a console.
      *
      * Only drawn for skins that ask for it ([ConsoleTheme.trayBackground] non-zero), which is why
-     * the 3DS and PSP do not get one.
+     * the clamshell and crossbar skins do not get one.
      */
     private fun addTray(skin: com.abacus.dualscreen.theme.ConsoleTheme) {
         val parent = binding.toolGrid.parent as? ViewGroup ?: return
