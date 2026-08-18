@@ -354,7 +354,9 @@ class HomeActivity : AppCompatActivity() {
             for (slot in com.abacus.dualscreen.theme.ConsoleSkin.slotFillers(this, skin, tools.size)) {
                 binding.toolGrid.addView(slot, GridLayout.LayoutParams().apply {
                     width = 0
-                    height = dp(56)
+                    // Same height as a real tile, so the empty places line up with the filled ones
+                    // instead of stepping down half way through a row.
+                    height = dp(88)
                     columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
                     setMargins(dp(3), dp(3), dp(3), dp(3))
                 })
@@ -394,9 +396,29 @@ class HomeActivity : AppCompatActivity() {
 
             val keep = child === binding.toolGrid ||
                 child === connectCard ||
-                child.tag == STATUS_BAR_TAG
+                child.tag == STATUS_BAR_TAG ||
+                child.tag == TRAY_TAG
 
             child.visibility = if (!skinned || keep) View.VISIBLE else View.GONE
+        }
+
+        /*
+         * Repaint the connect card in the skin's colours.
+         *
+         * Left alone it keeps the app's dark card style, and a charcoal panel sitting on a 3DS's
+         * white field is the single most jarring thing on the themed home screen — it reads as a
+         * bug, because it looks like one part of the app failed to notice the theme.
+         */
+        val skin = com.abacus.dualscreen.theme.ThemeStore(this).byId(settings.consoleTheme)
+        if (skinned && connectCard != null) {
+            connectCard.background = com.abacus.dualscreen.theme.ConsoleSkin.tileFace(this, skin)
+            recolourText(connectCard, skin.tileLabel, skin.tileGlyph)
+
+            // Again after the queue drains. The spinner rebuilds its selected view whenever the
+            // selection is set, and applyMode() does exactly that later in the same pass -- which
+            // threw away the colour set here and left the game name almost invisible on a white
+            // card.
+            connectCard.post { recolourText(connectCard, skin.tileLabel, skin.tileGlyph) }
         }
 
         // The scroller's own padding frames the app's cards; a console menu wants the grid to run
@@ -429,7 +451,7 @@ class HomeActivity : AppCompatActivity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
             setBackgroundColor(skin.trayBackground)
-            setPadding(dp(8), dp(8), dp(8), dp(8))
+            setPadding(dp(8), dp(10), dp(8), dp(10))
             tag = TRAY_TAG
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -458,6 +480,15 @@ class HomeActivity : AppCompatActivity() {
             })
         }
 
+        // A hairline above it, so the strip reads as an edge of the screen rather than as a band
+        // of colour that happens to be sitting there.
+        parent.addView(View(this).apply {
+            setBackgroundColor(skin.tileBorder.takeIf { it != 0 } ?: skin.trayIcon)
+            alpha = 0.4f
+            tag = TRAY_TAG
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1))
+        })
+
         parent.addView(tray)
     }
 
@@ -479,6 +510,43 @@ class HomeActivity : AppCompatActivity() {
                 pass = settings.ftpPassword,
                 wholeDevice = settings.ftpWholeDevice,
             )
+        }
+    }
+
+    /**
+     * Walk a view tree and recolour its text to suit a skin.
+     *
+     * Labels take the strong colour, hints and captions the softer one — anything already dimmed by
+     * the app's own styling stays relatively dimmer, so the hierarchy survives the repaint instead
+     * of flattening into one colour.
+     */
+    private fun recolourText(view: View, strong: Int, soft: Int) {
+        when (view) {
+            /*
+             * Buttons need their background replaced, not just their text.
+             *
+             * They carry the app's own accentFill drawable, so on a light skin a dark slab with
+             * dark text sat in the middle of a white card — unreadable, and the most obviously
+             * broken thing left on screen once the card itself was fixed.
+             */
+            is Button -> {
+                val skin = com.abacus.dualscreen.theme.ThemeStore(this).byId(settings.consoleTheme)
+                view.background = com.abacus.dualscreen.theme.ConsoleSkin.tileFace(this, skin)
+                view.setTextColor(strong)
+            }
+
+            // A Spinner draws its selection through a child TextView, so recolouring the Spinner
+            // itself did nothing and the game name came out almost invisible on a white card.
+            is android.widget.Spinner ->
+                for (i in 0 until view.childCount) recolourText(view.getChildAt(i), strong, soft)
+
+            is TextView -> {
+                val faint = view.alpha < 1f ||
+                    view.textSize < 13 * resources.displayMetrics.scaledDensity
+                view.setTextColor(if (faint) soft else strong)
+            }
+
+            is ViewGroup -> for (i in 0 until view.childCount) recolourText(view.getChildAt(i), strong, soft)
         }
     }
 
@@ -521,10 +589,10 @@ class HomeActivity : AppCompatActivity() {
             ViewGroup.LayoutParams.WRAP_CONTENT,
         )
 
-        val at = parent.indexOfChild(binding.toolGrid)
-        parent.addView(bar, if (at >= 0) at else 0)
+        // Top of the screen, not above the grid. A console status strip belongs at the very top --
+        // tucked between the connect card and the tiles it read as a stray line of text.
+        parent.addView(bar, 0)
 
-        android.util.Log.i("AynSkin", "status bar added for ${skin.id} at index $at of ${parent.childCount}")
     }
 
     /**

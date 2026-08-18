@@ -209,12 +209,12 @@ Save-Art $c "3ds"
 
 # ── Wii U: brighter and cooler than the 3DS, same restraint ─────────────────
 $c = New-Canvas $Width $Height
-Set-Gradient $c.Graphics $Width $Height "#FFFFFF" "#EDF1F4"
+Set-Gradient $c.Graphics $Width $Height "#FDFBF6" "#F1EEE7"
 Save-Art $c "wiiu"
 
 # ── Wii: white with the faintest blue toward the bottom ─────────────────────
 $c = New-Canvas $Width $Height
-Set-Gradient $c.Graphics $Width $Height "#FFFFFF" "#E7EEF4"
+Set-Gradient $c.Graphics $Width $Height "#E1EDF8" "#F8FBFD"
 Save-Art $c "wii"
 
 # ── Switch: charcoal, strong vignette, nothing else ─────────────────────────
@@ -244,7 +244,7 @@ Save-Art $c "ps1"
 
 # ── DS Lite: silver, almost flat ───────────────────────────────────────────
 $c = New-Canvas $Width $Height
-Set-Gradient $c.Graphics $Width $Height "#F6F8FA" "#E4EAF0"
+Set-Gradient $c.Graphics $Width $Height "#D7DDE4" "#EEF1F4"
 Save-Art $c "dslite"
 
 Write-Host "Done." -ForegroundColor Green

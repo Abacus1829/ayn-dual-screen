@@ -22,7 +22,10 @@ enum class Tool(
     BRIGHTNESS("brightness", R.string.tool_brightness, "☀"),
     APPEARANCE("appearance", R.string.tool_appearance, "◈"),
     KEYBOARD("keyboard", R.string.tool_keyboard, "⌨"),
-    MIRROR("mirror", R.string.tool_mirror, "⧉"),
+    // Third attempt at this glyph. ⧉, ▥ and ◨ all drew as tofu on the test device; ◐ renders
+    // (Themes uses it), so its neighbour ◑ is the safe pick. Worth checking on a real device
+    // rather than trusting a font to have anything outside the common blocks.
+    MIRROR("mirror", R.string.tool_mirror, "◎"),
 
     // The pad itself is on-device. Its text and key macros go out through this app's own keyboard, which
     // is as far as Android lets one app reach into another without a signature-level permission.
