@@ -3,6 +3,7 @@ package com.abacus.dualscreen
 import android.os.Bundle
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -16,10 +17,9 @@ import com.abacus.dualscreen.databinding.ActivityThemesBinding
 /**
  * Pick a console skin, or find out how to write one.
  *
- * Every entry shows a small live preview built from the theme itself rather than a screenshot —
- * three tiles on the theme's own background, in its own colours. That matters most for user themes,
- * which have no screenshot anybody could have shipped, and it means a preview can never drift out
- * of date with what the skin actually does.
+ * Every entry carries a small sample drawn from the theme itself rather than a screenshot: its own
+ * artwork with two tiles on it. That matters most for user themes, which have no screenshot anybody
+ * could have shipped, and it means a sample can never drift out of date with what the skin does.
  */
 class ThemesActivity : AppCompatActivity() {
 
@@ -56,17 +56,27 @@ class ThemesActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * One row: a small sample of the theme on the left, its name on the right.
+     *
+     * Compact and uniform on purpose. The first version drew each row using the theme's own tile
+     * style, which meant the Vita's 64dp corner radius turned its row into a lozenge and the PSP's
+     * transparent tile face made its row vanish — nine of those made the list a mess and far taller
+     * than the screen. A picker should be legible at a glance; the sample is where the theme gets
+     * to look like itself.
+     */
     private fun row(theme: ConsoleTheme): LinearLayout {
         val chosen = settings.consoleTheme == theme.id
 
         return LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), dp(12), dp(12), dp(12))
-            background = ConsoleSkin.tileFace(this@ThemesActivity, theme)
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(10), dp(8), dp(10), dp(8))
+            tag = if (chosen) "accentEdge" else "card"      // Appearance paints these
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
-            ).apply { bottomMargin = dp(10) }
+            ).apply { bottomMargin = dp(8) }
 
             setOnClickListener {
                 settings.consoleTheme = theme.id
@@ -74,56 +84,56 @@ class ThemesActivity : AppCompatActivity() {
                 buildList()
             }
 
-            // Name, and where it came from. A user theme says so, because "why is this one
-            // different" is the first question when one misbehaves.
-            addView(TextView(context).apply {
-                text = if (chosen) "● ${theme.name}" else theme.name
-                setTextColor(theme.tileLabel)
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
-            })
+            addView(sample(theme))
 
-            val note = listOfNotNull(
-                theme.subtitle.ifEmpty { null },
-                if (theme.builtIn) null else getString(R.string.theme_from_file),
-            ).joinToString(" · ")
+            addView(LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                    .apply { leftMargin = dp(10) }
 
-            if (note.isNotEmpty()) {
                 addView(TextView(context).apply {
-                    text = note
-                    setTextColor(theme.tileGlyph)
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+                    text = if (chosen) "● ${theme.name}" else theme.name
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
                 })
-            }
 
-            addView(preview(theme))
+                val note = listOfNotNull(
+                    theme.subtitle.ifEmpty { null },
+                    if (theme.builtIn) null else getString(R.string.theme_from_file),
+                ).joinToString(" · ")
+
+                if (note.isNotEmpty()) {
+                    addView(TextView(context).apply {
+                        text = note
+                        setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+                        alpha = 0.7f
+                    })
+                }
+            })
         }
     }
 
-    /** Three tiles on the theme's own field — the smallest thing that shows what it looks like. */
-    private fun preview(theme: ConsoleTheme): LinearLayout =
+    /**
+     * A postage stamp of the theme: its real artwork, with two tiles on top.
+     *
+     * Fixed size, so every row is the same height whatever the theme asks for — the tiles inside
+     * are scaled to the stamp rather than to the theme's own dimensions.
+     */
+    private fun sample(theme: ConsoleTheme): View =
         LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            // The theme's real artwork in the preview, not just its colours — otherwise every light
-            // skin looks like every other light skin in this list, which is exactly the complaint
-            // that prompted the art in the first place.
+            gravity = Gravity.CENTER
             background = store.background(theme) ?: ConsoleSkin.backdrop(theme)
-            setPadding(dp(8), dp(8), dp(8), dp(8))
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(8) }
+            layoutParams = LinearLayout.LayoutParams(dp(76), dp(48))
 
-            for (glyph in listOf("▣", "⇅", "▶")) {
+            for (glyph in listOf("▣", "⇅")) {
                 addView(TextView(context).apply {
                     text = glyph
                     gravity = Gravity.CENTER
                     setTextColor(theme.tileGlyph)
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
                     background = ConsoleSkin.tileFace(this@ThemesActivity, theme)
-                    layoutParams = LinearLayout.LayoutParams(dp(46), dp(46)).apply {
-                        rightMargin = dp(8)
-                    }
+                    layoutParams = LinearLayout.LayoutParams(dp(26), dp(26))
+                        .apply { rightMargin = dp(4) }
                 })
             }
         }
