@@ -54,7 +54,11 @@ class Settings(context: Context) {
      */
     var consoleTheme: String
         get() = prefs.getString(KEY_CONSOLE_THEME, "default") ?: "default"
-        set(value) = prefs.edit().putString(KEY_CONSOLE_THEME, value).apply()
+        // commit() rather than apply(), unusually. apply() writes on a background thread, and a
+        // theme is very often the last thing someone changes before backgrounding or killing the
+        // app to go and look at the result -- which is exactly the window where the write is lost.
+        // One synchronous write on a deliberate user action is cheap.
+        set(value) { prefs.edit().putString(KEY_CONSOLE_THEME, value).commit() }
 
     /*********
      * FTP

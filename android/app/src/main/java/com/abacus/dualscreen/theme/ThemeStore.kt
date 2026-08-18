@@ -83,6 +83,19 @@ class ThemeStore(private val context: Context) {
      * is the theme's call, not a guess from the image size.
      */
     fun background(theme: ConsoleTheme): Drawable? {
+        // A built-in skin's art ships inside the APK. Drawn by tools/make-theme-art.ps1 rather than
+        // downloaded, so the repository owns everything it ships and the art can be regenerated
+        // from a script instead of being a folder of PNGs nobody can edit.
+        if (theme.builtIn) {
+            return runCatching {
+                context.assets.open("themes/${theme.id}.png").use { stream ->
+                    BitmapDrawable(context.resources, BitmapFactory.decodeStream(stream)).apply {
+                        gravity = android.view.Gravity.FILL
+                    }
+                }
+            }.getOrNull()          // a skin with no art file simply falls back to its colours
+        }
+
         if (theme.iconFolder.isEmpty() || theme.backgroundImage.isEmpty()) return null
 
         val file = File(theme.iconFolder, theme.backgroundImage).takeIf { it.isFile } ?: return null

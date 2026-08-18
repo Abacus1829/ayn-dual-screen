@@ -104,7 +104,10 @@ class ThemesActivity : AppCompatActivity() {
         LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            background = ConsoleSkin.backdrop(theme)
+            // The theme's real artwork in the preview, not just its colours — otherwise every light
+            // skin looks like every other light skin in this list, which is exactly the complaint
+            // that prompted the art in the first place.
+            background = store.background(theme) ?: ConsoleSkin.backdrop(theme)
             setPadding(dp(8), dp(8), dp(8), dp(8))
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,

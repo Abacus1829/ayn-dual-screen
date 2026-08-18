@@ -221,11 +221,16 @@ class HomeActivity : AppCompatActivity() {
                 ?: com.abacus.dualscreen.theme.ConsoleSkin.backdrop(skin)
 
             binding.backgroundImage.visibility = View.GONE
-            addStatusBar(skin)
         }
 
-        // Do this after the status bar exists, so it survives the sweep that hides everything else.
+        // Hide the app's chrome FIRST, then add the status strip.
+        //
+        // The other order looked fine and wasn't: the sweep walks every child of the grid's parent,
+        // and the strip is one of those children. Keeping it by tag should have spared it and did
+        // not, so rather than debug a comparison, the strip is simply added after the sweep has
+        // finished — nothing can hide something that is not there yet.
         applyChrome(skinned)
+        if (skinned) addStatusBar(skin)
 
         val accent = Appearance.accentOf(settings)
         val hidden = settings.hiddenTools
@@ -348,10 +353,23 @@ class HomeActivity : AppCompatActivity() {
     private fun applyChrome(skinned: Boolean) {
         val parent = binding.toolGrid.parent as? ViewGroup ?: return
 
+        // The card holding the game picker stays, skin or no skin.
+        //
+        // The first version hid it along with everything else, which made the home screen look
+        // right and took the app's actual purpose with it — there was no way to choose a game or
+        // set an address any more. A themed home screen is still this app; it is not a costume
+        // worth losing the connect controls over.
+        val connectCard = generateSequence(binding.gameSpinner.parent) { (it as? View)?.parent }
+            .filterIsInstance<View>()
+            .firstOrNull { it.parent === parent }
+
         for (index in 0 until parent.childCount) {
             val child = parent.getChildAt(index)
 
-            val keep = child === binding.toolGrid || child.tag == STATUS_BAR_TAG
+            val keep = child === binding.toolGrid ||
+                child === connectCard ||
+                child.tag == STATUS_BAR_TAG
+
             child.visibility = if (!skinned || keep) View.VISIBLE else View.GONE
         }
 
@@ -409,10 +427,26 @@ class HomeActivity : AppCompatActivity() {
         val connection = settings.hostFor(settings.lastGame).ifEmpty { getString(R.string.app_name) }
 
         val bar = com.abacus.dualscreen.theme.ConsoleSkin
-            .buildStatusBar(this, skin, connection, battery) ?: return
+            .buildStatusBar(this, skin, connection, battery)
+
+        if (bar == null) {
+            android.util.Log.w("AynSkin", "no status bar for ${skin.id} (statusBackground is 0)")
+            return
+        }
 
         bar.tag = STATUS_BAR_TAG
-        parent.addView(bar, parent.indexOfChild(binding.toolGrid))
+
+        // Explicit layout params. Added to a vertical LinearLayout without them, the bar takes the
+        // parent's defaults and can end up measuring to nothing.
+        bar.layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+        )
+
+        val at = parent.indexOfChild(binding.toolGrid)
+        parent.addView(bar, if (at >= 0) at else 0)
+
+        android.util.Log.i("AynSkin", "status bar added for ${skin.id} at index $at of ${parent.childCount}")
     }
 
     /**
