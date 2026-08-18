@@ -333,15 +333,34 @@ class HomeActivity : AppCompatActivity() {
              */
             val custom = if (skinned) themes.icon(skin, tool.id) else null
 
-            if (custom != null) {
-                cell.addView(ImageView(this).apply {
+            /*
+             * Three sources, in order of who should win:
+             *   1. the theme's own PNG for this tool, if it ships one
+             *   2. the tool's drawn vector, for the ones a font cannot be trusted with
+             *   3. the glyph
+             */
+            val drawn = if (tool.icon != 0) androidx.core.content.ContextCompat.getDrawable(this, tool.icon) else null
+
+            when {
+                custom != null -> cell.addView(ImageView(this).apply {
                     setImageDrawable(custom)
                     scaleType = ImageView.ScaleType.FIT_CENTER
                     alpha = if (tool.available) 1f else 0.45f
                     layoutParams = LinearLayout.LayoutParams(dp(40), dp(40))
                 })
-            } else {
-                cell.addView(glyph)
+
+                drawn != null -> cell.addView(ImageView(this).apply {
+                    setImageDrawable(drawn)
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    alpha = if (tool.available) 1f else 0.45f
+
+                    // Tinted to whatever the glyphs are using, so a drawn icon and a typed one sit
+                    // at the same weight on every skin.
+                    setColorFilter(glyph.currentTextColor)
+                    layoutParams = LinearLayout.LayoutParams(dp(26), dp(26))
+                })
+
+                else -> cell.addView(glyph)
             }
 
             cell.addView(label)

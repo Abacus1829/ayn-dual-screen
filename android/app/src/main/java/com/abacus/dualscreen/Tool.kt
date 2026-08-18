@@ -1,5 +1,6 @@
 package com.abacus.dualscreen
 
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 
 /**
@@ -13,6 +14,16 @@ enum class Tool(
     val id: String,
     @StringRes val label: Int,
     val glyph: String,
+
+    /**
+     * A drawn icon, used in preference to [glyph] when set.
+     *
+     * Exists because a font is not a guarantee. Four different characters for Mirror each rendered
+     * as tofu on the test device, and finding that out costs a build and an install every time. A
+     * vector always draws; the glyph stays as the fallback for the text-icon mode and for tools
+     * that do not need one.
+     */
+    @DrawableRes val icon: Int = 0,
     val available: Boolean = true,
     @StringRes val blockedReason: Int = 0
 ) {
@@ -22,10 +33,8 @@ enum class Tool(
     BRIGHTNESS("brightness", R.string.tool_brightness, "☀"),
     APPEARANCE("appearance", R.string.tool_appearance, "◈"),
     KEYBOARD("keyboard", R.string.tool_keyboard, "⌨"),
-    // Third attempt at this glyph. ⧉, ▥ and ◨ all drew as tofu on the test device; ◐ renders
-    // (Themes uses it), so its neighbour ◑ is the safe pick. Worth checking on a real device
-    // rather than trusting a font to have anything outside the common blocks.
-    MIRROR("mirror", R.string.tool_mirror, "◎"),
+    // Drawn rather than typed: see the icon field above.
+    MIRROR("mirror", R.string.tool_mirror, "▣", icon = R.drawable.ic_mirror),
 
     // The pad itself is on-device. Its text and key macros go out through this app's own keyboard, which
     // is as far as Android lets one app reach into another without a signature-level permission.
