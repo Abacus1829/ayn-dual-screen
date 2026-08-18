@@ -53,7 +53,24 @@ class Settings(context: Context) {
      * else's theme the moment a new file lands.
      */
     var consoleTheme: String
-        get() = prefs.getString(KEY_CONSOLE_THEME, "default") ?: "default"
+        get() {
+            /*
+             * One-time reset back to the app's own look.
+             *
+             * Console skins are behind a beta marker now, and anyone already carrying one from an
+             * earlier build should land on the stock look rather than on a half-finished costume
+             * they never chose. Done once and remembered, so picking a skin afterwards sticks.
+             */
+            if (!prefs.getBoolean(KEY_THEME_BETA_RESET, false)) {
+                prefs.edit()
+                    .putBoolean(KEY_THEME_BETA_RESET, true)
+                    .putString(KEY_CONSOLE_THEME, "default")
+                    .commit()
+                return "default"
+            }
+
+            return prefs.getString(KEY_CONSOLE_THEME, "default") ?: "default"
+        }
         // commit() rather than apply(), unusually. apply() writes on a background thread, and a
         // theme is very often the last thing someone changes before backgrounding or killing the
         // app to go and look at the result -- which is exactly the window where the write is lost.
@@ -232,6 +249,7 @@ class Settings(context: Context) {
         const val KEY_REMEMBER_DISPLAY = "remember_display"
 
         const val KEY_CONSOLE_THEME = "console_theme"
+        const val KEY_THEME_BETA_RESET = "console_theme_beta_reset"
 
         const val KEY_FTP_PORT = "ftp_port"
         const val KEY_FTP_USER = "ftp_user"

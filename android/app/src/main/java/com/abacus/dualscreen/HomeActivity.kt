@@ -316,10 +316,16 @@ class HomeActivity : AppCompatActivity() {
                 // A live dot on the FTP tile while the server is up. Without it the only way to
                 // know is to open the screen, and "did I leave that running?" is a question worth
                 // answering from the home grid — especially for a thing that shares your files.
-                text = if (tool == Tool.FTP && FtpService.live != null) {
-                    "● " + getString(tool.label)
-                } else {
-                    getString(tool.label)
+                text = when {
+                    // A live dot on the FTP tile while the server is up. Without it the only way to
+                    // know is to open the screen, and "did I leave that running?" is worth being
+                    // able to answer from the home grid -- especially for a thing sharing files.
+                    tool == Tool.FTP && FtpService.live != null -> "● " + getString(tool.label)
+
+                    // Beta tools say so on the tile rather than in a screen you have to open first.
+                    tool.beta -> getString(tool.label) + " " + getString(R.string.beta_suffix)
+
+                    else -> getString(tool.label)
                 }
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
                 setTextColor(getColor(R.color.text_dim))

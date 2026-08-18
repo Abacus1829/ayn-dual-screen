@@ -100,11 +100,12 @@
     <string name="tool_mirror">Mirror</string>
     <string name="tool_ftp">FTP</string>
     <string name="tool_themes">Themes</string>
+    <string name="beta_suffix">(beta)</string>
 
     <!-- Themes -->
-    <string name="appearance_console_themes">Console themes — 3DS, Vita, PSP…</string>
+    <string name="appearance_console_themes">Console themes (beta) — 3DS, Vita, PSP…</string>
     <string name="themes_title">Console themes</string>
-    <string name="themes_blurb">Dress the home screen as a handheld. Tap one to switch; tap Ayn Dual Screen to go back to the app\'s own look.</string>
+    <string name="themes_blurb">Beta. These skins work but are rough and still changing. Pick Ayn Dual Screen at any time to return to the standard look.</string>
     <string name="theme_applied">%1$s applied</string>
     <string name="theme_from_file">from a file</string>
     <string name="theme_make_own">Make your own</string>

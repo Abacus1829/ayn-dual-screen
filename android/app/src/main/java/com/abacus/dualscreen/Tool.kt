@@ -24,6 +24,15 @@ enum class Tool(
      * that do not need one.
      */
     @DrawableRes val icon: Int = 0,
+
+    /**
+     * Unfinished, and it says so on the tile.
+     *
+     * Different from [available]: a beta tool opens and works, it is just not done. Marking it is
+     * how somebody knows which rough edges are already known.
+     */
+    val beta: Boolean = false,
+
     val available: Boolean = true,
     @StringRes val blockedReason: Int = 0
 ) {
@@ -44,7 +53,7 @@ enum class Tool(
     FTP("ftp", R.string.tool_ftp, "⇅"),
 
     /** Console skins for the home screen, and the folder where user-made ones live. */
-    THEMES("themes", R.string.tool_themes, "◐"),
+    THEMES("themes", R.string.tool_themes, "◐", beta = true),
 
     /**
      * Pairing with a PC that can stream games.
@@ -53,7 +62,7 @@ enum class Tool(
      * and completes the pairing handshake, which is the hard half. It does NOT play anything, and
      * the screen says so in its first paragraph rather than letting somebody discover it.
      */
-    STREAM("stream", R.string.tool_stream, "▶");
+    STREAM("stream", R.string.tool_stream, "▶", beta = true);
 
     companion object {
         fun byId(id: String?): Tool? = entries.firstOrNull { it.id == id }
