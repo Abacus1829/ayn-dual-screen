@@ -51,6 +51,8 @@ class FtpConsoleActivity : AppCompatActivity() {
         // onPause, so it never outlives the window.
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+        applySkin()
+
         binding.stopButton.setOnClickListener {
             FtpService.stop(this)
             finish()
@@ -72,6 +74,34 @@ class FtpConsoleActivity : AppCompatActivity() {
         binding.consoleTitle.setOnClickListener { copyAddress() }
 
         applyTextSize()
+    }
+
+    /**
+     * Tint the console to match the chosen console skin.
+     *
+     * Only the chrome — the status strip and the panel behind the log. The log text itself keeps
+     * ftpd's colours, because [COMMAND] green and [RESPONSE] cyan are load-bearing: they are how
+     * you read the thing at a glance, and a skin that recoloured them to match its palette would
+     * be prettier and worse.
+     *
+     * The stock theme leaves everything alone, so the ftpd look is the default rather than a mode.
+     */
+    private fun applySkin() {
+        val skin = com.abacus.dualscreen.theme.ThemeStore(this)
+            .byId(Settings(this).consoleTheme)
+
+        if (skin.id == "default") return
+
+        binding.root.setBackgroundColor(skin.background)
+
+        if (skin.statusBackground != 0) {
+            (binding.consoleTitle.parent as? View)?.setBackgroundColor(skin.statusBackground)
+            binding.consoleTitle.setTextColor(skin.statusText)
+            binding.consoleClock.setTextColor(skin.statusText)
+            binding.consoleStorage.setTextColor(skin.statusText)
+        }
+
+        binding.sessionsText.setTextColor(skin.tileLabel)
     }
 
     private fun resize(by: Int) {

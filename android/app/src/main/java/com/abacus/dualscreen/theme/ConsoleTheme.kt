@@ -334,8 +334,70 @@ data class ConsoleTheme(
             trayIcon = 0xFF6A7D8A.toInt(),
         )
 
+        /**
+         * Nintendo Switch — the modern home menu.
+         *
+         * Near-black with square-ish tiles and a thin white selection ring. Twelve games across a
+         * row on the hardware, which would be unreadable here, so five: the point is the palette
+         * and the shape, not the exact count.
+         */
+        val SWITCH = ConsoleTheme(
+            id = "switch",
+            name = "Nintendo Switch",
+            subtitle = "Home menu",
+            background = 0xFF2D2D2D.toInt(),
+            backgroundEnd = 0xFF1A1A1A.toInt(),
+            slotColor = 0xFF3A3A3A.toInt(),
+            statusBackground = 0xFF232323.toInt(),
+            statusText = 0xFFEDEDED.toInt(),
+            statusPill = 0,
+            showSignal = true,
+            showDate = true,
+            showBattery = true,
+            tileFace = 0xFF4A4A4A.toInt(),
+            tileBorder = 0xFF5E5E5E.toInt(),
+            tileCorner = 6,
+            tileGlyph = 0xFFF2F2F2.toInt(),
+            tileLabel = 0xFFDDDDDD.toInt(),
+            tileSelected = 0xFFFFFFFF.toInt(),
+            columns = 5,
+            tileScale = 0.80f,
+            showLabels = true,
+        )
+
+        /**
+         * PlayStation Portable Go / PS1 — the older, darker XMB.
+         *
+         * Kept apart from [PSP] because the two really do look different: this is the deep
+         * blue-to-black wave of the original PlayStation menus rather than the PSP's flatter field,
+         * and the icons sit larger and further apart.
+         */
+        val PS1 = ConsoleTheme(
+            id = "ps1",
+            name = "PlayStation",
+            subtitle = "Memory card menu",
+            background = 0xFF10131C.toInt(),
+            backgroundEnd = 0xFF272B3A.toInt(),
+            slotColor = 0,
+            statusBackground = 0xFF0A0C12.toInt(),
+            statusText = 0xFFC9CEDC.toInt(),
+            statusPill = 0,
+            showSignal = false,
+            showDate = true,
+            showBattery = false,
+            tileFace = 0xFF1C2130.toInt(),
+            tileBorder = 0xFF39415A.toInt(),
+            tileCorner = 4,
+            tileGlyph = 0xFFB8C2DC.toInt(),
+            tileLabel = 0xFFA8B2CC.toInt(),
+            tileSelected = 0xFF7C8CB8.toInt(),
+            columns = 4,
+            tileScale = 0.78f,
+            showLabels = true,
+        )
+
         /** Every skin that ships with the app. */
-        val BUILT_IN = listOf(DEFAULT, THREE_DS, WII_U, WII, PSP, VITA, DS_LITE)
+        val BUILT_IN = listOf(DEFAULT, THREE_DS, WII_U, WII, SWITCH, PSP, VITA, PS1, DS_LITE)
 
         fun byId(id: String?): ConsoleTheme = BUILT_IN.firstOrNull { it.id == id } ?: DEFAULT
 
