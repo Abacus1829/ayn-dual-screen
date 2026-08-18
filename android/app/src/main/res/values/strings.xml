@@ -103,9 +103,9 @@
     <string name="beta_suffix">(beta)</string>
 
     <!-- Themes -->
-    <string name="appearance_console_themes">Console themes (beta) — handheld and console looks</string>
-    <string name="themes_title">Console themes</string>
-    <string name="themes_blurb">Beta. These skins work but are rough and still changing. Pick Ayn Dual Screen at any time to return to the standard look.</string>
+    <string name="appearance_console_themes">Console themes (experimental)</string>
+    <string name="themes_title">Themes (experimental)</string>
+    <string name="themes_blurb">Experimental. These looks are unfinished and change how the whole app appears. Pick Ayn Dual Screen at any time to return to the standard look.</string>
     <string name="theme_applied">%1$s applied</string>
     <string name="theme_from_file">from a file</string>
     <string name="theme_make_own">Make your own</string>

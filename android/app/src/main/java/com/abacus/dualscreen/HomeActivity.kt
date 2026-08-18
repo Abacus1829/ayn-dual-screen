@@ -241,7 +241,9 @@ class HomeActivity : AppCompatActivity() {
 
         // saved order first, then anything added by a later version that the saved list can't know about
         val ordered = settings.toolOrder.mapNotNull { Tool.byId(it) }
-        val tools = (ordered + Tool.entries).distinct().filter { it.id !in hidden }
+        val tools = (ordered + Tool.entries)
+            .distinct()
+            .filter { it.id !in hidden && !it.hidden }
 
         if (tools.isEmpty()) {
             binding.toolGrid.visibility = View.GONE
@@ -507,7 +509,6 @@ class HomeActivity : AppCompatActivity() {
         val shortcuts = listOf(
             Tool.SECOND_SCREEN to "▣",
             Tool.FTP to "⇅",
-            Tool.THEMES to "◐",
             Tool.APPEARANCE to "◈",
         )
 

@@ -160,8 +160,8 @@ data class ConsoleTheme(
          */
         val CLAMSHELL = ConsoleTheme(
             id = "clamshell",
-            name = "Clamshell",
-            subtitle = "Twin-screen handheld",
+            name = "Theme 1",
+            subtitle = "Light, four across",
             background = 0xFFF2F2F2.toInt(),
             slotColor = 0xFFE4E4E4.toInt(),
             statusBackground = 0xFFF7F7F7.toInt(),
@@ -193,8 +193,8 @@ data class ConsoleTheme(
          */
         val CROSSBAR = ConsoleTheme(
             id = "crossbar",
-            name = "Crossbar",
-            subtitle = "Media bar",
+            name = "Theme 5",
+            subtitle = "Dark blue, no tiles",
             background = 0xFF0A1428.toInt(),
             slotColor = 0,
             statusBackground = 0xFF091223.toInt(),
@@ -223,8 +223,8 @@ data class ConsoleTheme(
          */
         val BUBBLES = ConsoleTheme(
             id = "bubbles",
-            name = "Bubbles",
-            subtitle = "Rounded deck",
+            name = "Theme 6",
+            subtitle = "Blue, round icons",
 
             // The home screen is a blue wash, deep at the top and pale toward the bottom. Flat
             // blue reads as "a blue theme"; the gradient is what makes it read as that hardware.
@@ -264,8 +264,8 @@ data class ConsoleTheme(
          */
         val SILVER = ConsoleTheme(
             id = "silver",
-            name = "Silver",
-            subtitle = "Twin-screen menu",
+            name = "Theme 8",
+            subtitle = "Silver, three across",
             background = 0xFFD9DEE4.toInt(),
             backgroundEnd = 0xFFEFF2F5.toInt(),
             slotColor = 0xFFC6CDD6.toInt(),
@@ -296,8 +296,8 @@ data class ConsoleTheme(
          */
         val TABLET_PAD = ConsoleTheme(
             id = "tabletpad",
-            name = "Tablet Pad",
-            subtitle = "Living-room tablet",
+            name = "Theme 2",
+            subtitle = "Warm light, five across",
             background = 0xFFFDFBF6.toInt(),
             backgroundEnd = 0xFFF2EFE8.toInt(),
             slotColor = 0xFFE7E2D7.toInt(),
@@ -332,8 +332,8 @@ data class ConsoleTheme(
          */
         val CHANNELS = ConsoleTheme(
             id = "channels",
-            name = "Channels",
-            subtitle = "Channel grid",
+            name = "Theme 3",
+            subtitle = "Cool light, no top bar",
             background = 0xFFE3EEF7.toInt(),
             backgroundEnd = 0xFFF7FBFD.toInt(),
             slotColor = 0xFFD2E1EE.toInt(),
@@ -367,8 +367,8 @@ data class ConsoleTheme(
          */
         val HYBRID = ConsoleTheme(
             id = "hybrid",
-            name = "Hybrid",
-            subtitle = "Dockable console",
+            name = "Theme 4",
+            subtitle = "Dark, five across",
             background = 0xFF2D2D2D.toInt(),
             backgroundEnd = 0xFF1A1A1A.toInt(),
             slotColor = 0xFF3A3A3A.toInt(),
@@ -398,8 +398,8 @@ data class ConsoleTheme(
          */
         val GREY_BOX = ConsoleTheme(
             id = "greybox",
-            name = "Grey Box",
-            subtitle = "Memory-card menu",
+            name = "Theme 7",
+            subtitle = "Dark slate",
             background = 0xFF10131C.toInt(),
             backgroundEnd = 0xFF272B3A.toInt(),
             slotColor = 0,
@@ -421,7 +421,10 @@ data class ConsoleTheme(
         )
 
         /** Every skin that ships with the app. */
-        val BUILT_IN = listOf(DEFAULT, CLAMSHELL, TABLET_PAD, CHANNELS, HYBRID, CROSSBAR, BUBBLES, GREY_BOX, SILVER)
+        // Ordered as they are numbered, so "Theme 3" is the third one in the list.
+        val BUILT_IN = listOf(
+            DEFAULT, CLAMSHELL, TABLET_PAD, CHANNELS, HYBRID, CROSSBAR, BUBBLES, GREY_BOX, SILVER,
+        )
 
         fun byId(id: String?): ConsoleTheme = BUILT_IN.firstOrNull { it.id == id } ?: DEFAULT
 

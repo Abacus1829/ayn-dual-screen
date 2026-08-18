@@ -33,6 +33,9 @@ enum class Tool(
      */
     val beta: Boolean = false,
 
+    /** Never shown as a tile on the home grid. Reachable from elsewhere, or not at all. */
+    val hidden: Boolean = false,
+
     val available: Boolean = true,
     @StringRes val blockedReason: Int = 0
 ) {
@@ -52,8 +55,14 @@ enum class Tool(
     /** An FTP server on this device, so a PC can browse it over the network, like a homebrew file server. */
     FTP("ftp", R.string.tool_ftp, "⇅"),
 
-    /** Console skins for the home screen, and the folder where user-made ones live. */
-    THEMES("themes", R.string.tool_themes, "◐", beta = true),
+    /**
+     * Console skins for the home screen, and the folder where user-made ones live.
+     *
+     * Kept OFF the home grid: [hidden] means it never appears as a tile, and the only way in is
+     * Appearance. The skins are unfinished and they change how the whole app looks, which is not
+     * something to leave one stray tap away on the main screen.
+     */
+    THEMES("themes", R.string.tool_themes, "◐", beta = true, hidden = true),
 
     /**
      * Pairing with a PC that can stream games.
