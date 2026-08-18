@@ -24,13 +24,21 @@
 param(
     # Resolved from this script's own location. $PSScriptRoot is empty when the file is invoked
     # through some hosts, which silently wrote the art to the drive root the first time this ran.
-    [string] $OutputDir = (Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) "../app/src/main/assets/themes"),
+    [string] $OutputDir = "",
 
     # Portrait-ish and modest: these are stretched over a panel, and a 4K wallpaper in an APK is
     # megabytes for something nobody will look at closely.
     [int] $Width = 720,
     [int] $Height = 1280
 )
+
+# Resolve the output folder here rather than in the parameter default: $PSScriptRoot and
+# $MyInvocation are both unreliable in a param() block depending on how the file is invoked, and
+# the first version of this silently wrote the art to the drive root.
+if (-not $OutputDir) {
+    $here = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Definition }
+    $OutputDir = Join-Path $here "../app/src/main/assets/themes"
+}
 
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
@@ -123,15 +131,15 @@ function Add-Waves {
 
 function Add-Bubbles {
     <# The Vita's LiveArea: soft translucent circles over the blue. #>
-    param($G, [int] $W, [int] $H, [string] $Color, [int] $Alpha = 26)
+    param($G, [int] $W, [int] $H, [string] $Color, [int] $Alpha = 26, [int] $Count = 26)
 
     $base = [System.Drawing.ColorTranslator]::FromHtml($Color)
     $tint = [System.Drawing.Color]::FromArgb($Alpha, $base.R, $base.G, $base.B)
     $brush = New-Object System.Drawing.SolidBrush $tint
 
     $random = New-Object System.Random 20260818     # fixed seed: the art must not change per run
-    for ($i = 0; $i -lt 26; $i++) {
-        $size = $random.Next([int]($W * 0.10), [int]($W * 0.34))
+    for ($i = 0; $i -lt $Count; $i++) {
+        $size = $random.Next([int]($W * 0.18), [int]($W * 0.46))
         $x = $random.Next(-40, $W)
         $y = $random.Next(-40, $H)
         $G.FillEllipse($brush, $x, $y, $size, $size)
@@ -166,53 +174,66 @@ function Save-Art {
 
 Write-Host "Drawing console backgrounds into $OutputDir" -ForegroundColor Cyan
 
-# ── 3DS: pale field, rounded empty slots, four across ────────────────────────
+<#
+    A background sits BEHIND things.
+
+    The first pass forgot that. It baked a slot grid into the wallpaper while the app was also
+    drawing slot fillers into the grid itself — two grids at different pitches, on top of each
+    other, that can never line up because one is stretched to the screen and the other is laid out
+    by the tiles. And the Vita's bubbles were big and opaque enough to fight the labels sitting on
+    them.
+
+    So: no structure that the layout also draws, and everything at low contrast. The slots come
+    from ConsoleSkin.slotFillers, which align with real tiles because they ARE tiles. What is left
+    here is atmosphere — a wash, a faint ribbon, a soft vignette.
+#>
+
+# ── 3DS: pale, faintly warm wash. Slots come from the layout, not from here ──
 $c = New-Canvas $Width $Height
-Set-Gradient $c.Graphics $Width $Height "#F7F7F7" "#E9E9E9"
-Add-RoundedSlots $c.Graphics $Width $Height 4 "#DCDCDC" 255 18
+# No vignette on the light skins: a soft radial over a near-white field shows as visible
+# concentric banding at 8-bit colour, which looks like a rendering fault rather than depth.
+Set-Gradient $c.Graphics $Width $Height "#FAFAFA" "#EBEBEB"
 Save-Art $c "3ds"
 
-# ── Wii U: lighter, warmer, five across, softer slots ────────────────────────
+# ── Wii U: brighter and cooler than the 3DS, same restraint ─────────────────
 $c = New-Canvas $Width $Height
-Set-Gradient $c.Graphics $Width $Height "#FFFFFF" "#F1F1F1"
-Add-RoundedSlots $c.Graphics $Width $Height 5 "#E6E6E6" 255 16
+Set-Gradient $c.Graphics $Width $Height "#FFFFFF" "#EDF1F4"
 Save-Art $c "wiiu"
 
-# ── Wii: cooler white, wider channel slots ───────────────────────────────────
+# ── Wii: white with the faintest blue toward the bottom ─────────────────────
 $c = New-Canvas $Width $Height
-Set-Gradient $c.Graphics $Width $Height "#FFFFFF" "#E8EFF4"
-Add-RoundedSlots $c.Graphics $Width $Height 4 "#DCE6ED" 255 12
+Set-Gradient $c.Graphics $Width $Height "#FFFFFF" "#E7EEF4"
 Save-Art $c "wii"
 
-# ── Switch: charcoal with a vignette, no slots ───────────────────────────────
+# ── Switch: charcoal, strong vignette, nothing else ─────────────────────────
 $c = New-Canvas $Width $Height
-Set-Gradient $c.Graphics $Width $Height "#333333" "#1B1B1B"
-Add-Vignette $c.Graphics $Width $Height 110
+Set-Gradient $c.Graphics $Width $Height "#3A3A3A" "#161616"
+Add-Vignette $c.Graphics $Width $Height 120
 Save-Art $c "switch"
 
-# ── PSP: XMB ribbon over deep blue ───────────────────────────────────────────
+# ── PSP: the XMB ribbon, but as atmosphere rather than as a subject ─────────
 $c = New-Canvas $Width $Height
-Set-Gradient $c.Graphics $Width $Height "#0B1730" "#04070F"
-Add-Waves $c.Graphics $Width $Height "#5FA8FF" 55 6
+Set-Gradient $c.Graphics $Width $Height "#0C1A38" "#05080F"
+Add-Waves $c.Graphics $Width $Height "#4E8FE0" 18 5
+Add-Vignette $c.Graphics $Width $Height 60
 Save-Art $c "psp"
 
-# ── Vita: blue wash with LiveArea bubbles ────────────────────────────────────
+# ── Vita: the blue wash. A few soft bubbles, not a bubble bath ──────────────
 $c = New-Canvas $Width $Height
-Set-Gradient $c.Graphics $Width $Height "#1F6FB8" "#9AD0EE"
-Add-Bubbles $c.Graphics $Width $Height "#FFFFFF" 30
+Set-Gradient $c.Graphics $Width $Height "#2A7CC0" "#A6D6EF"
+Add-Bubbles $c.Graphics $Width $Height "#FFFFFF" 10 9
 Save-Art $c "vita"
 
-# ── PlayStation: dark blue, faint wave, vignette ─────────────────────────────
+# ── PlayStation: dark blue with one slow wave ──────────────────────────────
 $c = New-Canvas $Width $Height
-Set-Gradient $c.Graphics $Width $Height "#161A28" "#2A3048"
-Add-Waves $c.Graphics $Width $Height "#8FA0D0" 30 4
-Add-Vignette $c.Graphics $Width $Height 70
+Set-Gradient $c.Graphics $Width $Height "#191D2C" "#2C3350"
+Add-Waves $c.Graphics $Width $Height "#8FA0D0" 12 3
+Add-Vignette $c.Graphics $Width $Height 80
 Save-Art $c "ps1"
 
-# ── DS Lite: silver-white, small slots, no gradient drama ────────────────────
+# ── DS Lite: silver, almost flat ───────────────────────────────────────────
 $c = New-Canvas $Width $Height
-Set-Gradient $c.Graphics $Width $Height "#F4F7FA" "#E2E9EF"
-Add-RoundedSlots $c.Graphics $Width $Height 3 "#D7E0E8" 255 14
+Set-Gradient $c.Graphics $Width $Height "#F6F8FA" "#E4EAF0"
 Save-Art $c "dslite"
 
 Write-Host "Done." -ForegroundColor Green

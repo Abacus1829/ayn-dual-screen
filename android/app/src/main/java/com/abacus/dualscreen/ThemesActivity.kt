@@ -71,12 +71,12 @@ class ThemesActivity : AppCompatActivity() {
         return LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(10), dp(8), dp(10), dp(8))
+            setPadding(dp(8), dp(5), dp(8), dp(5))
             tag = if (chosen) "accentEdge" else "card"      // Appearance paints these
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
-            ).apply { bottomMargin = dp(8) }
+            ).apply { bottomMargin = dp(5) }
 
             setOnClickListener {
                 settings.consoleTheme = theme.id
@@ -93,7 +93,7 @@ class ThemesActivity : AppCompatActivity() {
 
                 addView(TextView(context).apply {
                     text = if (chosen) "● ${theme.name}" else theme.name
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
                 })
 
                 val note = listOfNotNull(
@@ -104,7 +104,7 @@ class ThemesActivity : AppCompatActivity() {
                 if (note.isNotEmpty()) {
                     addView(TextView(context).apply {
                         text = note
-                        setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+                        setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
                         alpha = 0.7f
                     })
                 }
@@ -123,17 +123,17 @@ class ThemesActivity : AppCompatActivity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
             background = store.background(theme) ?: ConsoleSkin.backdrop(theme)
-            layoutParams = LinearLayout.LayoutParams(dp(76), dp(48))
+            layoutParams = LinearLayout.LayoutParams(dp(58), dp(34))
 
             for (glyph in listOf("▣", "⇅")) {
                 addView(TextView(context).apply {
                     text = glyph
                     gravity = Gravity.CENTER
                     setTextColor(theme.tileGlyph)
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 9f)
                     background = ConsoleSkin.tileFace(this@ThemesActivity, theme)
-                    layoutParams = LinearLayout.LayoutParams(dp(26), dp(26))
-                        .apply { rightMargin = dp(4) }
+                    layoutParams = LinearLayout.LayoutParams(dp(20), dp(20))
+                        .apply { rightMargin = dp(3) }
                 })
             }
         }
