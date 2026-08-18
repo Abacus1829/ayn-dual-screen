@@ -306,6 +306,7 @@ class FtpServer(
                 "RMD", "XRMD" -> "Removing $name"
                 "RNFR", "RNTO" -> "Renaming"
                 "PASS", "USER" -> "Logging in"
+                "SIZE", "MDTM" -> "Checking $name"
                 "QUIT" -> "Disconnecting"
                 else -> "Connected"
             }
@@ -334,7 +335,16 @@ class FtpServer(
                     // Compared in full rather than short-circuiting, out of habit. This is plain FTP
                     // on a LAN, so it is a doorlock and not a secret worth defending properly.
                     authenticated = givenUser == username && argument == password
-                    if (authenticated) reply(230, "Logged in.") else reply(530, "Wrong.")
+
+                    if (authenticated) {
+                        reply(230, "Logged in.")
+                    } else {
+                        // Logged loudly. A failed login on a server sharing your whole device is
+                        // worth seeing on the console, and it is the one line somebody scanning
+                        // the log for trouble is looking for.
+                        note("[ERROR] ${record.address} failed to log in as ${givenUser.orEmpty()}")
+                        reply(530, "Wrong.")
+                    }
                 }
 
                 "SYST" -> reply(215, "UNIX Type: L8")
