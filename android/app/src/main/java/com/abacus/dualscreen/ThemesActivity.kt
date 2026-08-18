@@ -5,27 +5,36 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.abacus.dualscreen.databinding.ActivityThemesBinding
 import com.abacus.dualscreen.theme.ConsoleSkin
 import com.abacus.dualscreen.theme.ConsoleTheme
 import com.abacus.dualscreen.theme.ThemeStore
-import com.abacus.dualscreen.databinding.ActivityThemesBinding
 
 /**
  * Pick a console skin, or find out how to write one.
  *
- * Every entry carries a small sample drawn from the theme itself rather than a screenshot: its own
- * artwork with two tiles on it. That matters most for user themes, which have no screenshot anybody
- * could have shipped, and it means a sample can never drift out of date with what the skin does.
+ * A dropdown and one preview, rather than a scrolling list of cards. Nine skins as full-width rows
+ * ran well past the bottom of the screen and turned a single decision into a catalogue.
+ *
+ * The preview is drawn from the theme itself -- its real background, its own tile shape and glyph
+ * colour, its status strip if it has one -- so it can never drift out of date with what the skin
+ * actually does, and a user's own theme gets a preview nobody had to ship a screenshot for.
  */
 class ThemesActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityThemesBinding
     private lateinit var settings: Settings
     private lateinit var store: ThemeStore
+
+    private var themes: List<ConsoleTheme> = emptyList()
+
+    /** Set while the spinner is being filled, so populating it does not count as a choice. */
+    private var settling = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,111 +47,108 @@ class ThemesActivity : AppCompatActivity() {
         binding.backButton.setOnClickListener { finish() }
         binding.folderButton.setOnClickListener { showFolder() }
 
+        binding.themeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (settling) return
+
+                val chosen = themes.getOrNull(position) ?: return
+                settings.consoleTheme = chosen.id
+                showPreview(chosen)
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
+
         Appearance.apply(this, binding.root, settings, binding.backgroundImage)
     }
 
     override fun onResume() {
         super.onResume()
-        // Rebuilt on every return: someone may have dropped a theme file in over FTP while the
+        // Rebuilt on every return: someone may have dropped a theme file in over FTP while this
         // screen sat open behind them.
-        buildList()
+        fill()
     }
 
-    private fun buildList() {
-        binding.themeList.removeAllViews()
+    private fun fill() {
+        themes = store.all()
 
-        for (theme in store.all()) {
-            binding.themeList.addView(row(theme))
+        val labels = themes.map { theme ->
+            val note = if (theme.builtIn) theme.subtitle else getString(R.string.theme_from_file)
+            if (note.isEmpty()) theme.name else "${theme.name} - $note"
         }
+
+        settling = true
+        binding.themeSpinner.adapter = ArrayAdapter(
+            this, android.R.layout.simple_spinner_item, labels
+        ).apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+
+        val current = themes.indexOfFirst { it.id == settings.consoleTheme }.coerceAtLeast(0)
+        binding.themeSpinner.setSelection(current)
+        settling = false
+
+        showPreview(themes.getOrNull(current) ?: ConsoleTheme.DEFAULT)
     }
 
-    /**
-     * One row: a small sample of the theme on the left, its name on the right.
-     *
-     * Compact and uniform on purpose. The first version drew each row using the theme's own tile
-     * style, which meant the Vita's 64dp corner radius turned its row into a lozenge and the PSP's
-     * transparent tile face made its row vanish — nine of those made the list a mess and far taller
-     * than the screen. A picker should be legible at a glance; the sample is where the theme gets
-     * to look like itself.
-     */
-    private fun row(theme: ConsoleTheme): LinearLayout {
-        val chosen = settings.consoleTheme == theme.id
+    /** A working miniature of the skin, built the same way the home screen builds itself. */
+    private fun showPreview(theme: ConsoleTheme) {
+        binding.themeNote.text = when {
+            !theme.builtIn -> getString(R.string.theme_from_file)
+            theme.subtitle.isNotEmpty() -> theme.subtitle
+            else -> ""
+        }
 
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(8), dp(5), dp(8), dp(5))
-            tag = if (chosen) "accentEdge" else "card"      // Appearance paints these
-            layoutParams = LinearLayout.LayoutParams(
+        binding.themePreview.removeAllViews()
+        binding.themePreview.background = store.background(theme) ?: ConsoleSkin.backdrop(theme)
+
+        val column = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            ).apply { bottomMargin = dp(5) }
-
-            setOnClickListener {
-                settings.consoleTheme = theme.id
-                Toast.makeText(context, getString(R.string.theme_applied, theme.name), Toast.LENGTH_SHORT).show()
-                buildList()
-            }
-
-            addView(sample(theme))
-
-            addView(LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                    .apply { leftMargin = dp(10) }
-
-                addView(TextView(context).apply {
-                    text = if (chosen) "● ${theme.name}" else theme.name
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-                })
-
-                val note = listOfNotNull(
-                    theme.subtitle.ifEmpty { null },
-                    if (theme.builtIn) null else getString(R.string.theme_from_file),
-                ).joinToString(" · ")
-
-                if (note.isNotEmpty()) {
-                    addView(TextView(context).apply {
-                        text = note
-                        setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
-                        alpha = 0.7f
-                    })
-                }
-            })
+                ViewGroup.LayoutParams.MATCH_PARENT,
+            )
         }
-    }
 
-    /**
-     * A postage stamp of the theme: its real artwork, with two tiles on top.
-     *
-     * Fixed size, so every row is the same height whatever the theme asks for — the tiles inside
-     * are scaled to the stamp rather than to the theme's own dimensions.
-     */
-    private fun sample(theme: ConsoleTheme): View =
-        LinearLayout(this).apply {
+        // The status strip, for skins that have one. It is half of what separates a 3DS from a DS
+        // Lite, and leaving it out of the preview hid exactly that difference.
+        ConsoleSkin.buildStatusBar(this, theme, getString(R.string.app_name), 80)?.let {
+            column.addView(
+                it,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                ),
+            )
+        }
+
+        column.addView(LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            background = store.background(theme) ?: ConsoleSkin.backdrop(theme)
-            layoutParams = LinearLayout.LayoutParams(dp(58), dp(34))
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+            )
 
-            for (glyph in listOf("▣", "⇅")) {
-                addView(TextView(context).apply {
+            for (glyph in listOf("▣", "⇅", "◐", "▶")) {
+                addView(TextView(this@ThemesActivity).apply {
                     text = glyph
                     gravity = Gravity.CENTER
                     setTextColor(theme.tileGlyph)
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 9f)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
                     background = ConsoleSkin.tileFace(this@ThemesActivity, theme)
-                    layoutParams = LinearLayout.LayoutParams(dp(20), dp(20))
-                        .apply { rightMargin = dp(3) }
+                    layoutParams = LinearLayout.LayoutParams(dp(38), dp(38))
+                        .apply { rightMargin = dp(6) }
                 })
             }
-        }
+        })
+
+        binding.themePreview.addView(column)
+    }
 
     /**
      * Create the themes folder and say where it is.
      *
-     * Deliberately not done at startup — an app that makes directories on somebody's storage before
-     * being asked is a rude app. Opening this screen is the moment it becomes useful.
+     * Deliberately not done at startup -- an app that makes directories on somebody's storage
+     * before being asked is a rude app. Opening this screen is the moment it becomes useful.
      */
     private fun showFolder() {
         val made = store.ensureFolder()

@@ -148,6 +148,18 @@ function Add-Bubbles {
     $brush.Dispose()
 }
 
+function Set-Solid {
+    <#
+        A flat fill. Sometimes the right answer: any ramp across a large dark area quantises into
+        visible bands at 8 bits per channel, and no amount of subtlety in the colours fixes it.
+    #>
+    param($G, [int] $W, [int] $H, [string] $Color)
+
+    $brush = New-Object System.Drawing.SolidBrush ([System.Drawing.ColorTranslator]::FromHtml($Color))
+    $G.FillRectangle($brush, 0, 0, $W, $H)
+    $brush.Dispose()
+}
+
 function Add-Vignette {
     param($G, [int] $W, [int] $H, [int] $Alpha = 90)
 
@@ -207,15 +219,15 @@ Save-Art $c "wii"
 
 # ── Switch: charcoal, strong vignette, nothing else ─────────────────────────
 $c = New-Canvas $Width $Height
-Set-Gradient $c.Graphics $Width $Height "#3A3A3A" "#161616"
-Add-Vignette $c.Graphics $Width $Height 120
+# Flat, not a gradient. A soft radial or a long ramp over a dark flat field bands into visible
+# rings at 8-bit colour -- which is exactly what the first Switch background did. Flat cannot band.
+Set-Solid $c.Graphics $Width $Height "#2B2B2B"
 Save-Art $c "switch"
 
 # ── PSP: the XMB ribbon, but as atmosphere rather than as a subject ─────────
 $c = New-Canvas $Width $Height
 Set-Gradient $c.Graphics $Width $Height "#0C1A38" "#05080F"
 Add-Waves $c.Graphics $Width $Height "#4E8FE0" 18 5
-Add-Vignette $c.Graphics $Width $Height 60
 Save-Art $c "psp"
 
 # ── Vita: the blue wash. A few soft bubbles, not a bubble bath ──────────────
@@ -228,7 +240,6 @@ Save-Art $c "vita"
 $c = New-Canvas $Width $Height
 Set-Gradient $c.Graphics $Width $Height "#191D2C" "#2C3350"
 Add-Waves $c.Graphics $Width $Height "#8FA0D0" 12 3
-Add-Vignette $c.Graphics $Width $Height 80
 Save-Art $c "ps1"
 
 # ── DS Lite: silver, almost flat ───────────────────────────────────────────

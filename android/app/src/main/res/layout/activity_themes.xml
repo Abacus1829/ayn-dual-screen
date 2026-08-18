@@ -55,13 +55,44 @@
                 android:text="@string/themes_blurb"
                 android:textSize="12sp" />
 
-            <!-- The list, built in code so each row can be drawn in its own theme's colours. -->
+            <!--
+                A dropdown rather than a list of cards. Nine skins as full rows ran off the screen
+                twice over; a picker is a one-line control with a preview under it.
+            -->
             <LinearLayout
-                android:id="@+id/themeList"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:orientation="vertical" />
+                android:orientation="vertical"
+                android:padding="12dp"
+                android:tag="card">
+
+                <TextView
+                    style="@style/Label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/themes_title" />
+
+                <Spinner
+                    android:id="@+id/themeSpinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" />
+
+                <TextView
+                    android:id="@+id/themeNote"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/text_dim"
+                    android:textSize="11sp" />
+
+                <FrameLayout
+                    android:id="@+id/themePreview"
+                    android:layout_width="match_parent"
+                    android:layout_height="120dp"
+                    android:layout_marginTop="10dp" />
+            </LinearLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
