@@ -5,6 +5,8 @@ fullscreen on the display you choose.
 
 **By Abacus.**
 
+Version history is in [CHANGELOG.md](CHANGELOG.md).
+
 > **This app contains AI-assisted code.** It was written with the help of an AI coding assistant and
 > reviewed by a human before release.
 

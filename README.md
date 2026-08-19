@@ -1,3 +1,4 @@
+| The Android app *(optional)* |
 # Ayn Dual Screen
 
 A second-screen companion for handhelds with two panels. Built for the **AYN Thor**, but the second
@@ -32,7 +33,8 @@ Every file there is built from the source in this repository.
 
 The app's `.apk` comes straight out of `dist/latest/` on `main` rather than off a release, so it is
 whatever was last built and pushed — no waiting for a tagged release to try a new build. The mods
-still come from releases, where their install notes live.
+still come from releases, where their install notes live. What changed in each app version is in
+[`android/CHANGELOG.md`](android/CHANGELOG.md).
 
 The app is **optional** — any browser pointed at the address the mod prints gives you the same second
 screen. What it adds is launching onto the Thor's lower panel, saved connections with one-tap

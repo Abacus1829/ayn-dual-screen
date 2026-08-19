@@ -30,11 +30,18 @@ android {
         minSdk = (project.findProperty("testMinSdk") as String?)?.toInt() ?: 26
         targetSdk = 34
 
-        // Bumped from 8/0.8.0 because 0.8.0 is the version PUBLISHED on GitHub, and local builds
-        // carrying the same number are indistinguishable from it on a device — which cost a round
-        // of "the feature isn't there" when the installed APK was simply the older one.
-        versionCode = 9
-        versionName = "0.9.0-ftp"
+        /*
+         * Every change here needs a matching entry in CHANGELOG.md.
+         *
+         * The versionCode must go UP on every build anybody installs over an existing one: Android
+         * refuses a lower one on top, and that has already cost a round of "the feature isn't there"
+         * when the installed APK was simply the older build.
+         *
+         * The name lost its `-ftp` suffix here. It was chosen when the FTP server was the only new
+         * thing in the release, and stopped being true several features ago.
+         */
+        versionCode = 10
+        versionName = "0.9.0"
     }
 
     signingConfigs {
