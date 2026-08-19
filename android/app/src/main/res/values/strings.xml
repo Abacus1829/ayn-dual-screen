@@ -590,6 +590,7 @@
     <string name="tool_game_codes">Game Codes</string>
     <string name="codes_title">Game Codes</string>
     <string name="codes_unlocked">GAME CODES UNLOCKED</string>
+    <string name="codes_relocked">GAME CODES HIDDEN</string>
     <string name="codes_settings">Settings</string>
     <string name="codes_type">Type a code</string>
     <string name="codes_type_hint">Code</string>

@@ -20,7 +20,9 @@ import android.view.KeyEvent
  */
 class SecretSequence(
     private val steps: List<Int>,
-    private val timeoutMs: Long = 3_000L,
+    private val timeoutMs: Long = 5_000L,
+    /** How far in, out of how many. Fired on every press so a progress display can follow along. */
+    private val onProgress: (Int, Int) -> Unit = { _, _ -> },
     private val onComplete: () -> Unit,
 ) {
 
@@ -52,9 +54,12 @@ class SecretSequence(
 
         if (at >= steps.size) {
             at = 0
+            onProgress(steps.size, steps.size)
             onComplete()
+            return false
         }
 
+        onProgress(at, steps.size)
         return false
     }
 

@@ -89,31 +89,164 @@ class HomeActivity : AppCompatActivity() {
         if (!codes.enabled) emptyList()
         else listOf(
             com.abacus.dualscreen.codes.SecretSequence(
-                com.abacus.dualscreen.codes.SecretSequence.UNLOCK
-            ) { unlockCodes() },
+                steps = com.abacus.dualscreen.codes.SecretSequence.UNLOCK,
+                onProgress = { at, total -> showProgress(at, total) },
+            ) { toggleCodes() },
             com.abacus.dualscreen.codes.SecretSequence(
-                com.abacus.dualscreen.codes.SecretSequence.UNLOCK_KEYBOARD
-            ) { unlockCodes() },
+                steps = com.abacus.dualscreen.codes.SecretSequence.UNLOCK_KEYBOARD,
+                onProgress = { at, total -> showProgress(at, total) },
+            ) { toggleCodes() },
         )
     }
 
-    override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
-        // Fed first, handled normally afterwards. onKeyDown is only reached while this screen has
-        // focus, which gives "only when the app is focused" for free.
-        secrets.forEach { it.onKey(keyCode) }
-        return super.onKeyDown(keyCode, event)
+    /**
+     * Every key, before anything else sees it.
+     *
+     * dispatchKeyEvent rather than onKeyDown, and that distinction is the feature working or not:
+     * onKeyDown is only reached for keys the view hierarchy did **not** consume, and on this screen
+     * the arrow keys are consumed to move focus between the dropdown, the address fields and the
+     * buttons — so the sequence was being eaten before it ever arrived.
+     *
+     * The event is still passed on afterwards. This watches; it does not intercept.
+     */
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        // First press only. A held key repeats ACTION_DOWN many times a second, which would race
+        // through the sequence and land nowhere — a hold has to count once, like a press.
+        if (event.action == android.view.KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+            secrets.forEach { it.onKey(event.keyCode) }
+        }
+
+        return super.dispatchKeyEvent(event)
     }
 
-    /** Found it. Idempotent, so entering it again on an unlocked device celebrates nothing twice. */
-    private fun unlockCodes() {
-        val codes = com.abacus.dualscreen.codes.CodeSettings(this)
-        if (!codes.enabled || codes.unlocked) return
+    /**
+     * A real gamepad's d-pad, which is not keys at all.
+     *
+     * Plenty of pads — this handheld's included — report their d-pad as the HAT_X/HAT_Y axes of a
+     * motion event rather than as DPAD key codes. Without this the sequence is enterable on a
+     * keyboard and quietly impossible on the device it was designed for.
+     */
+    override fun onGenericMotionEvent(event: android.view.MotionEvent): Boolean {
+        if (event.source and android.view.InputDevice.SOURCE_CLASS_JOYSTICK != 0 &&
+            event.action == android.view.MotionEvent.ACTION_MOVE
+        ) {
+            feedAxis(event.getAxisValue(android.view.MotionEvent.AXIS_HAT_X), horizontal = true)
+            feedAxis(event.getAxisValue(android.view.MotionEvent.AXIS_HAT_Y), horizontal = false)
+        }
 
-        codes.unlocked = true
+        return super.onGenericMotionEvent(event)
+    }
+
+    /** Where each hat axis was last time, so one push is one press rather than one per frame. */
+    private var hatX = 0
+    private var hatY = 0
+
+    private fun feedAxis(value: Float, horizontal: Boolean) {
+        val now = when {
+            value > 0.5f -> 1
+            value < -0.5f -> -1
+            else -> 0
+        }
+
+        val was = if (horizontal) hatX else hatY
+        if (now == was) return
+
+        if (horizontal) hatX = now else hatY = now
+        if (now == 0) return
+
+        val key = when {
+            horizontal && now > 0 -> android.view.KeyEvent.KEYCODE_DPAD_RIGHT
+            horizontal -> android.view.KeyEvent.KEYCODE_DPAD_LEFT
+            now > 0 -> android.view.KeyEvent.KEYCODE_DPAD_DOWN
+            else -> android.view.KeyEvent.KEYCODE_DPAD_UP
+        }
+
+        secrets.forEach { it.onKey(key) }
+    }
+
+    /**
+     * Found it — or, if it was already found, put it away again.
+     *
+     * The same sequence both ways, so there is one thing to remember rather than two. Relocking
+     * takes the tile away; the codes themselves and their per-game switches are untouched, so
+     * finding it again restores what you had rather than a blank slate.
+     */
+    private fun toggleCodes() {
+        val codes = com.abacus.dualscreen.codes.CodeSettings(this)
+        if (!codes.enabled) return
+
+        val nowUnlocked = !codes.unlocked
+        codes.unlocked = nowUnlocked
+
         com.abacus.dualscreen.ui.Feedback.success(binding.root)
-        celebrate()
+        removeTagged(binding.root, STEPS_TAG)
+        celebrate(
+            if (nowUnlocked) getString(R.string.codes_unlocked)
+            else getString(R.string.codes_relocked)
+        )
         buildTools()
     }
+
+    /**
+     * The step display, in the style of the arrow games.
+     *
+     * Deliberately silent for the first few presses: showing it on the very first UP would give the
+     * secret away to anybody who nudged the stick. It appears once somebody is clearly entering
+     * *something*, which is the point where a hint helps rather than spoils.
+     *
+     * Rebuilt per press rather than animated — ten small views is nothing, and rebuilding makes it
+     * impossible for the lit state and the counter to disagree.
+     */
+    private fun showProgress(at: Int, total: Int) {
+        removeTagged(binding.root, STEPS_TAG)
+        if (at < REVEAL_AFTER || at > total) return
+
+        val row = LinearLayout(this).apply {
+            tag = STEPS_TAG
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(dp(16), dp(10), dp(16), dp(10))
+            background = Appearance.panel(
+                this@HomeActivity, settings,
+                getColor(R.color.card_hi), Appearance.accentOf(settings), 2,
+            )
+            alpha = 0f
+            layoutParams = android.widget.FrameLayout.LayoutParams(
+                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER_HORIZONTAL or Gravity.BOTTOM,
+            ).apply { bottomMargin = dp(28) }
+        }
+
+        STEP_GLYPHS.forEachIndexed { index, glyph ->
+            row.addView(TextView(this).apply {
+                text = glyph
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
+                setPadding(dp(7), 0, dp(7), 0)
+
+                val done = index < at
+                setTextColor(if (done) Appearance.accentOf(settings) else getColor(R.color.text_faint))
+                alpha = if (done) 1f else 0.3f
+                // The one just hit sits slightly larger, so the eye follows along the row.
+                scaleX = if (index == at - 1) 1.3f else 1f
+                scaleY = scaleX
+            })
+        }
+
+        binding.root.addView(row)
+        row.animate().alpha(1f).setDuration(90).start()
+
+        lastStepAt = System.currentTimeMillis()
+
+        // Clears itself if the attempt is abandoned, so half an entry does not sit there.
+        binding.root.postDelayed({
+            if (row.parent != null && System.currentTimeMillis() - lastStepAt >= 2_400) {
+                binding.root.removeView(row)
+            }
+        }, 2_500)
+    }
+
+    private var lastStepAt = 0L
 
     /**
      * The celebration.
@@ -121,9 +254,9 @@ class HomeActivity : AppCompatActivity() {
      * A banner that rises, holds and fades, drawn in code so it costs no layout and inherits the
      * chosen accent. Original wording and original artwork — it names nothing but the feature.
      */
-    private fun celebrate() {
+    private fun celebrate(message: String) {
         val banner = TextView(this).apply {
-            text = getString(R.string.codes_unlocked)
+            text = message
             gravity = Gravity.CENTER
             setTextColor(getColor(R.color.text))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
@@ -1158,6 +1291,15 @@ class HomeActivity : AppCompatActivity() {
 
         /** Same idea for the bottom shortcut strip. */
         const val TRAY_TAG = "console-tray"
+
+        /** The hidden sequence's progress row. */
+        const val STEPS_TAG = "secret-steps"
+
+        /** How many correct presses before the row appears. Enough not to give the secret away. */
+        const val REVEAL_AFTER = 4
+
+        /** One glyph per step, in order: directions, then the two finishing buttons. */
+        val STEP_GLYPHS = listOf("↑", "↑", "↓", "↓", "←", "→", "←", "→", "B", "A")
 
         /** The Wild theme's animated layer, so it is replaced rather than stacked. */
         const val WAVE_TAG = "console-waves"
