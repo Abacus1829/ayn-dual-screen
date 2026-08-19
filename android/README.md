@@ -31,16 +31,23 @@ doesn't need to.
 The second screen is tied to one running game, so when that game goes away the app hands control back
 to the picker rather than sitting on a dead page.
 
-- **The session ending returns you to the menu.** The WebView can't detect this on its own — once the
-  page has loaded, the mod's server disappearing produces no navigation error at all, the page's own
+- **The session ending returns you to the menu.** The WebView cannot detect this on its own — once the
+  page has loaded, the mod's server disappearing produces no navigation error at all; the page's own
   polling just starts failing quietly. So the app checks `/state` every 4 seconds out of band, and two
   consecutive misses mean the game has gone.
+- **The network is what decides the connection state, not the WebView.** Some WebView builds report a
+  page as finished before anything has arrived, which is enough to show a confident "Connected" over a
+  blank screen. `/state` answering means a companion server; the root answering means an ordinary web
+  page; neither answering means nothing is there.
+- **An address with nothing at it says so in about twelve seconds**, rather than sitting blank for the
+  length of the WebView's own connect timeout, which is closer to two minutes.
 - **With *Reconnect automatically* on**, it retries first (backing off to 5s) and only drops to the menu
-  after 8 failed attempts — a game being restarted comes back well inside that.
+  after 8 failed attempts — a game being restarted comes back well inside that. A successful connection
+  resets the count.
 - **With it off**, it returns to the menu as soon as the session ends.
-- **The &#8942; button, top-left**, opens **Quit to menu** and **Reload page** at any time. It's on the
-  left because the mod's own settings cog is top-right; they do different jobs and shouldn't overlap.
-  The system back gesture does the same thing, but on a secondary display there may not be one.
+- **An address that is not a companion server stays open.** The health check asks for `/state`, which an
+  ordinary web page will never have; those are identified once and the check is switched off for them
+  rather than closing a working page after eight seconds.
 
 ## Simple and Advanced
 
@@ -49,7 +56,10 @@ The mode switch at the top is remembered between launches.
 **Simple** is the game picker and one button. It sweeps the network, works out which game is running,
 takes that address and opens the second screen — no typing at all.
 
-**Advanced** adds the address fields, the display picker, and three toggles:
+**Advanced** adds the address fields, the display picker, and three toggles. Both modes are the older,
+single-address path and still work exactly as they did; **Connect** is the newer one and is where
+saved connections, discovery and import/export live.
+
 
 | Toggle | Default | What it does |
 | --- | --- | --- |
@@ -57,11 +67,91 @@ takes that address and opens the second screen — no typing at all.
 | Never sleep while open | on | Holds the panel awake. Turn it off to let it dim normally. |
 | Remember this display | on | Reopens on the same panel next time without asking. Stored per game. |
 
-## Finding the PC
+## Saved connections
 
-**Find my PC** sweeps your /24 on the configured port, 48 sockets at a time with a 350 ms timeout, and
-identifies each hit. Results are tappable — taking one also switches the game picker to whatever that
-address is actually running, so the two can't disagree.
+The **Connect** tile is the fast path: a list of everything you have saved, one tap to open. It is
+also the first tile on the home grid, because it is what the app is for.
+
+Each saved connection keeps:
+
+| Field | What it does |
+| --- | --- |
+| Name | What it is called in the list, and in the session's status line |
+| Host / IP | The PC. Never a name the app invents — `localhost` is rejected, because it means the PC itself |
+| Port | Whatever the mod is serving on |
+| Opens on | This screen, second screen, external display, automatic, or ask every time |
+| Orientation | Automatic, landscape or portrait |
+| Keep screen awake | Always, while connected, or never |
+| Connect on launch | Opens this one as soon as the app starts. Only one connection can hold it |
+
+Long-press a row (or tap **⋯**) for edit, duplicate, delete, and **Make default** — the default sorts
+to the top and is marked with a star.
+
+Connections are stored in the app's own preferences and survive reinstall-free updates. They are not
+tied to any particular game: a connection pointing at something nobody has written a mod for yet
+works exactly as well as one pointing at a known mod.
+
+### Recent connections
+
+Anything you actually opened appears under **RECENT**, newest first, deduplicated by host and port —
+opening the same PC twenty times leaves one entry, not twenty. Tap to reconnect, long-press to keep
+it as a saved connection, **Clear** to empty the list.
+
+### Import and export
+
+**More → Export** writes `AynDualScreen/profiles.json` to shared storage, which this app's own FTP
+server already serves — so an export is on your PC without a cable or a dialog. **Share** hands the
+same JSON to another app instead.
+
+**More → Import** reads that file back, or takes pasted JSON. Malformed entries are skipped rather
+than fatal, and a connection whose host and port already exist updates that one instead of appearing
+twice, so importing your own export back is a no-op. Only what the app actually stores is exported.
+
+## Finding servers on the network
+
+**Connect → Find** sweeps your /24 across several ports, 48 sockets at a time with a 350 ms timeout,
+and asks whatever answered what it is. Each result shows the host, the port, and one of three states:
+a companion server with a world loaded, one sitting at its menu, or a port that is open but is
+something else. Tap to connect, **Save** to keep it.
+
+**The limitation, stated plainly:** the companion mods are ordinary HTTP servers that bind a port and
+announce nothing — no mDNS, no broadcast. There is no discovery protocol to listen for, so the only
+honest way to find one is to ask every address on the subnet. That means discovery **cannot see past
+a router**, and **cannot find a server on a port nobody thought to try**. The ports offered by default
+are the mod defaults plus every port your saved connections use, which is why an unusual port is found
+on the second attempt without typing anything.
+
+## Which screen it opens on
+
+A saved connection stores an *intent* — "the second screen" — and never a display id. Display ids are
+handed out by the system and change when a dock is unplugged or the device reboots, so a connection
+that remembered "display 2" would be pointing at nothing, or at something else, by tomorrow. The
+intent is resolved against the displays that exist at the moment you tap connect.
+
+- **Automatic** — the second screen when there is one, this one when there is not. The default.
+- **Second screen** — the first display that is not the main one. On the Thor, the lower panel.
+- **External display** — a display the system marks as presentable, which is what an HDMI dock gives.
+- **This screen** — the main display.
+- **Ask every time** — a chooser built from the displays present right now.
+
+If the chosen screen is not there, the session opens on the main display rather than failing. If the
+screen disappears *during* a session — the panel switched off, a dock pulled — the page reappears on
+the main display instead of the app silently vanishing with it.
+
+**More → Defaults for new connections** sets what a newly made connection starts out as. It is a
+default, not an override: a connection that says landscape means landscape.
+
+## In a session
+
+The small **⋯** button, top-left, opens the session menu. It carries the page controls — Back,
+Forward, Reload, Reconnect, Reset zoom, Fullscreen — and can be emptied entirely from
+**Defaults for new connections**. They live in the menu rather than on the screen because the second
+display is the whole point, and a permanent toolbar across it takes space from the thing you are
+looking at.
+
+The connection state appears as a small badge opposite it: **Connecting**, **Connected**,
+**Reconnecting**, **Disconnected** or **Connection failed**. It fades out a second after a
+connection goes green, so a healthy session carries no badge at all.
 
 ## Games
 
@@ -125,13 +215,16 @@ adb install -r AbacusDualScreenInterface-0.1.0-debug.apk
 
 ## Using it
 
-1. On the PC, start the game with the mod. **LAN access is on by default** in both mods, so there's
-   nothing to switch on — but if it was ever turned off, the mod only listens on loopback and the Thor
-   can't reach it.
-2. Find the PC's address with `ipconfig`.
-3. In the app: pick the game, enter the address, tap **Test connection**.
-4. Tap **Open second screen**. If the Thor reports more than one display, a picker appears and
-   defaults to the second one.
+1. On the PC, start the game with the mod. **LAN access is on by default** in the mods, so there is
+   nothing to switch on — but if it was ever turned off, the mod listens on loopback only and the Thor
+   cannot reach it.
+2. In the app, tap **Connect → Find**. It sweeps the network and lists what answered.
+3. Tap a result to open it, or **Save** to keep it as a named connection first.
+4. From then on it is one tap: open the app, tap the connection. Set **Connect on launch** on the one
+   you use most and it is no taps at all.
+
+If you would rather type the address: **Connect → New**, enter host and port, tap **Test** to check
+it before saving. `ipconfig` on the PC gives you the address.
 
 > **LAN access means the second screen can rearrange and destroy your items.** Only turn it on for a
 > network you trust.
@@ -193,7 +286,25 @@ Abacus Dual Screen Interface/
 
 ## Ideas worth adding next
 
-- Scan the local subnet for a listening mod, so the address never has to be typed.
-- A home-screen shortcut per game that skips the picker entirely.
-- Remember the chosen display per game and reopen there automatically.
-- Reconnect on its own when the game restarts, instead of showing the error panel.
+Everything that used to be listed here — subnet scanning, remembering the display, reconnecting on its
+own — is built. What is left:
+
+- **A home-screen shortcut per saved connection**, so the second screen is one tap from the launcher
+  with the app never appearing at all.
+- **Discovery that does not have to sweep.** If the mods ever advertise themselves over mDNS, the scan
+  becomes a listen, works across subnets, and stops looking like a port scanner to an access point.
+- **Remembering where a session was scrolled** when it comes back from a reconnect.
+
+## Known limitations
+
+- **Discovery cannot see past a router**, and cannot find a server on a port it was not told to try.
+  There is nothing to listen for; see [Finding servers on the network](#finding-servers-on-the-network).
+- **The second display needs Android 8.0.** Launching onto a chosen display is
+  `ActivityOptions.setLaunchDisplayId`, which arrived in Oreo. The `-PtestMinSdk` build flag lowers the
+  minimum for testing the parts that have nothing to do with displays; a build made that way is not
+  shippable.
+- **HTTP only.** The mods serve plain HTTP on a LAN. Nothing here does TLS, and nothing should be
+  pointed across the internet.
+- **Import merges on host and port.** Two saved connections to the same address are treated as the same
+  connection by an import, which is deliberate and means you cannot keep two profiles for one address
+  that differ only in their display or orientation and import them separately.

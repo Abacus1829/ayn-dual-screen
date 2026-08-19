@@ -35,7 +35,8 @@ whatever was last built and pushed — no waiting for a tagged release to try a 
 still come from releases, where their install notes live.
 
 The app is **optional** — any browser pointed at the address the mod prints gives you the same second
-screen.
+screen. What it adds is launching onto the Thor's lower panel, saved connections with one-tap
+reconnect, and a network scan so the address never has to be typed.
 
 Minecraft uses 27302, New Vegas 27303 and Skyrim 27305 rather than all sharing 27301 deliberately:
 they are likely to be installed on the same PC, and two mods fighting over one port fails in a way
