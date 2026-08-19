@@ -94,6 +94,13 @@ enum class Tool(
      */
     GAME_CODES("gamecodes", R.string.tool_game_codes, "⌘", hidden = true),
 
+    /**
+     * Everything the app remembers, gathered.
+     *
+     * The switches still live where they always did; this is one place to find them.
+     */
+    SETTINGS("settings", R.string.tool_settings, "⚙"),
+
     /** An FTP server on this device, so a PC can browse it over the network, like a homebrew file server. */
     FTP("ftp", R.string.tool_ftp, "⇅"),
 

@@ -997,6 +997,7 @@ class HomeActivity : AppCompatActivity() {
             Tool.STREAM -> startActivity(Intent(this, StreamActivity::class.java))
             Tool.PROFILES -> startActivity(Intent(this, ProfilesActivity::class.java))
             Tool.WIDGETS -> startActivity(Intent(this, WidgetsActivity::class.java))
+            Tool.SETTINGS -> startActivity(Intent(this, SettingsActivity::class.java))
             Tool.GAME_CODES -> startActivity(Intent(this, GameCodesActivity::class.java))
             Tool.MACRO_BUILDER -> startActivity(Intent(this, MacroBuilderActivity::class.java))
             Tool.LAYOUTS -> startActivity(Intent(this, LayoutEditorActivity::class.java))

@@ -346,8 +346,29 @@ class GameCodesActivity : AppCompatActivity() {
             isEnabled = gameId.isNotBlank()
         }
 
+        /**
+         * Put the tab away without switching the feature off.
+         *
+         * The distinction matters: turning game codes off stops the app asking any companion about
+         * them at all, and stops the hidden sequence working. This only takes the tile away —
+         * everything is still here, and entering the sequence again brings it straight back with
+         * your per-game switches as you left them.
+         */
+        val hide = android.widget.CheckBox(this).apply {
+            text = getString(R.string.codes_hide_tab)
+            setTextColor(getColor(R.color.text))
+            isChecked = false
+        }
+
         body.addView(global)
         body.addView(perGame)
+        body.addView(hide)
+        body.addView(TextView(this).apply {
+            text = getString(R.string.codes_hide_detail)
+            setTextColor(getColor(R.color.text_faint))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+            setPadding(0, dp(4), 0, 0)
+        })
         body.addView(TextView(this).apply {
             text = getString(R.string.codes_settings_detail)
             setTextColor(getColor(R.color.text_faint))
@@ -362,11 +383,22 @@ class GameCodesActivity : AppCompatActivity() {
                 codes.enabled = global.isChecked
                 if (gameId.isNotBlank()) codes.setEnabledFor(gameId, perGame.isChecked)
 
-                if (!global.isChecked) {
-                    codes.relock()
-                    finish()
-                } else {
-                    load()
+                when {
+                    // Off entirely: the feature stops existing, so the tile goes with it.
+                    !global.isChecked -> {
+                        codes.relock()
+                        finish()
+                    }
+
+                    // Just put away. The feature stays on, so the sequence finds it again.
+                    hide.isChecked -> {
+                        codes.relock()
+                        Feedback.success(binding.root)
+                        Feedback.toast(this, getString(R.string.codes_hidden))
+                        finish()
+                    }
+
+                    else -> load()
                 }
             }
             .setNegativeButton(R.string.action_cancel, null)

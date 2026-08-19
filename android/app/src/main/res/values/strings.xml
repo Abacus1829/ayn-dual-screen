@@ -618,4 +618,26 @@
         <item quantity="other">%1$d codes available</item>
     </plurals>
 
+
+    <!-- Settings -->
+    <string name="tool_settings">Settings</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_blurb">Everything the app remembers, in one place.</string>
+    <string name="settings_connection">CONNECTION</string>
+    <string name="settings_session">SECOND SCREEN</string>
+    <string name="settings_look">LOOK</string>
+    <string name="settings_controls">CONTROLS</string>
+    <string name="settings_tools">TOOLS</string>
+    <string name="settings_saved_connections">Saved connections</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_themes">Themes</string>
+    <string name="settings_macros">Macro pad</string>
+    <string name="settings_layouts">Layout editor</string>
+    <string name="settings_keyboard">Keyboard</string>
+    <string name="settings_ftp">FTP server</string>
+    <string name="settings_dashboard">Dashboard</string>
+    <string name="codes_hide_tab">Hide the tab until the code is entered again</string>
+    <string name="codes_hide_detail">Takes the tile away without switching game codes off. Your settings are kept.</string>
+    <string name="codes_hidden">Hidden. Enter the sequence again to bring it back.</string>
+
 </resources>
