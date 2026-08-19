@@ -34,9 +34,46 @@ class Settings(context: Context) {
         get() = prefs.getBoolean(KEY_RECONNECT, true)
         set(value) = prefs.edit().putBoolean(KEY_RECONNECT, value).apply()
 
+    /**
+     * The old two-state screen-awake switch.
+     *
+     * Superseded by [awakeMode], and kept because it is what the toggle on the home screen writes
+     * and what an older build's preferences contain. It seeds [awakeMode] the first time that is
+     * read, so nobody's existing choice is quietly reversed by the update.
+     */
     var keepAwake: Boolean
         get() = prefs.getBoolean(KEY_KEEP_AWAKE, true)
         set(value) = prefs.edit().putBoolean(KEY_KEEP_AWAKE, value).apply()
+
+    /**
+     * When to hold the screen on: `always`, `connected` or `never`.
+     *
+     * Defaults from [keepAwake], so the behaviour somebody already had is the behaviour they keep.
+     * See [com.abacus.dualscreen.connect.Awake].
+     */
+    var awakeMode: String
+        get() = prefs.getString(KEY_AWAKE_MODE, null) ?: if (keepAwake) "always" else "never"
+        set(value) = prefs.edit().putString(KEY_AWAKE_MODE, value).apply()
+
+    /**
+     * Where new profiles open by default: `main`, `second`, `external`, `auto` or `ask`.
+     *
+     * See [com.abacus.dualscreen.connect.DisplayChoice]. Automatic means the second screen when
+     * there is one and this one when there is not, which is what almost everybody wants.
+     */
+    var displayChoice: String
+        get() = prefs.getString(KEY_DISPLAY_CHOICE, "auto") ?: "auto"
+        set(value) = prefs.edit().putString(KEY_DISPLAY_CHOICE, value).apply()
+
+    /** Default orientation for new profiles: `auto`, `landscape` or `portrait`. */
+    var orientation: String
+        get() = prefs.getString(KEY_ORIENTATION, "auto") ?: "auto"
+        set(value) = prefs.edit().putString(KEY_ORIENTATION, value).apply()
+
+    /** Show the session's floating controls. Off leaves only the small menu button. */
+    var showControls: Boolean
+        get() = prefs.getBoolean(KEY_SHOW_CONTROLS, true)
+        set(value) = prefs.edit().putBoolean(KEY_SHOW_CONTROLS, value).apply()
 
     var rememberDisplay: Boolean
         get() = prefs.getBoolean(KEY_REMEMBER_DISPLAY, true)
@@ -305,6 +342,11 @@ class Settings(context: Context) {
         const val KEY_KB_SPLIT = "kb_split"
         const val KEY_KB_SIZE = "kb_size"
         const val KEY_KB_HAPTICS = "kb_haptics"
+
+        const val KEY_AWAKE_MODE = "awake_mode"
+        const val KEY_DISPLAY_CHOICE = "display_choice"
+        const val KEY_ORIENTATION = "orientation"
+        const val KEY_SHOW_CONTROLS = "show_controls"
 
         const val KEY_NOTES = "notes"
         const val KEY_NOTE_SORT = "note_sort"

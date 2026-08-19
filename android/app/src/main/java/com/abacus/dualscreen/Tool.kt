@@ -39,6 +39,13 @@ enum class Tool(
     val available: Boolean = true,
     @StringRes val blockedReason: Int = 0
 ) {
+    /**
+     * Saved connections: the shortest path from opening the app to being on the second screen.
+     *
+     * First in the list on purpose. It is the thing this app is for.
+     */
+    PROFILES("profiles", R.string.tool_profiles, "⇢"),
+
     SECOND_SCREEN("screen", R.string.tool_second_screen, "▣"),
     NOTES("notes", R.string.tool_notes, "✎"),
     VOLUME("volume", R.string.tool_volume, "◧"),

@@ -27,6 +27,28 @@
         android:scaleType="fitCenter"
         android:src="@drawable/ic_menu_dots" />
 
+    <!--
+        The connection state, opposite the menu button.
+
+        Small, dim and self-hiding: it exists for the moment the session drops, and a permanent badge
+        over somebody's inventory would be worse than no badge at all. Shown while anything other
+        than a healthy connection is going on, then faded out.
+    -->
+    <TextView
+        android:id="@+id/statusPill"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_margin="8dp"
+        android:alpha="0"
+        android:background="@drawable/bg_round"
+        android:paddingStart="10dp"
+        android:paddingTop="5dp"
+        android:paddingEnd="10dp"
+        android:paddingBottom="5dp"
+        android:textColor="@color/text"
+        android:textSize="11sp" />
+
     <LinearLayout
         android:id="@+id/menuPanel"
         android:layout_width="match_parent"
@@ -40,11 +62,33 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="18dp"
+            android:layout_marginBottom="6dp"
             android:text="@string/screen_menu_title"
             android:textColor="@color/text"
             android:textSize="18sp"
             android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/menuStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:gravity="center"
+            android:textColor="@color/text_dim"
+            android:textSize="12sp" />
+
+        <!--
+            The page controls. Inside the menu rather than on the screen, because the second display
+            is the whole product and a permanent toolbar across it would be taking space from the
+            thing somebody bought a handheld with two screens to look at.
+        -->
+        <LinearLayout
+            android:id="@+id/controlsRow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="14dp"
+            android:gravity="center"
+            android:orientation="horizontal" />
 
         <Button
             android:id="@+id/backToScreenButton"

@@ -114,6 +114,19 @@
                     android:lineSpacingExtra="2dp"
                     android:textColor="@color/text_dim"
                     android:textSize="12sp" />
+
+                <!--
+                    The way into saved connections, on the card people already look at to connect.
+                    Hidden when nothing has been saved, so a first run is not offering an empty list.
+                -->
+                <Button
+                    android:id="@+id/profilesButton"
+                    style="@style/Action"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/home_saved_connections"
+                    android:visibility="gone" />
             </LinearLayout>
 
             <!-- ===== address (advanced) ===== -->

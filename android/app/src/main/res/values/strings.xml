@@ -359,4 +359,113 @@
         <item quantity="other">%1$d characters</item>
     </plurals>
 
+
+    <!-- Connection profiles -->
+    <string name="tool_profiles">Connect</string>
+    <string name="profiles_title">Connect</string>
+    <string name="profiles_new">New</string>
+    <string name="profiles_find">Find</string>
+    <string name="profiles_find_long">Find servers on this network</string>
+    <string name="profiles_more">More</string>
+    <string name="profiles_recent">RECENT</string>
+    <string name="profiles_clear">Clear</string>
+    <string name="profiles_connect">Connect</string>
+    <string name="profiles_edit">Edit</string>
+    <string name="profiles_duplicate">Duplicate</string>
+    <string name="profiles_delete">Delete</string>
+    <string name="profiles_delete_confirm">Delete \"%1$s\"?</string>
+    <string name="profiles_set_default">Make default</string>
+    <string name="profiles_unset_default">Stop being default</string>
+    <string name="profiles_empty">No saved connections yet. Scan the network to find one, or tap New to type an address.</string>
+    <string name="profiles_second_ready">second screen ready</string>
+    <string name="profiles_no_second">this screen only</string>
+    <string name="profiles_saved">Saved as \"%1$s\"</string>
+    <string name="profiles_export">Export</string>
+    <string name="profiles_export_empty">Nothing to export yet.</string>
+    <string name="profiles_export_failed">Could not write the file. Grant All files access, or use Share.</string>
+    <string name="profiles_export_done">Written to\n%1$s\n\nIt is reachable over this app\'s FTP server.</string>
+    <string name="profiles_import">Import</string>
+    <string name="profiles_import_paste">Paste instead</string>
+    <string name="profiles_import_found">Import from\n%1$s?</string>
+    <string name="profiles_import_hint">Paste exported JSON here</string>
+    <string name="profiles_import_nothing">Nothing in there could be read as a connection.</string>
+    <string name="profiles_import_done">%1$d added, %2$d updated, %3$d skipped.</string>
+
+    <!-- Profile editor -->
+    <string name="profile_new_title">New connection</string>
+    <string name="profile_edit_title">Edit connection</string>
+    <string name="profile_name">NAME</string>
+    <string name="profile_name_hint">Living room PC</string>
+    <string name="profile_host">HOST OR IP</string>
+    <string name="profile_host_hint">192.168.1.20</string>
+    <string name="profile_port">PORT</string>
+    <string name="profile_test">Test</string>
+    <string name="profile_test_reachable">Something answered, but it is not a companion server.</string>
+    <string name="profile_test_refused">Nothing is listening on that port. The mod may be bound to the PC only.</string>
+    <string name="profile_opens_on">OPENS ON</string>
+    <string name="profile_orientation">ORIENTATION</string>
+    <string name="profile_awake">KEEP SCREEN AWAKE</string>
+    <string name="profile_autoconnect">Connect to this on launch</string>
+    <string name="profile_autoconnect_detail">Only one connection can do this. Setting it here clears it elsewhere.</string>
+    <string name="profile_autoconnect_short">auto</string>
+    <string name="profile_unusable">Needs a host and a port</string>
+
+    <!-- Display choices -->
+    <string name="display_opt_main">This screen</string>
+    <string name="display_opt_second">Second screen</string>
+    <string name="display_opt_external">External display</string>
+    <string name="display_opt_auto">Automatic</string>
+    <string name="display_opt_ask">Ask every time</string>
+    <string name="display_which">Open on which screen?</string>
+    <string name="display_this_one">%1$s (this one)</string>
+
+    <string name="orientation_auto">Automatic</string>
+    <string name="orientation_landscape">Landscape</string>
+    <string name="orientation_portrait">Portrait</string>
+
+    <string name="awake_always">Always</string>
+    <string name="awake_connected">While connected</string>
+    <string name="awake_never">Never</string>
+
+    <!-- Discovery -->
+    <string name="discover_title">Find servers</string>
+    <string name="discover_scan">Scan</string>
+    <string name="discover_blurb">Companion servers announce nothing, so this asks every address on your network whether the port is open. It cannot see past a router.</string>
+    <string name="discover_ports">PORTS</string>
+    <string name="discover_ports_hint">27301, 27302</string>
+    <string name="discover_none">Nothing answered on %1$s. Check the PC is on the same network and the mod allows LAN access.</string>
+    <string name="discover_found">%1$d answered · %2$d look like companion servers</string>
+    <string name="discover_in_game">%1$s — %2$s</string>
+    <string name="discover_at_menu">%1$s, at the menu</string>
+    <string name="discover_open_port">Port open, not a companion server</string>
+    <string name="discover_save">Save</string>
+    <string name="discover_saved">Saved \"%1$s\" (%2$s).</string>
+    <string name="discover_already">Already saved as \"%1$s\"</string>
+
+    <!-- Session status -->
+    <string name="error_no_answer">No answer from that address.</string>
+    <string name="link_connecting">Connecting</string>
+    <string name="link_connected">Connected</string>
+    <string name="link_reconnecting">Reconnecting</string>
+    <string name="link_disconnected">Disconnected</string>
+    <string name="link_failed">Connection failed</string>
+    <string name="link_detail">%1$s · %2$s · %3$s</string>
+    <string name="screen_display_gone">That screen went away. Back on the main display.</string>
+
+    <string name="control_back">Back</string>
+    <string name="control_forward">Forward</string>
+    <string name="control_reload">Reload</string>
+    <string name="control_reconnect">Reconnect</string>
+    <string name="control_zoom">Reset zoom</string>
+    <string name="control_fullscreen">Fullscreen</string>
+
+    <string name="home_saved_connections">Saved connections</string>
+    <string name="profiles_defaults">Defaults for new connections</string>
+    <string name="profiles_show_controls">Show page controls in the session menu</string>
+
+    <plurals name="profiles_count">
+        <item quantity="one">%1$d connection</item>
+        <item quantity="other">%1$d connections</item>
+    </plurals>
+
 </resources>

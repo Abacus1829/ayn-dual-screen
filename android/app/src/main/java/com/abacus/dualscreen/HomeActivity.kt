@@ -68,6 +68,9 @@ class HomeActivity : AppCompatActivity() {
         binding.testButton.setOnClickListener { test() }
         binding.findButton.setOnClickListener { find(thenOpen = false) }
         binding.detectButton.setOnClickListener { detect(announce = true) }
+        binding.profilesButton.setOnClickListener {
+            startActivity(Intent(this, ProfilesActivity::class.java))
+        }
         binding.openButton.setOnClickListener {
             if (!advanced && binding.hostField.text.isBlank()) find(thenOpen = true) else open()
         }
@@ -82,6 +85,12 @@ class HomeActivity : AppCompatActivity() {
         maybeAutoStartFtp()
         buildTools()
         applyMode()
+
+        // Only offered once there is something in it: an empty saved list is a worse first
+        // impression than no button at all.
+        binding.profilesButton.visibility =
+            if (com.abacus.dualscreen.connect.ProfileStore(this).profiles.isEmpty()) View.GONE
+            else View.VISIBLE
 
         if (settings.autoDetect) detect(announce = false)
     }
@@ -680,6 +689,7 @@ class HomeActivity : AppCompatActivity() {
             Tool.MACROS -> startActivity(Intent(this, MacrosActivity::class.java))
             Tool.FTP -> startActivity(Intent(this, FtpActivity::class.java))
             Tool.STREAM -> startActivity(Intent(this, StreamActivity::class.java))
+            Tool.PROFILES -> startActivity(Intent(this, ProfilesActivity::class.java))
             Tool.SCRIBBLE -> startActivity(Intent(this, ScribbleActivity::class.java))
             Tool.THEMES -> startActivity(Intent(this, ThemesActivity::class.java))
             else -> Unit

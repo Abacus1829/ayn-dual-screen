@@ -6,8 +6,14 @@ import java.net.Socket
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-/** A mod found on the network. */
-data class Found(val host: String, val game: Game?, val place: String?)
+/**
+ * Something answering on the network, and what it turned out to be.
+ *
+ * [game] is null when a port was open but nothing behind it looked like a companion server — worth
+ * showing anyway, because "something is listening there" is a useful thing to know when you expected
+ * a mod and got a printer.
+ */
+data class Found(val host: String, val game: Game?, val place: String?, val port: Int = 0)
 
 /**
  * Finds the PC on the local network, so its address never has to be typed.
@@ -63,8 +69,36 @@ object Scanner {
         // identify only the handful that answered — a full probe per address would be far too slow
         return hits.sorted().map { host ->
             val result = Probe.run("http://$host:$port")
-            Found(host, result.game, result.place)
+            Found(host, result.game, result.place, port)
         }
+    }
+
+    /**
+     * The same sweep across several ports.
+     *
+     * There is no discovery protocol to speak to here — the companion mods are plain HTTP servers
+     * that answer on a port and broadcast nothing — so finding them means asking the subnet. That is
+     * the honest limitation: this cannot find a server on a port nobody thought to try, and it
+     * cannot see past a router.
+     *
+     * Ports are swept one after another rather than all at once. Each pass already runs 48 sockets
+     * in parallel, and multiplying that by the port count is how a handheld on hotel Wi-Fi ends up
+     * looking like a port scanner to the access point.
+     */
+    fun sweep(ports: List<Int>, onProgress: (Float) -> Unit = {}): List<Found> {
+        val wanted = ports.filter { it in 1..65535 }.distinct()
+        if (wanted.isEmpty()) return emptyList()
+
+        val all = mutableListOf<Found>()
+
+        wanted.forEachIndexed { index, port ->
+            val slice = 1f / wanted.size
+            all += sweep(port) { progress -> onProgress(index * slice + progress * slice) }
+        }
+
+        // One host answering on two ports is two findings, but the same host twice over on one port
+        // is not something the sweep can produce, so ordering is all that is left to do.
+        return all.sortedWith(compareBy({ it.game == null }, { it.host }, { it.port }))
     }
 
     private fun isOpen(host: String, port: Int): Boolean = try {

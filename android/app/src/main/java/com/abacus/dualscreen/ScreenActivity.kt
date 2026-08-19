@@ -2,9 +2,11 @@ package com.abacus.dualscreen
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.TypedValue
 import android.view.View
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -34,12 +36,33 @@ import java.net.URL
  */
 class ScreenActivity : AppCompatActivity() {
 
+    /** Where the session is, as far as anything outside this screen needs to know. */
+    private enum class Link { CONNECTING, CONNECTED, RECONNECTING, DISCONNECTED, FAILED }
+
     private lateinit var binding: ActivityScreenBinding
     private lateinit var url: String
     private lateinit var game: Game
 
     private var autoReconnect = true
-    private var keepAwake = true
+
+    /** What this session is called, for the status line. Falls back to the preset's name. */
+    private var sessionName = ""
+
+    private var awake = com.abacus.dualscreen.connect.Awake.ALWAYS
+    private var orientation = com.abacus.dualscreen.connect.Orientation.AUTOMATIC
+
+    private var link = Link.CONNECTING
+
+    /**
+     * The display this session is on, so its disappearance can be noticed.
+     *
+     * A handheld's second panel can be switched off mid-session and a dock can be unplugged. Android
+     * tears down activities on a removed display, and doing nothing means the session simply
+     * vanishes; catching it lets the page come back on the main screen instead.
+     */
+    private var displayListener: android.hardware.display.DisplayManager.DisplayListener? = null
+    private var homeDisplayId = android.view.Display.DEFAULT_DISPLAY
+    private var movingDisplay = false
 
     /**
      * Whether the load in flight already failed. onPageFinished still fires after onReceivedError
@@ -50,6 +73,35 @@ class ScreenActivity : AppCompatActivity() {
     private var attempt = 0
     private var healthMisses = 0
     private var leaving = false
+
+    /**
+     * Whether `/state` has ever answered at this address.
+     *
+     * The WebView is not a reliable witness to whether the connection is good — it reports a page
+     * as finished before anything has arrived on some builds, which is how a dead address ended up
+     * showing "Connected" over a blank screen. When the target is a companion server, this probe is
+     * the authority and the WebView's opinion is ignored.
+     */
+    private var probedOk = false
+
+    /**
+     * Set once we conclude the address is not a companion server: an ordinary web page, which the
+     * app is happy to show.
+     *
+     * It matters because the health check asks for `/state`, and a site that has no such endpoint
+     * fails it forever — which used to tear the session down after eight seconds. Anything that is
+     * not a companion server gets the health check switched off and is judged by the WebView alone.
+     */
+    private var plainSite = false
+
+    /**
+     * Set once the address has been shown to be answering, so the stall timer can tell "still
+     * waiting" from "arrived".
+     *
+     * Set from the network probe rather than from onPageFinished, because that callback is not a
+     * reliable witness — see [probedOk].
+     */
+    private var pageArrived = false
 
     /**
      * Whether the WebView has wandered off the mod — onto the game's wiki, in practice.
@@ -77,14 +129,32 @@ class ScreenActivity : AppCompatActivity() {
         url = intent.getStringExtra(EXTRA_URL).orEmpty()
         game = Game.byId(intent.getStringExtra(EXTRA_GAME))
         autoReconnect = intent.getBooleanExtra(EXTRA_RECONNECT, true)
-        keepAwake = intent.getBooleanExtra(EXTRA_KEEP_AWAKE, true)
+        sessionName = intent.getStringExtra(EXTRA_NAME).orEmpty().ifBlank { getString(game.label) }
+
+        /*
+         * The awake mode, or the old boolean if that is all the caller sent.
+         *
+         * Both paths still arrive here: profiles send a mode, and the original connect screen sends
+         * EXTRA_KEEP_AWAKE. Reading the extra first and falling back keeps that screen working
+         * unchanged rather than requiring both to be updated in lockstep.
+         */
+        awake = intent.getStringExtra(EXTRA_AWAKE)?.let { com.abacus.dualscreen.connect.Awake.byId(it) }
+            ?: if (intent.getBooleanExtra(EXTRA_KEEP_AWAKE, true)) com.abacus.dualscreen.connect.Awake.ALWAYS
+            else com.abacus.dualscreen.connect.Awake.NEVER
+
+        orientation = com.abacus.dualscreen.connect.Orientation.byId(intent.getStringExtra(EXTRA_ORIENTATION))
+
         if (url.isEmpty()) {
             finish()
             return
         }
 
+        applyOrientation()
+        watchDisplay()
         goImmersive()
         configureWebView()
+        buildControls()
+        setLink(Link.CONNECTING)
 
         // match the loading background to the game's own page, so there's no white flash on open
         binding.root.setBackgroundColor(getColor(game.background))
@@ -133,13 +203,80 @@ class ScreenActivity : AppCompatActivity() {
 
     /** A second screen that sleeps after 30 seconds is useless, so hold the screen on by default. */
     private fun goImmersive() {
-        binding.root.keepScreenOn = keepAwake
+        applyAwake()
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, binding.root).apply {
             hide(WindowInsetsCompat.Type.systemBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
+    }
+
+    /**
+     * Hold the screen on, or stop holding it.
+     *
+     * Applied to this window, which is the one on the display the session is actually on — the flag
+     * is per-window, so setting it anywhere else would keep the wrong panel awake. Re-applied on
+     * every state change because the "while connected" mode depends on the state.
+     */
+    private fun applyAwake() {
+        binding.root.keepScreenOn = when (awake) {
+            com.abacus.dualscreen.connect.Awake.ALWAYS -> true
+            com.abacus.dualscreen.connect.Awake.NEVER -> false
+            com.abacus.dualscreen.connect.Awake.CONNECTED -> link == Link.CONNECTED
+        }
+    }
+
+    /**
+     * Lock the session's orientation, or leave it alone.
+     *
+     * UNSPECIFIED rather than SENSOR for automatic: the Thor's lower panel has its own idea of which
+     * way up it is, and forcing sensor rotation onto it fights the system rather than following it.
+     */
+    private fun applyOrientation() {
+        requestedOrientation = when (orientation) {
+            com.abacus.dualscreen.connect.Orientation.AUTOMATIC ->
+                android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            com.abacus.dualscreen.connect.Orientation.LANDSCAPE ->
+                android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            com.abacus.dualscreen.connect.Orientation.PORTRAIT ->
+                android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
+    }
+
+    /**
+     * Notice the display this session is on going away.
+     *
+     * Rather than letting the system quietly destroy the activity — which from the user's side is
+     * the app disappearing — the page is relaunched on the main display. [movingDisplay] stops the
+     * teardown that follows from being mistaken for the user leaving.
+     */
+    private fun watchDisplay() {
+        homeDisplayId = runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) display?.displayId
+            else @Suppress("DEPRECATION") windowManager.defaultDisplay?.displayId
+        }.getOrNull() ?: android.view.Display.DEFAULT_DISPLAY
+
+        if (homeDisplayId == android.view.Display.DEFAULT_DISPLAY) return
+
+        displayListener = com.abacus.dualscreen.connect.Displays.listen(this) {
+            if (leaving || movingDisplay) return@listen
+            if (com.abacus.dualscreen.connect.Displays.exists(this, homeDisplayId)) return@listen
+
+            movingDisplay = true
+            runOnUiThread { moveToMainDisplay() }
+        }
+    }
+
+    private fun moveToMainDisplay() {
+        handler.removeCallbacks(retry)
+        handler.removeCallbacks(healthCheck)
+
+        val again = Intent(intent).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        runCatching { startActivity(again) }
+            .onFailure { quitToMenu(getString(R.string.screen_display_gone)) }
+
+        finish()
     }
 
     @SuppressLint("SetJavaScriptEnabled") // the page is served by the mod on the user's own machine
@@ -176,9 +313,23 @@ class ScreenActivity : AppCompatActivity() {
             override fun onPageFinished(view: WebView, url: String) {
                 trackLocation(url)
                 if (!loadFailed) {
-                    binding.errorPanel.visibility = View.GONE
-                    attempt = 0
-                    healthMisses = 0
+                    /*
+                     * Nothing here is believed without corroboration from the network.
+                     *
+                     * Some WebView builds call this the moment a load is *started*, so acting on it
+                     * alone reported a connection to an address with nothing at it — and, worse,
+                     * hid the retry panel a moment after the retry put it up. The probe knows
+                     * whether anything answered; until it says so, this callback changes nothing.
+                     *
+                     * Off-site is the wiki rather than the session, and says nothing about whether
+                     * the mod is still running either way.
+                     */
+                    if (!offSite && (plainSite || probedOk)) {
+                        binding.errorPanel.visibility = View.GONE
+                        attempt = 0
+                        healthMisses = 0
+                        setLink(Link.CONNECTED)
+                    }
                 }
             }
 
@@ -236,10 +387,161 @@ class ScreenActivity : AppCompatActivity() {
         return super.dispatchTouchEvent(event)
     }
 
+    // ── connection state ────────────────────────────────────────────────────
+
+    /**
+     * Move to a state and show it.
+     *
+     * One place, so the pill, the menu line and the screen-awake flag can never disagree about what
+     * is happening. The pill is shown for anything that is not a healthy connection and fades itself
+     * out once things are well again — a permanent badge over the page would cost more than it says.
+     */
+    private fun setLink(state: Link) {
+        link = state
+        applyAwake()
+
+        val label = getString(
+            when (state) {
+                Link.CONNECTING -> R.string.link_connecting
+                Link.CONNECTED -> R.string.link_connected
+                Link.RECONNECTING -> R.string.link_reconnecting
+                Link.DISCONNECTED -> R.string.link_disconnected
+                Link.FAILED -> R.string.link_failed
+            }
+        )
+
+        val colour = getColor(
+            when (state) {
+                Link.CONNECTED -> R.color.state_ok
+                Link.FAILED, Link.DISCONNECTED -> R.color.state_bad
+                else -> R.color.state_busy
+            }
+        )
+
+        binding.statusPill.text = label
+        binding.statusPill.setTextColor(colour)
+        binding.menuStatus.text = getString(R.string.link_detail, sessionName, host(), label)
+
+        handler.removeCallbacks(hidePill)
+
+        if (state == Link.CONNECTED) {
+            // Shown briefly on success, then out of the way. Seeing it turn green is worth one
+            // second; leaving it there is not.
+            binding.statusPill.animate().alpha(0.85f).setDuration(120).start()
+            handler.postDelayed(hidePill, PILL_LINGER_MS)
+        } else {
+            binding.statusPill.animate().alpha(0.9f).setDuration(120).start()
+        }
+    }
+
+    private val hidePill = Runnable {
+        binding.statusPill.animate().alpha(0f).setDuration(400).start()
+    }
+
+    /** The address without the scheme, which is all anybody reads off it. */
+    private fun host(): String = url.removePrefix("http://").removePrefix("https://")
+
+    // ── page controls ───────────────────────────────────────────────────────
+
+    /**
+     * The row of page controls in the menu.
+     *
+     * Built in code because whether Back and Forward are useful depends on where the WebView has
+     * been, and because a settings switch can take the whole row away — which is the point of
+     * putting them here rather than on the screen.
+     */
+    private fun buildControls() {
+        binding.controlsRow.removeAllViews()
+
+        if (!Settings(this).showControls) {
+            binding.controlsRow.visibility = View.GONE
+            return
+        }
+
+        binding.controlsRow.visibility = View.VISIBLE
+
+        control(R.string.control_back) {
+            if (binding.webView.canGoBack()) binding.webView.goBack()
+        }
+        control(R.string.control_forward) {
+            if (binding.webView.canGoForward()) binding.webView.goForward()
+        }
+        control(R.string.control_reload) { binding.webView.reload() }
+        control(R.string.control_reconnect) {
+            binding.menuPanel.visibility = View.GONE
+            attempt = 0
+            healthMisses = 0
+            setLink(Link.CONNECTING)
+            load()
+        }
+        control(R.string.control_zoom) { resetZoom() }
+        control(R.string.control_fullscreen) { goImmersive() }
+    }
+
+    private fun control(label: Int, onClick: () -> Unit) {
+        binding.controlsRow.addView(android.widget.Button(this).apply {
+            text = getString(label)
+            isAllCaps = false
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setTextColor(getColor(R.color.text))
+            minWidth = 0
+            minimumWidth = 0
+            setPadding(dp(12), dp(8), dp(12), dp(8))
+            background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = dp(8).toFloat()
+                setColor(getColor(R.color.card_hi))
+                setStroke(dp(1), getColor(R.color.edge))
+            }
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply { marginEnd = dp(6) }
+            setOnClickListener { onClick() }
+        })
+    }
+
+    /**
+     * Put the page back to its natural size.
+     *
+     * setInitialScale(0) is the documented way to say "no forced scale"; calling it alone does not
+     * repaint, so the page is reloaded afterwards. Pinch zoom is off in this WebView, but a page can
+     * still end up scaled by its own viewport handling after a rotation.
+     */
+    private fun resetZoom() {
+        binding.webView.setInitialScale(0)
+        binding.webView.reload()
+    }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
     private fun load() {
         loadFailed = false
+        pageArrived = false
         handler.removeCallbacks(retry)
+
+        // A WebView pointed at an address that is simply not there can sit on its own connect
+        // timeout for the better part of two minutes, showing a blank screen and saying nothing.
+        // This is the promise that something will be said before then.
+        handler.removeCallbacks(stall)
+        handler.postDelayed(stall, STALL_MS)
+
         binding.webView.loadUrl(url)
+
+        // Asked straight away rather than waiting for the first scheduled check: it decides whether
+        // this address is a companion server, which decides what the rest of this screen believes.
+        probeSession()
+    }
+
+    /**
+     * Nothing has arrived in a reasonable time.
+     *
+     * Treated as a failed load rather than left alone, which puts it into the same retry path as a
+     * refused connection — the user gets the same panel and the same countdown either way, and the
+     * difference between "refused" and "no answer at all" is not one they can act on differently.
+     */
+    private val stall = Runnable {
+        if (leaving || probedOk || pageArrived) return@Runnable
+        showError(getString(R.string.error_no_answer))
     }
 
     /**
@@ -253,26 +555,45 @@ class ScreenActivity : AppCompatActivity() {
         if (leaving) return
 
         Thread {
-            val alive = runCatching {
-                val connection = (URL("$url/state").openConnection() as HttpURLConnection).apply {
-                    requestMethod = "GET"
-                    connectTimeout = HEALTH_TIMEOUT_MS
-                    readTimeout = HEALTH_TIMEOUT_MS
-                }
-                try {
-                    connection.responseCode == HttpURLConnection.HTTP_OK
-                } finally {
-                    connection.disconnect()
-                }
-            }.getOrDefault(false)
+            val alive = statusOf("$url/state") == HttpURLConnection.HTTP_OK
+
+            /*
+             * Whether anything at all is at that address.
+             *
+             * Asked only when /state did not answer, and it is what separates "an ordinary web page,
+             * which is fine" from "nothing there". Inferring that from the WebView instead was
+             * wrong: some builds report a page as finished while the connection is still pending, so
+             * a dead address showed a confident green "Connected" over a blank screen.
+             */
+            val anything = !alive && statusOf(url) != null
 
             runOnUiThread {
                 if (leaving) return@runOnUiThread
 
                 if (alive) {
+                    probedOk = true
+                    plainSite = false
+                    pageArrived = true
                     healthMisses = 0
+                    if (link != Link.CONNECTED && !offSite) setLink(Link.CONNECTED)
                     return@runOnUiThread
                 }
+
+                /*
+                 * Something is there, but it is not a companion server — an ordinary web page,
+                 * which this app is perfectly happy to show full-screen. Health checking it means
+                 * asking for an endpoint it will never have, so the check is switched off rather
+                 * than being allowed to close a working session eight seconds in.
+                 */
+                if (!probedOk && anything) {
+                    plainSite = true
+                    pageArrived = true
+                    healthMisses = 0
+                    if (!offSite) setLink(Link.CONNECTED)
+                    return@runOnUiThread
+                }
+
+                if (plainSite) return@runOnUiThread
 
                 healthMisses++
                 if (healthMisses >= HEALTH_MISSES_ALLOWED)
@@ -282,10 +603,31 @@ class ScreenActivity : AppCompatActivity() {
     }
 
     /**
+     * The HTTP status at a URL, or null if nothing answered.
+     *
+     * Blocking; called from the probe thread. Null and a 404 are very different answers here — one
+     * means nothing is listening, the other means something is and it simply does not have that
+     * path — so the status is returned rather than a boolean.
+     */
+    private fun statusOf(target: String): Int? = runCatching {
+        val connection = (URL(target).openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = HEALTH_TIMEOUT_MS
+            readTimeout = HEALTH_TIMEOUT_MS
+        }
+        try {
+            connection.responseCode
+        } finally {
+            connection.disconnect()
+        }
+    }.getOrNull()
+
+    /**
      * The session has gone. Either wait for it to come back, or hand control back to the picker.
      */
     private fun sessionLost() {
         if (!autoReconnect) {
+            setLink(Link.DISCONNECTED)
             quitToMenu(getString(R.string.session_ended))
             return
         }
@@ -293,12 +635,14 @@ class ScreenActivity : AppCompatActivity() {
         // give it a bounded number of tries — a game being restarted comes back in well under this,
         // and anything longer means the session is genuinely over
         if (attempt >= MAX_ATTEMPTS) {
+            setLink(Link.FAILED)
             quitToMenu(getString(R.string.session_gave_up))
             return
         }
 
         attempt++
-        binding.errorTitle.text = getString(R.string.error_title, getString(game.label))
+        setLink(Link.RECONNECTING)
+        binding.errorTitle.text = getString(R.string.error_title, sessionName)
         binding.errorDetail.text = getString(R.string.session_lost, attempt)
         binding.errorPanel.visibility = View.VISIBLE
 
@@ -315,20 +659,23 @@ class ScreenActivity : AppCompatActivity() {
      */
     private fun showError(detail: String) {
         loadFailed = true
-        binding.errorTitle.text = getString(R.string.error_title, getString(game.label))
+        binding.errorTitle.text = getString(R.string.error_title, sessionName)
 
         if (!autoReconnect) {
+            setLink(Link.DISCONNECTED)
             binding.errorDetail.text = if (detail.isEmpty()) url else "$url\n\n$detail"
             binding.errorPanel.visibility = View.VISIBLE
             return
         }
 
         if (attempt >= MAX_ATTEMPTS) {
+            setLink(Link.FAILED)
             quitToMenu(getString(R.string.session_gave_up))
             return
         }
 
         attempt++
+        setLink(Link.RECONNECTING)
         binding.errorDetail.text = "$url\n\n${getString(R.string.error_retrying, attempt)}"
         binding.errorPanel.visibility = View.VISIBLE
 
@@ -368,6 +715,9 @@ class ScreenActivity : AppCompatActivity() {
         leaving = true
         handler.removeCallbacks(retry)
         handler.removeCallbacks(healthCheck)
+        handler.removeCallbacks(hidePill)
+        com.abacus.dualscreen.connect.Displays.stopListening(this, displayListener)
+        displayListener = null
         binding.webView.destroy()
         super.onDestroy()
     }
@@ -376,12 +726,35 @@ class ScreenActivity : AppCompatActivity() {
         const val EXTRA_URL = "url"
         const val EXTRA_GAME = "game"
         const val EXTRA_RECONNECT = "reconnect"
+
+        /**
+         * The old two-state awake flag.
+         *
+         * Still sent by the original connect screen, which has not been rewritten and does not need
+         * to be. Profiles send [EXTRA_AWAKE] instead and this is ignored.
+         */
         const val EXTRA_KEEP_AWAKE = "keepAwake"
+
+        const val EXTRA_NAME = "name"
+        const val EXTRA_ORIENTATION = "orientation"
+        const val EXTRA_AWAKE = "awake"
+        const val EXTRA_PROFILE = "profile"
 
         private const val IDLE_FADE_MS = 4000L
         private const val HEALTH_INTERVAL_MS = 4000L
         private const val HEALTH_TIMEOUT_MS = 2500
         private const val HEALTH_MISSES_ALLOWED = 2
         private const val MAX_ATTEMPTS = 8
+
+        /** How long the pill stays up after a successful connection before fading. */
+        private const val PILL_LINGER_MS = 1800L
+
+        /**
+         * How long a load may produce nothing before it is called a failure.
+         *
+         * Well inside the WebView's own connect timeout, which is long enough that somebody would
+         * reasonably conclude the app had hung.
+         */
+        private const val STALL_MS = 12_000L
     }
 }

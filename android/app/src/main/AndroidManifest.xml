@@ -73,6 +73,22 @@
             android:resizeableActivity="true"
             android:theme="@style/Theme.DualScreen.Fullscreen" />
         <activity
+            android:name=".ProfilesActivity"
+            android:exported="false"
+            android:resizeableActivity="true" />
+
+        <activity
+            android:name=".ProfileEditActivity"
+            android:exported="false"
+            android:resizeableActivity="true"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".DiscoverActivity"
+            android:exported="false"
+            android:resizeableActivity="true" />
+
+        <activity
             android:name=".NotesActivity"
             android:exported="false"
             android:resizeableActivity="true" />
