@@ -228,9 +228,36 @@ class Settings(context: Context) {
     /*********
      * Tools
      *********/
+
+    /**
+     * The old single-sheet scratchpad.
+     *
+     * Notes are files now. This is read once, by [com.abacus.dualscreen.notes.NoteStore.migrateLegacy],
+     * to rescue whatever an older build left in here — and then kept rather than cleared, because it
+     * costs nothing and it is the only copy if that write ever fails.
+     */
     var notes: String
         get() = prefs.getString(KEY_NOTES, "").orEmpty()
         set(value) = prefs.edit().putString(KEY_NOTES, value).apply()
+
+    /** How the notes list is arranged. Remembered, because it is a preference and not a mode. */
+    var noteSort: String
+        get() = prefs.getString(KEY_NOTE_SORT, "recent").orEmpty()
+        set(value) = prefs.edit().putString(KEY_NOTE_SORT, value).apply()
+
+    /** What other devices call you in the doodle rooms. Blank means "use the device model". */
+    var scribbleName: String
+        get() = prefs.getString(KEY_SCRIBBLE_NAME, "").orEmpty()
+        set(value) = prefs.edit().putString(KEY_SCRIBBLE_NAME, value).apply()
+
+    var scribbleRoom: String
+        get() = prefs.getString(KEY_SCRIBBLE_ROOM, "A").orEmpty().ifBlank { "A" }
+        set(value) = prefs.edit().putString(KEY_SCRIBBLE_ROOM, value).apply()
+
+    /** Last ink colour, so the pen is where you left it rather than white every single time. */
+    var scribbleInk: Int
+        get() = prefs.getInt(KEY_SCRIBBLE_INK, android.graphics.Color.WHITE)
+        set(value) = prefs.edit().putInt(KEY_SCRIBBLE_INK, value).apply()
 
     /** Which tools are pinned to the home screen, as an ordered list of ids. */
     var pinnedTools: List<String>
@@ -280,6 +307,11 @@ class Settings(context: Context) {
         const val KEY_KB_HAPTICS = "kb_haptics"
 
         const val KEY_NOTES = "notes"
+        const val KEY_NOTE_SORT = "note_sort"
         const val KEY_TOOLS = "tools"
+
+        const val KEY_SCRIBBLE_NAME = "scribble_name"
+        const val KEY_SCRIBBLE_ROOM = "scribble_room"
+        const val KEY_SCRIBBLE_INK = "scribble_ink"
     }
 }

@@ -5,6 +5,13 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!--
+        Wi-Fi drops broadcast packets while the radio dozes unless something holds a multicast lock,
+        and the doodle rooms find each other by broadcast. Without this the app talks and hears
+        nobody, which is indistinguishable from nobody being there.
+    -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+
     <!-- Volume sliders. System brightness uses WRITE_SETTINGS, which is a special permission
          granted from a system page rather than a normal runtime prompt. -->
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
@@ -69,6 +76,18 @@
             android:name=".NotesActivity"
             android:exported="false"
             android:resizeableActivity="true" />
+
+        <activity
+            android:name=".NoteEditorActivity"
+            android:exported="false"
+            android:resizeableActivity="true"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".ScribbleActivity"
+            android:exported="false"
+            android:resizeableActivity="true"
+            android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".ControlsActivity"

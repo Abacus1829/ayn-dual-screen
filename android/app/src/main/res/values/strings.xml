@@ -292,4 +292,61 @@
     <string name="macro_running">Macro pad on screen</string>
     <string name="macro_running_detail">Tap Hide to put it away.</string>
     <string name="macro_hide">Hide</string>
+
+    <!-- Notes -->
+    <string name="notes_new">New</string>
+    <string name="notes_new_name">Note %1$s</string>
+    <string name="notes_untitled">Untitled</string>
+    <string name="notes_search">Search notes</string>
+    <string name="notes_sort_recent">Recent</string>
+    <string name="notes_sort_name">Name</string>
+    <string name="notes_sort_longest">Longest</string>
+    <string name="notes_empty">No notes yet. Tap New, or drop a .txt file into the notes folder over FTP.</string>
+    <string name="notes_no_matches">Nothing matches that.</string>
+    <string name="notes_blank">Empty</string>
+    <string name="notes_actions">More</string>
+    <string name="notes_open">Open</string>
+    <string name="notes_pin">Pin</string>
+    <string name="notes_unpin">Unpin</string>
+    <string name="notes_rename">Rename</string>
+    <string name="notes_duplicate">Duplicate</string>
+    <string name="notes_delete">Delete</string>
+    <string name="notes_delete_confirm">Delete \"%1$s\"? This removes the file.</string>
+    <string name="notes_save">Save</string>
+    <string name="notes_done">Done</string>
+    <string name="notes_share">Share</string>
+    <string name="notes_share_failed">Nothing on this device can take shared text.</string>
+    <string name="notes_folder_shared">%1$s</string>
+    <string name="notes_folder_private">app-private storage — grant All files access to reach them over FTP</string>
+    <string name="notes_status">%1$d lines · %2$d words · %3$d characters · %4$s</string>
+
+    <!-- Doodle rooms -->
+    <string name="tool_scribble">Doodles</string>
+    <string name="scribble_title">Doodles</string>
+    <string name="scribble_hint">Say something</string>
+    <string name="scribble_send">Send</string>
+    <string name="scribble_name">Name</string>
+    <string name="scribble_ink">Ink colour</string>
+    <string name="scribble_thin">Thin</string>
+    <string name="scribble_thick">Thick</string>
+    <string name="scribble_erase">Erase</string>
+    <string name="scribble_undo">Undo</string>
+    <string name="scribble_clear">Clear</string>
+    <string name="scribble_doodle">Doodle</string>
+    <string name="scribble_empty">Nothing in this room yet. Draw something and send it — it is kept even with nobody else here.</string>
+    <string name="scribble_alone">Nobody else on this network</string>
+    <string name="scribble_one_peer">%1$s is here</string>
+    <string name="scribble_peers">%1$d others here</string>
+    <string name="scribble_elsewhere">%1$s posted in room %2$s</string>
+
+    <plurals name="notes_count">
+        <item quantity="one">%1$d note</item>
+        <item quantity="other">%1$d notes</item>
+    </plurals>
+
+    <plurals name="notes_chars">
+        <item quantity="one">%1$d character</item>
+        <item quantity="other">%1$d characters</item>
+    </plurals>
+
 </resources>

@@ -52,6 +52,14 @@ enum class Tool(
     // is as far as Android lets one app reach into another without a signature-level permission.
     MACROS("macros", R.string.tool_macros, "⚙"),
 
+    /**
+     * Doodles and short messages, sent to every other device on the Wi-Fi.
+     *
+     * No pairing and no address to type: presence goes out as a UDP broadcast and anybody running
+     * this app answers. Works alone too, in which case it is a drawing scrapbook kept on disk.
+     */
+    SCRIBBLE("scribble", R.string.tool_scribble, "✍"),
+
     /** An FTP server on this device, so a PC can browse it over the network, like a homebrew file server. */
     FTP("ftp", R.string.tool_ftp, "⇅"),
 
