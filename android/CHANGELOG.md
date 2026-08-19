@@ -7,6 +7,43 @@ time — so they say what the commits show and no more.
 
 ---
 
+## 0.14.0 — 2026-08-19
+
+### Settings
+
+- **One screen for everything the app remembers.** The switches were spread across four places --
+  some on the home page, some in Appearance, some behind a menu on the saved-connections list. Each
+  made sense where it was and none was findable if you did not already know.
+- Grouped: connection behaviour, how a session opens, and links to the screens that own a whole
+  subject. It owns none of them -- every switch writes the same preference the original screen
+  writes, and anything with a real editor is linked rather than rebuilt, because two editors for one
+  setting is how they drift apart.
+- The Game Codes row appears only once the feature has been found. Listing it otherwise would give
+  away that there is something to find.
+
+### The hidden sequence, fixed
+
+- **It never fired.** onKeyDown is only reached for keys the view hierarchy did not consume, and the
+  home screen consumes the arrow keys to move focus between the dropdown, the address fields and the
+  buttons. Watched from dispatchKeyEvent now, which sees every key first and still passes it on.
+- **Swipes work too, and that is the path that actually works everywhere.** A desktop emulator's own
+  key-mapping layer takes the arrow keys before the app sees them, and a handheld d-pad may arrive as
+  motion axes rather than key codes. A touch has nothing in between: eight swipes then two taps.
+- Held keys no longer race through the sequence -- one hold counts once. Gamepad hat axes are read as
+  directions. The window between presses went from three seconds to five.
+- **A step display**, in the style of the arrow games: after four correct inputs a row appears
+  showing how far you have got, the one just hit slightly larger. Silent before four, because showing
+  it on the first press would give the secret away to anybody who nudged the stick.
+- **The same sequence hides it again**, so there is one thing to remember rather than two.
+
+### Game codes
+
+- **Hide the tab** without switching the feature off -- the tile goes, everything else stays, and the
+  sequence brings it back. Distinct from disabling, which stops the app asking any companion about
+  codes at all.
+
+---
+
 ## 0.13.0 — 2026-08-19
 
 ### Game codes (hidden, optional, off at the game end by default)
