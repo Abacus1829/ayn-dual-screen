@@ -78,6 +78,13 @@ enum class Tool(
     /** Arrange the macro pad, keep several layouts, and hand one to somebody else. */
     LAYOUTS("layouts", R.string.tool_layouts, "▦", hidden = true),
 
+    /**
+     * What the handheld knows about itself: clock, battery, network, storage, a stopwatch.
+     *
+     * The one tool that needs nothing -- no game, no server, no network, no extra permission.
+     */
+    WIDGETS("widgets", R.string.tool_widgets, "◴"),
+
     /** An FTP server on this device, so a PC can browse it over the network, like a homebrew file server. */
     FTP("ftp", R.string.tool_ftp, "⇅"),
 

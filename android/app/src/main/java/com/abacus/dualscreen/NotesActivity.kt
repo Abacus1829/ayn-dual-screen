@@ -57,7 +57,7 @@ class NotesActivity : AppCompatActivity() {
         // conclude their notes are gone.
         store.migrateLegacy(settings.notes)
 
-        binding.backButton.setOnClickListener { finish() }
+        com.abacus.dualscreen.ui.Nav.back(this, binding.backButton)
         binding.newButton.setOnClickListener { newNote() }
 
         binding.searchField.addTextChangedListener(object : TextWatcher {

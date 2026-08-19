@@ -155,6 +155,91 @@ The connection state appears as a small badge opposite it: **Connecting**, **Con
 **Reconnecting**, **Disconnected** or **Connection failed**. It fades out a second after a
 connection goes green, so a healthy session carries no badge at all.
 
+## Remote control profiles
+
+The macro pad's layouts are remote control profiles. Each is a named set of buttons with positions,
+sizes and actions, and each can be:
+
+- **created, renamed, duplicated, deleted, reset** — from **Macros → Layout editor → More**.
+- **exported and imported** — versioned JSON carrying the macros its buttons need. See
+  [Layout sharing](#layout-sharing).
+- **assigned to a game**, from **More → Use for a game**. A profile assigned to a game is the one
+  `MacroStore.profileFor(gameId)` returns while that game is what the app is connected to; the
+  active profile is the general one and is what everything falls back to. Only one profile may hold
+  a given game — assigning it moves it.
+
+### Gestures
+
+Every button has a tap action, and optionally:
+
+| Gesture | What it does |
+| --- | --- |
+| Tap | The button's own action: type text, press a key, open an app or a tool, run a macro |
+| Long press | Runs a saved macro |
+| Double tap | Runs a saved macro |
+| Toggle | Makes the tap hold its key down and release it on the next press |
+
+Long press and double tap run **macros** rather than offering a second and third copy of the action
+editor: a macro can already do anything a button can. Set them in the button dialog.
+
+A toggling button dims while it is holding its key, because a toggle whose state you cannot see is
+worse than no toggle. Anything held is released when the pad closes.
+
+The double-tap delay only applies to buttons that actually have a double-tap binding — the rest fire
+immediately, rather than every button on the pad waiting a quarter of a second for a gesture almost
+none of them use.
+
+**Extending this later.** Gestures are stored as a map of trigger id to macro id, not as a field per
+gesture. A swipe or a gamepad button is one entry in `Macro.Trigger` and needs no change to the
+stored format: an older build reading a layout that uses one finds a binding it does not recognise
+and ignores it.
+
+## Dashboard
+
+**Dashboard** on the home grid is what the handheld knows about itself. Everything on it works with
+no game, no server, no network and no permission the app did not already hold:
+
+| Widget | Shows |
+| --- | --- |
+| Time | Clock and date |
+| Battery | Percentage, whether it is charging and how, temperature |
+| Network | Wi-Fi, Ethernet, mobile or offline, and this device's address |
+| Storage | Free and used on shared storage |
+| Memory | Free and total RAM, and whether the system considers it low |
+| Device | Model and Android version |
+| Stopwatch | Start/stop/reset, plus a countdown timer in minutes |
+
+The stopwatch measures against `SystemClock.elapsedRealtime` and keeps its state in preferences, so
+it survives the screen closing, the app being killed and the device sleeping — and it cannot be
+thrown off by the wall clock changing.
+
+Battery is read from the sticky `ACTION_BATTERY_CHANGED` broadcast; the network address comes from
+the interface list rather than `WifiManager`, which keeps it clear of the location permission that
+reading Wi-Fi details now requires and covers Ethernet docks as well.
+
+Adding another widget is one object in `widgets/Widget.kt` and one entry in `Widget.ALL`. No layout
+changes.
+
+## Getting back
+
+Every tool screen has a visible **Back** control that returns to whatever opened it — the home menu
+for a tool opened from the grid, the list above for a nested editor. They all go through
+`ui/Nav.kt`, so the behaviour is identical everywhere and there is one place to change it.
+
+This is deliberate rather than relying on the system back gesture: on a handheld the gesture is easy
+to miss, and on the second panel there may be no gesture area at all. The system back button still
+does exactly what it did before.
+
+## Touch feedback
+
+Feedback goes through `ui/Feedback.kt` so it is the same everywhere. Haptics use
+`View.performHapticFeedback`, which honours the system's touch-feedback setting, needs no VIBRATE
+permission, and does nothing on a device with haptics turned off — the accessible answer rather than
+the obvious one.
+
+Status wording distinguishes **sent** from **succeeded**. A request that left the device is not a
+request that worked, and only a protocol that answers earns a success state.
+
 ## Games
 
 | Game | Mod required | Default port |

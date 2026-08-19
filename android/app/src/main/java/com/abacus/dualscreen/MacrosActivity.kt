@@ -12,6 +12,7 @@ import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.SeekBar
@@ -52,7 +53,7 @@ class MacrosActivity : AppCompatActivity() {
         settings = Settings(this)
         store = MacroStore(this)
 
-        binding.backButton.setOnClickListener { finish() }
+        com.abacus.dualscreen.ui.Nav.back(this, binding.backButton)
         binding.addMacro.setOnClickListener { edit(null) }
         binding.builderButton.setOnClickListener {
             startActivity(Intent(this, MacroBuilderActivity::class.java))
@@ -354,6 +355,47 @@ class MacrosActivity : AppCompatActivity() {
         body.addView(kindSpinner)
         body.addView(payload)
         body.addView(choices)
+        /*
+         * The other gestures.
+         *
+         * Both run a saved macro rather than offering the whole kind/payload apparatus a second and
+         * third time: a macro can already do anything a button can, and one editor for "what does
+         * this do" beats three. "None" is first, so a button without extra gestures needs no thought.
+         */
+        val gestureScripts = scriptStore.scripts
+        val gestureNames = (listOf(getString(R.string.gesture_none)) + gestureScripts.map { it.name })
+            .toTypedArray()
+
+        fun gestureSpinner(trigger: Macro.Trigger) = Spinner(this).apply {
+            adapter = ArrayAdapter(
+                this@MacrosActivity, android.R.layout.simple_spinner_item, gestureNames
+            ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+
+            val bound = existing?.bindings?.get(trigger.id)
+            setSelection(gestureScripts.indexOfFirst { it.id == bound }.let { if (it < 0) 0 else it + 1 })
+        }
+
+        val longSpinner = gestureSpinner(Macro.Trigger.LONG_PRESS)
+        val doubleSpinner = gestureSpinner(Macro.Trigger.DOUBLE_TAP)
+
+        val toggleCheck = CheckBox(this).apply {
+            text = getString(R.string.gesture_toggle)
+            setTextColor(getColor(R.color.text))
+            isChecked = existing?.toggle == true
+        }
+
+        fun gestureLabel(text: Int) = TextView(this).apply {
+            setText(text)
+            setTextColor(getColor(R.color.text_dim))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setPadding(0, dp(10), 0, dp(2))
+        }
+
+        body.addView(gestureLabel(R.string.gesture_long_press))
+        body.addView(longSpinner)
+        body.addView(gestureLabel(R.string.gesture_double_tap))
+        body.addView(doubleSpinner)
+        body.addView(toggleCheck)
         body.addView(sizeLabel)
         body.addView(sizeBar)
         applyKind()
@@ -381,12 +423,13 @@ class MacrosActivity : AppCompatActivity() {
                         x = 0.06f,
                         y = 0.2f + 0.1f * (profile.macros.size % 6),
                         size = sizeBar.progress + 44
-                    )
+                    ).also { applyGestures(it, longSpinner, doubleSpinner, toggleCheck, gestureScripts) }
                 } else {
                     existing.label = label.text.toString().ifBlank { "?" }
                     existing.kind = kind
                     existing.payload = value
                     existing.size = sizeBar.progress + 44
+                    applyGestures(existing, longSpinner, doubleSpinner, toggleCheck, gestureScripts)
                 }
 
                 store.save(profile)
@@ -396,6 +439,32 @@ class MacrosActivity : AppCompatActivity() {
             .setNegativeButton(R.string.action_cancel, null)
             .setOnDismissListener { onDismiss?.invoke() }
             .show()
+    }
+
+    /**
+     * Copy the gesture pickers onto a button.
+     *
+     * Position 0 is "None" in both spinners, so choosing it removes the binding rather than storing
+     * an empty one -- a button with no extra gestures should serialise to exactly what it always did.
+     */
+    private fun applyGestures(
+        macro: Macro,
+        longSpinner: Spinner,
+        doubleSpinner: Spinner,
+        toggleCheck: CheckBox,
+        scripts: List<com.abacus.dualscreen.macro.MacroScript>,
+    ) {
+        fun bind(trigger: Macro.Trigger, spinner: Spinner) {
+            val at = spinner.selectedItemPosition
+            val script = if (at <= 0) null else scripts.getOrNull(at - 1)
+
+            if (script == null) macro.bindings.remove(trigger.id)
+            else macro.bindings[trigger.id] = script.id
+        }
+
+        bind(Macro.Trigger.LONG_PRESS, longSpinner)
+        bind(Macro.Trigger.DOUBLE_TAP, doubleSpinner)
+        macro.toggle = toggleCheck.isChecked
     }
 
     private fun kindLabel(kind: Macro.Kind) = when (kind) {

@@ -53,6 +53,8 @@ class FtpConsoleActivity : AppCompatActivity() {
 
         applySkin()
 
+        com.abacus.dualscreen.ui.Nav.back(this, binding.backButton)
+
         binding.stopButton.setOnClickListener {
             FtpService.stop(this)
             finish()

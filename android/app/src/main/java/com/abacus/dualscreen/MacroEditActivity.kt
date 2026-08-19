@@ -49,7 +49,7 @@ class MacroEditActivity : AppCompatActivity() {
         script = found
 
         binding.nameField.setText(script.name)
-        binding.backButton.setOnClickListener { finish() }
+        com.abacus.dualscreen.ui.Nav.back(this, binding.backButton)
         binding.addButton.setOnClickListener { addStep() }
         binding.runButton.setOnClickListener { runScript() }
 

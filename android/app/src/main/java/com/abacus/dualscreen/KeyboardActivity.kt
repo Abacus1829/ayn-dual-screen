@@ -32,7 +32,7 @@ class KeyboardActivity : AppCompatActivity() {
 
         settings = Settings(this)
 
-        binding.backButton.setOnClickListener { finish() }
+        com.abacus.dualscreen.ui.Nav.back(this, binding.backButton)
         binding.enableButton.setOnClickListener {
             startActivity(Intent(AndroidSettings.ACTION_INPUT_METHOD_SETTINGS))
         }

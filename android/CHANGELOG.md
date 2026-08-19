@@ -7,6 +7,54 @@ time — so they say what the commits show and no more.
 
 ---
 
+## 0.11.0 — 2026-08-19
+
+Control profiles gain gestures and per-game assignment, the app gains a dashboard that needs no game
+at all, and every tool gains a visible way back.
+
+### Remote control profiles
+
+- **Buttons have more than one gesture.** A long press and a double tap can each run a saved macro,
+  and a tap can be a toggle -- holding its key down and releasing it on the next press, which is how
+  a sprint or a crouch is actually used. A toggling button dims while it holds, and anything held is
+  released when the pad closes.
+- **A layout can be assigned to a game**, from More -> Use for a game. The assigned layout is what
+  `profileFor` returns for that game; the active layout is the general one everything falls back to.
+- Gestures are stored as trigger id to macro id, so a swipe or a gamepad button later is one enum
+  entry and no format change. An older build reading a binding it does not recognise ignores it.
+- Layouts and buttons saved by every earlier build load unchanged, and a button with no extra
+  gestures still serialises to exactly what it always did.
+
+### Dashboard
+
+- **A new tool that works with nothing running**: clock and date, battery with charging state and
+  temperature, network type and this device's address, free storage, free memory, device and Android
+  version, and a stopwatch with a countdown timer.
+- The stopwatch measures against elapsed-realtime and keeps its state in preferences, so it survives
+  the screen closing, the app being killed, and the device sleeping -- and cannot be thrown off by
+  the wall clock changing.
+- No new permissions. Battery comes from the sticky broadcast; the address comes from the interface
+  list rather than WifiManager, which would now require a location permission.
+- Another widget is one object and one list entry.
+
+### Getting back
+
+- **Every tool screen now has a visible Back control.** Three had none at all -- saved connections,
+  the connection editor, and the FTP console -- and the rest said four different things. They all go
+  through one component now.
+- Relying on the system back gesture alone was the gap: it is easy to miss on a handheld, and on the
+  second panel there may be no gesture area at all. The system back button still behaves as before.
+
+### Touch feedback
+
+- **One place decides how the app feels.** Haptics go through performHapticFeedback, which honours
+  the system touch-feedback setting, needs no VIBRATE permission, and stays silent on a device with
+  haptics off.
+- Status wording separates **sent** from **succeeded**, because a request that left the device is not
+  a request that worked.
+
+---
+
 ## 0.10.0 — 2026-08-19
 
 Macros, layouts, and layout sharing. All three are optional: the app behaves exactly as before for

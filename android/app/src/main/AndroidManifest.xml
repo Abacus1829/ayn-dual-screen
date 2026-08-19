@@ -102,6 +102,11 @@
             android:name=".LayoutEditorActivity"
             android:exported="false"
             android:resizeableActivity="true" />
+        <activity
+            android:name=".WidgetsActivity"
+            android:exported="false"
+            android:resizeableActivity="true" />
+
 
 
         <activity

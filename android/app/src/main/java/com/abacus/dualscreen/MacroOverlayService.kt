@@ -145,8 +145,22 @@ class MacroOverlayService : Service() {
                 }
 
                 MotionEvent.ACTION_UP -> {
-                    if (editing && moved) savePosition(macro, params)
-                    else if (!editing) fire(macro)
+                    when {
+                        editing && moved -> savePosition(macro, params)
+                        editing -> Unit
+
+                        /*
+                         * A long press is decided on release, not by a timer while the finger is
+                         * down. On a pad you can also drag, a timer makes "long press" and "about to
+                         * move" the same gesture; measuring afterwards costs nothing and is never
+                         * wrong about which one happened.
+                         */
+                        event.eventTime - event.downTime >= LONG_PRESS_MS &&
+                            macro.bindings.containsKey(Macro.Trigger.LONG_PRESS.id) ->
+                            runBinding(view, macro, Macro.Trigger.LONG_PRESS)
+
+                        else -> tapped(view, macro)
+                    }
                     true
                 }
 
@@ -169,6 +183,97 @@ class MacroOverlayService : Service() {
             it.y = macro.y
         }
         store.save(profile)
+    }
+
+    /*********
+     * Gestures
+     *********/
+
+    /** When the last tap on each button landed, so a second one soon after is a double tap. */
+    private val lastTap = mutableMapOf<String, Long>()
+
+    /** Buttons currently holding a key down, for [Macro.toggle]. */
+    private val held = mutableMapOf<String, Int>()
+
+    /**
+     * A plain tap — which may turn out to be the second half of a double tap.
+     *
+     * The double-tap binding is only waited for when the button actually has one. Without that
+     * check, every button on the pad would sit on its hands for a quarter of a second before doing
+     * anything, to support a gesture almost none of them use.
+     */
+    private fun tapped(view: View, macro: Macro) {
+        val double = macro.bindings[Macro.Trigger.DOUBLE_TAP.id]
+
+        if (double == null) {
+            fireTap(view, macro)
+            return
+        }
+
+        val now = System.currentTimeMillis()
+        val previous = lastTap[macro.id] ?: 0L
+
+        if (now - previous <= DOUBLE_TAP_MS) {
+            lastTap.remove(macro.id)
+            view.removeCallbacks(pending[macro.id] ?: Runnable {})
+            runBinding(view, macro, Macro.Trigger.DOUBLE_TAP)
+            return
+        }
+
+        lastTap[macro.id] = now
+
+        // The single tap is deferred by the double-tap window, so a button with both bindings does
+        // not fire the single one first and the double one immediately afterwards.
+        val single = Runnable { fireTap(view, macro) }
+        pending[macro.id] = single
+        view.postDelayed(single, DOUBLE_TAP_MS)
+    }
+
+    private val pending = mutableMapOf<String, Runnable>()
+
+    private fun runBinding(view: View, macro: Macro, trigger: Macro.Trigger) {
+        val id = macro.bindings[trigger.id] ?: return
+        val script = com.abacus.dualscreen.macro.MacroScriptStore(this).byId(id)
+
+        if (script == null) {
+            toast(getString(R.string.macro_no_script))
+            return
+        }
+
+        com.abacus.dualscreen.ui.Feedback.hold(view)
+        com.abacus.dualscreen.macro.MacroRunner.run(this, script)
+    }
+
+    /**
+     * A tap, honouring [Macro.toggle].
+     *
+     * A toggling button holds its key down and leaves it down until the next press. Anything that is
+     * not a key ignores the flag, because "held" means nothing for launching an app.
+     */
+    private fun fireTap(view: View, macro: Macro) {
+        com.abacus.dualscreen.ui.Feedback.tap(view)
+
+        if (!macro.toggle || macro.kind != Macro.Kind.KEY) {
+            fire(macro)
+            return
+        }
+
+        val code = Macro.KEYS.firstOrNull { it.first == macro.payload }?.second
+        if (code == null) {
+            fire(macro)
+            return
+        }
+
+        val down = held.remove(macro.id)
+        if (down != null) {
+            if (!KeyboardService.up(down)) needKeyboard()
+            view.alpha = 1f
+        } else {
+            if (!KeyboardService.down(code)) needKeyboard() else held[macro.id] = code
+            // Dimmed while held, so a button that is holding a key down looks different from one
+            // that is not. A toggle you cannot see the state of is worse than no toggle.
+            view.alpha = 0.55f
+        }
     }
 
     /*********
@@ -224,7 +329,14 @@ class MacroOverlayService : Service() {
     /*********
      * Plumbing
      *********/
+    /** Let go of every toggled key before the buttons disappear, or one stays down forever. */
+    private fun releaseHeld() {
+        held.values.forEach { KeyboardService.up(it) }
+        held.clear()
+    }
+
     private fun clear() {
+        releaseHeld()
         for ((_, view) in buttons) runCatching { windows.removeView(view) }
         buttons.clear()
     }
@@ -277,6 +389,12 @@ class MacroOverlayService : Service() {
 
         private const val CHANNEL = "macros"
         private const val NOTIFICATION_ID = 42
+
+        /** Held for this long before release counts as a long press. Android's own default. */
+        private const val LONG_PRESS_MS = 500L
+
+        /** Two taps inside this window are one double tap. */
+        private const val DOUBLE_TAP_MS = 260L
 
         @Volatile
         var running = false

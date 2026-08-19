@@ -44,7 +44,7 @@ class ThemesActivity : AppCompatActivity() {
         settings = Settings(this)
         store = ThemeStore(this)
 
-        binding.backButton.setOnClickListener { finish() }
+        com.abacus.dualscreen.ui.Nav.back(this, binding.backButton)
         binding.folderButton.setOnClickListener { showFolder() }
 
         binding.themeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {

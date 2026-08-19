@@ -34,41 +34,25 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:tag="accent"
-                    android:text="@string/profiles_title"
+                    android:text="@string/widgets_title"
                     android:textSize="20sp"
                     android:textStyle="bold" />
 
                 <TextView
-                    android:id="@+id/statusText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
+                    android:text="@string/widgets_blurb"
                     android:textColor="@color/text_dim"
                     android:textSize="12sp" />
             </LinearLayout>
 
             <Button
-                android:id="@+id/findButton"
+                android:id="@+id/notesButton"
                 style="@style/Action"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/profiles_find" />
-
-            <Button
-                android:id="@+id/newButton"
-                style="@style/Action"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="@string/profiles_new" />
-
-            <Button
-                android:id="@+id/menuButton"
-                style="@style/Action"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="@string/profiles_more" />
+                android:text="@string/widgets_notes" />
 
             <Button
                 android:id="@+id/backButton"
@@ -91,50 +75,77 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
+                <!-- The timer, which is the one widget you interact with. -->
                 <LinearLayout
-                    android:id="@+id/profileList"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical" />
-
-                <LinearLayout
-                    android:id="@+id/recentCard"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
                     android:orientation="vertical"
-                    android:padding="12dp"
-                    android:tag="card"
-                    android:visibility="gone">
+                    android:padding="14dp"
+                    android:tag="card">
+
+                    <TextView
+                        style="@style/Label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/widgets_stopwatch" />
+
+                    <TextView
+                        android:id="@+id/stopwatchValue"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:fontFamily="monospace"
+                        android:tag="accent"
+                        android:textSize="34sp" />
+
+                    <TextView
+                        android:id="@+id/stopwatchDetail"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/text_dim"
+                        android:textSize="12sp" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
+                        android:layout_marginTop="10dp"
                         android:orientation="horizontal">
 
-                        <TextView
-                            style="@style/Label"
+                        <Button
+                            android:id="@+id/startButton"
+                            style="@style/Action"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/profiles_recent" />
+                            android:text="@string/widgets_start" />
 
                         <Button
-                            android:id="@+id/clearRecentButton"
+                            android:id="@+id/resetButton"
                             style="@style/Action"
-                            android:layout_width="wrap_content"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:text="@string/profiles_clear" />
-                    </LinearLayout>
+                            android:layout_marginStart="8dp"
+                            android:layout_weight="1"
+                            android:text="@string/widgets_reset" />
 
-                    <LinearLayout
-                        android:id="@+id/recentList"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:orientation="vertical" />
+                        <Button
+                            android:id="@+id/timerButton"
+                            style="@style/Action"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:layout_weight="1"
+                            android:text="@string/widgets_timer" />
+                    </LinearLayout>
                 </LinearLayout>
+
+                <!-- Everything else is a reading, built in code from Widget.ALL. -->
+                <LinearLayout
+                    android:id="@+id/widgetGrid"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="vertical" />
             </LinearLayout>
         </ScrollView>
     </LinearLayout>

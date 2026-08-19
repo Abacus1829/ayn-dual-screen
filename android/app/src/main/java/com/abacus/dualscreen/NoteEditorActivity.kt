@@ -63,7 +63,7 @@ class NoteEditorActivity : AppCompatActivity() {
         binding.titleField.setText(file.nameWithoutExtension)
         binding.notesField.setText(store.read(file))
 
-        binding.backButton.setOnClickListener { finish() }
+        com.abacus.dualscreen.ui.Nav.back(this, binding.backButton)
         binding.deleteButton.setOnClickListener { confirmDelete() }
         binding.shareButton.setOnClickListener { share() }
         binding.pinButton.setOnClickListener { togglePin() }

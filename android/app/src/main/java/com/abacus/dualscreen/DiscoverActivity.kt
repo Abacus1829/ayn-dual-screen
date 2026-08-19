@@ -45,7 +45,7 @@ class DiscoverActivity : AppCompatActivity() {
         settings = Settings(this)
         store = ProfileStore(this)
 
-        binding.backButton.setOnClickListener { finish() }
+        com.abacus.dualscreen.ui.Nav.back(this, binding.backButton)
         binding.scanButton.setOnClickListener { scan() }
         binding.portsField.setText(defaultPorts().joinToString(", "))
 

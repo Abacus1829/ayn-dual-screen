@@ -19,8 +19,46 @@ data class Macro(
     var x: Float,
     var y: Float,
     /** Button width in dp. Height follows. */
-    var size: Int
+    var size: Int,
+
+    /**
+     * What other gestures on this button do, as trigger id to macro id.
+     *
+     * A map rather than a field per gesture, because the set of gestures is going to grow — a swipe,
+     * a gamepad button. Each of those becomes one entry in [Trigger] and needs no change to this
+     * class, to the stored JSON, or to anything that reads it.
+     *
+     * A plain tap is deliberately NOT in here: it stays [kind] and [payload], which is what every
+     * layout ever saved already contains. Moving it would have meant migrating them all to gain
+     * nothing.
+     */
+    val bindings: MutableMap<String, String> = mutableMapOf(),
+
+    /**
+     * Whether a tap alternates rather than firing once.
+     *
+     * The button holds its key down on the first press and releases it on the second, which is how a
+     * sprint or a crouch is actually used. Only meaningful for [Kind.KEY]; ignored elsewhere.
+     */
+    var toggle: Boolean = false,
 ) {
+
+    /**
+     * A way of touching a button.
+     *
+     * Ids are stored, so they must not change. New entries are new capabilities and nothing else —
+     * an older build reading a layout that uses one finds a binding it does not recognise and
+     * ignores it, which is the whole reason this is a map.
+     */
+    enum class Trigger(val id: String) {
+        LONG_PRESS("long"),
+        DOUBLE_TAP("double");
+
+        companion object {
+            fun byId(id: String?) = entries.firstOrNull { it.id == id }
+        }
+    }
+
     enum class Kind(val id: String) {
         /** Type text into whatever has focus. Needs the Thor Keyboard to be the active keyboard. */
         TEXT("text"),
@@ -56,6 +94,14 @@ data class Macro(
         .put("x", x.toDouble())
         .put("y", y.toDouble())
         .put("size", size)
+        // Written only when there is something to write, so an ordinary button's JSON is exactly
+        // what it was before this existed.
+        .apply {
+            if (bindings.isNotEmpty()) {
+                put("bindings", JSONObject().also { o -> bindings.forEach { (k, v) -> o.put(k, v) } })
+            }
+            if (toggle) put("toggle", true)
+        }
 
     companion object {
         fun fromJson(json: JSONObject) = Macro(
@@ -65,8 +111,22 @@ data class Macro(
             payload = json.optString("payload", ""),
             x = json.optDouble("x", 0.5).toFloat(),
             y = json.optDouble("y", 0.5).toFloat(),
-            size = json.optInt("size", 64)
+            size = json.optInt("size", 64),
+            bindings = readBindings(json),
+            toggle = json.optBoolean("toggle", false),
         )
+
+        /** Absent, empty or malformed all mean the same thing here: no extra gestures. */
+        private fun readBindings(json: JSONObject): MutableMap<String, String> {
+            val out = mutableMapOf<String, String>()
+            val obj = json.optJSONObject("bindings") ?: return out
+
+            for (key in obj.keys()) {
+                val value = obj.optString(key)
+                if (value.isNotBlank()) out[key] = value
+            }
+            return out
+        }
 
         /** The keys a macro can press, and what to call them. */
         val KEYS = listOf(
@@ -84,10 +144,22 @@ data class Macro(
     }
 }
 
-data class MacroProfile(val name: String, val macros: MutableList<Macro>) {
+/**
+ * A named set of buttons — a remote control profile.
+ *
+ * [gameId] is what makes one usable per game: blank means it is the general one, and a [Game] id
+ * means the pad reaches for it while the app is connected to that game. Blank is the default, so
+ * every layout saved before this existed stays exactly what it was.
+ */
+data class MacroProfile(
+    val name: String,
+    val macros: MutableList<Macro>,
+    var gameId: String = "",
+) {
 
     fun toJson(): JSONObject = JSONObject()
         .put("name", name)
+        .put("gameId", gameId)
         .put("macros", JSONArray().also { array -> macros.forEach { array.put(it.toJson()) } })
 
     companion object {
@@ -97,7 +169,11 @@ data class MacroProfile(val name: String, val macros: MutableList<Macro>) {
             for (i in 0 until array.length()) {
                 array.optJSONObject(i)?.let { list += Macro.fromJson(it) }
             }
-            return MacroProfile(json.optString("name", "Profile"), list)
+            return MacroProfile(
+                name = json.optString("name", "Profile"),
+                macros = list,
+                gameId = json.optString("gameId", ""),
+            )
         }
     }
 }
@@ -129,6 +205,18 @@ class MacroStore(context: Context) {
             value.forEach { array.put(it.toJson()) }
             prefs.edit().putString(KEY_PROFILES, array.toString()).apply()
         }
+
+    /**
+     * The profile to use for a game, falling back to the one the user chose.
+     *
+     * A layout assigned to that game wins; otherwise the active one, which is the general profile
+     * and is what every existing install has. Nothing switches behind the user's back — the pad only
+     * consults this when it is asked to.
+     */
+    fun profileFor(gameId: String?): MacroProfile {
+        val wanted = gameId?.takeIf { it.isNotBlank() } ?: return active
+        return profiles.firstOrNull { it.gameId == wanted } ?: active
+    }
 
     /** Index of the profile in use; clamped on read so a deleted profile can't leave it dangling. */
     var activeIndex: Int

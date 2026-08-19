@@ -126,6 +126,18 @@
             android:text="@string/ftp_stop_short"
             android:textColor="#E58A8A"
             android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/backButton"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="0dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:text="@string/nav_back"
+            android:textColor="#9FB4D8"
+            android:textSize="12sp" />
     </LinearLayout>
 
     <!-- The log. -->

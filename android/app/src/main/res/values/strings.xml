@@ -40,6 +40,9 @@
     <string name="action_retry">Retry</string>
     <string name="action_back">Change address</string>
 
+    <!-- The way out of a tool. One word, the same on every screen. -->
+    <string name="nav_back">Back</string>
+
     <string name="status_idle">Ready.</string>
     <string name="status_testing">Checking…</string>
     <string name="status_scanning">Scanning your network… %1$d%%</string>
@@ -527,6 +530,13 @@
     <string name="layouts_edit_button">Edit</string>
     <string name="layouts_delete_button">Remove</string>
     <string name="layouts_delete_confirm">Remove \"%1$s\" from this layout?</string>
+    <string name="gesture_none">None</string>
+    <string name="gesture_long_press">LONG PRESS RUNS</string>
+    <string name="gesture_double_tap">DOUBLE TAP RUNS</string>
+    <string name="gesture_toggle">Tap holds the key down, tap again releases it</string>
+
+    <string name="layouts_assign">Use for a game</string>
+    <string name="layouts_any_game">Any game</string>
     <string name="layouts_new">New layout</string>
     <string name="layouts_new_name">Layout</string>
     <string name="layouts_reset">Reset to default</string>
@@ -551,5 +561,22 @@
         <item quantity="one">%1$d step</item>
         <item quantity="other">%1$d steps</item>
     </plurals>
+
+
+    <!-- System widgets -->
+    <string name="tool_widgets">Dashboard</string>
+    <string name="widgets_title">Dashboard</string>
+    <string name="widgets_blurb">Everything here works without a game, a server or a network.</string>
+    <string name="widgets_notes">Notes</string>
+    <string name="widgets_stopwatch">STOPWATCH</string>
+    <string name="widgets_start">Start</string>
+    <string name="widgets_stop">Stop</string>
+    <string name="widgets_reset">Reset</string>
+    <string name="widgets_timer">Timer</string>
+    <string name="widgets_timer_hint">Minutes</string>
+    <string name="widgets_timer_running">Counting down</string>
+    <string name="widgets_timer_done">Time is up</string>
+    <string name="widgets_running">Running</string>
+    <string name="widgets_stopped">Stopped</string>
 
 </resources>

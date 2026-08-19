@@ -59,7 +59,7 @@ class ScribbleActivity : AppCompatActivity() {
         store = ScribbleStore(this)
         room = settings.scribbleRoom
 
-        binding.backButton.setOnClickListener { finish() }
+        com.abacus.dualscreen.ui.Nav.back(this, binding.backButton)
         binding.nameButton.setOnClickListener { askName() }
         binding.sendButton.setOnClickListener { send() }
 

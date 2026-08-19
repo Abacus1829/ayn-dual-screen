@@ -24,7 +24,7 @@ class FtpActivity : AppCompatActivity() {
 
         settings = Settings(this)
 
-        binding.backButton.setOnClickListener { finish() }
+        com.abacus.dualscreen.ui.Nav.back(this, binding.backButton)
         binding.startButton.setOnClickListener { start() }
         binding.stopButton.setOnClickListener { stop() }
         binding.grantButton.setOnClickListener { Storage.requestWholeDeviceAccess(this) }

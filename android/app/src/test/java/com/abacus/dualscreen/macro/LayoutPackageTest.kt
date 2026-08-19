@@ -179,3 +179,89 @@ class LayoutPackageTest {
         assertEquals(original.scripts.size, second.scripts.size)
     }
 }
+
+/**
+ * Remote control profiles: the parts that go through JSON.
+ *
+ * Backward compatibility is the point of most of these. Layouts saved by every earlier build are
+ * still out there, in preferences and in exported files, and they must keep loading unchanged.
+ */
+class ControlProfileTest {
+
+    @Test
+    fun `a button saved before gestures existed still loads`() {
+        val old = JSONObject(
+            """{"id":"b1","label":"GG","kind":"text","payload":"hi","x":0.1,"y":0.2,"size":64}"""
+        )
+        val macro = com.abacus.dualscreen.Macro.fromJson(old)
+
+        assertEquals("GG", macro.label)
+        assertTrue(macro.bindings.isEmpty())
+        assertEquals(false, macro.toggle)
+    }
+
+    @Test
+    fun `a button with no gestures serialises to what it always did`() {
+        val macro = com.abacus.dualscreen.Macro(
+            id = "b1", label = "GG", kind = com.abacus.dualscreen.Macro.Kind.TEXT,
+            payload = "hi", x = 0.1f, y = 0.2f, size = 64,
+        )
+
+        val json = macro.toJson()
+        assertTrue("bindings should be absent", !json.has("bindings"))
+        assertTrue("toggle should be absent", !json.has("toggle"))
+    }
+
+    @Test
+    fun `gestures and toggle survive a round trip`() {
+        val macro = com.abacus.dualscreen.Macro(
+            id = "b1", label = "Run", kind = com.abacus.dualscreen.Macro.Kind.KEY,
+            payload = "SHIFT", x = 0.1f, y = 0.2f, size = 64,
+            bindings = mutableMapOf(
+                com.abacus.dualscreen.Macro.Trigger.LONG_PRESS.id to "m1",
+                com.abacus.dualscreen.Macro.Trigger.DOUBLE_TAP.id to "m2",
+            ),
+            toggle = true,
+        )
+
+        val copy = com.abacus.dualscreen.Macro.fromJson(JSONObject(macro.toJson().toString()))
+
+        assertEquals("m1", copy.bindings[com.abacus.dualscreen.Macro.Trigger.LONG_PRESS.id])
+        assertEquals("m2", copy.bindings[com.abacus.dualscreen.Macro.Trigger.DOUBLE_TAP.id])
+        assertEquals(true, copy.toggle)
+    }
+
+    @Test
+    fun `a binding for a trigger this build does not know is ignored, not fatal`() {
+        // What an older build sees when a newer one adds a swipe. It must load the button.
+        val json = JSONObject(
+            """{"id":"b1","label":"X","kind":"key","payload":"ENTER","x":0.1,"y":0.1,"size":64,
+                "bindings":{"swipeup":"m9","long":"m1"}}"""
+        )
+        val macro = com.abacus.dualscreen.Macro.fromJson(json)
+
+        assertEquals("m1", macro.bindings["long"])
+        assertEquals("m9", macro.bindings["swipeup"])
+        assertEquals(null, com.abacus.dualscreen.Macro.Trigger.byId("swipeup"))
+    }
+
+    @Test
+    fun `a layout keeps which game it is for`() {
+        val json = JSONObject(
+            """{"name":"Farm pad","gameId":"stardew","macros":[
+                {"id":"b1","label":"X","kind":"key","payload":"ENTER","x":0.1,"y":0.1,"size":64}]}"""
+        )
+        val layout = com.abacus.dualscreen.MacroProfile.fromJson(json)
+
+        assertEquals("stardew", layout.gameId)
+        assertEquals("stardew", com.abacus.dualscreen.MacroProfile.fromJson(
+            JSONObject(layout.toJson().toString())
+        ).gameId)
+    }
+
+    @Test
+    fun `a layout saved before per-game assignment is a general one`() {
+        val json = JSONObject("""{"name":"Old pad","macros":[]}""")
+        assertEquals("", com.abacus.dualscreen.MacroProfile.fromJson(json).gameId)
+    }
+}

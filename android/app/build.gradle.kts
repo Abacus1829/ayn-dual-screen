@@ -40,8 +40,8 @@ android {
          * The name lost its `-ftp` suffix here. It was chosen when the FTP server was the only new
          * thing in the release, and stopped being true several features ago.
          */
-        versionCode = 11
-        versionName = "0.10.0"
+        versionCode = 12
+        versionName = "0.11.0"
     }
 
     signingConfigs {

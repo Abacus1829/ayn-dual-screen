@@ -44,6 +44,7 @@ class ProfilesActivity : AppCompatActivity() {
         store = ProfileStore(this)
         store.migrateFromGames(settings)
 
+        com.abacus.dualscreen.ui.Nav.back(this, binding.backButton)
         binding.newButton.setOnClickListener { edit(null) }
         binding.findButton.setOnClickListener {
             startActivity(Intent(this, DiscoverActivity::class.java))

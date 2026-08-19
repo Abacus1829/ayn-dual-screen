@@ -36,7 +36,7 @@ class MacroBuilderActivity : AppCompatActivity() {
         settings = Settings(this)
         store = MacroScriptStore(this)
 
-        binding.backButton.setOnClickListener { finish() }
+        com.abacus.dualscreen.ui.Nav.back(this, binding.backButton)
         binding.newButton.setOnClickListener { create() }
 
         Appearance.apply(this, binding.root, settings, binding.backgroundImage)

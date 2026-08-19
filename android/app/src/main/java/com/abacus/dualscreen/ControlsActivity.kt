@@ -47,7 +47,7 @@ class ControlsActivity : AppCompatActivity() {
         settings = Settings(this)
         audio = getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
-        binding.backButton.setOnClickListener { finish() }
+        com.abacus.dualscreen.ui.Nav.back(this, binding.backButton)
         binding.grantButton.setOnClickListener { requestWriteSettings() }
 
         wireVolume()

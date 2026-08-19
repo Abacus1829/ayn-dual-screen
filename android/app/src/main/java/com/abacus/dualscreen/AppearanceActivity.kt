@@ -51,7 +51,7 @@ class AppearanceActivity : AppCompatActivity() {
 
         settings = Settings(this)
 
-        binding.backButton.setOnClickListener { finish() }
+        com.abacus.dualscreen.ui.Nav.back(this, binding.backButton)
         binding.pickImage.setOnClickListener { pickImage.launch(arrayOf("image/*")) }
         binding.clearImage.setOnClickListener {
             settings.backgroundUri = ""

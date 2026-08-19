@@ -48,7 +48,7 @@ class StreamActivity : AppCompatActivity() {
         settings = Settings(this)
         hosts = HostStore(this)
 
-        binding.backButton.setOnClickListener { finish() }
+        com.abacus.dualscreen.ui.Nav.back(this, binding.backButton)
         binding.connectButton.setOnClickListener { connect() }
         binding.pairButton.setOnClickListener { pair() }
         binding.unpairButton.setOnClickListener { forget() }

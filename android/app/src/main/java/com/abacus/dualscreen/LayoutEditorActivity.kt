@@ -43,7 +43,7 @@ class LayoutEditorActivity : AppCompatActivity() {
         store = MacroStore(this)
         scripts = MacroScriptStore(this)
 
-        binding.backButton.setOnClickListener { finish() }
+        com.abacus.dualscreen.ui.Nav.back(this, binding.backButton)
         binding.menuButton.setOnClickListener { moreMenu() }
         binding.addButton.setOnClickListener { addButton() }
         binding.editButton.setOnClickListener { editSelected() }
@@ -235,6 +235,7 @@ class LayoutEditorActivity : AppCompatActivity() {
             getString(R.string.layouts_new),
             getString(R.string.notes_rename),
             getString(R.string.profiles_duplicate),
+            getString(R.string.layouts_assign),
             getString(R.string.layouts_reset),
             getString(R.string.profiles_delete),
             getString(R.string.layouts_export),
@@ -248,12 +249,50 @@ class LayoutEditorActivity : AppCompatActivity() {
                     0 -> newLayout()
                     1 -> renameLayout()
                     2 -> duplicateLayout()
-                    3 -> resetLayout()
-                    4 -> deleteLayout()
-                    5 -> exportLayout()
-                    6 -> importLayout()
+                    3 -> assignToGame()
+                    4 -> resetLayout()
+                    5 -> deleteLayout()
+                    6 -> exportLayout()
+                    7 -> importLayout()
                 }
             }
+            .show()
+    }
+
+    /**
+     * Tie this layout to a game, or to none.
+     *
+     * "Any game" is the first entry and the default, because a layout that is not about a particular
+     * game is the ordinary case. Assigning one to a game that already has one moves it: two layouts
+     * claiming the same game would make which one appears a matter of list order.
+     */
+    private fun assignToGame() {
+        val games = Game.entries.filter { it.isMod }
+        val labels = (listOf(getString(R.string.layouts_any_game)) + games.map { getString(it.label) })
+            .toTypedArray()
+
+        val current = store.active.gameId
+        val checked = games.indexOfFirst { it.id == current }.let { if (it < 0) 0 else it + 1 }
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.layouts_assign)
+            .setSingleChoiceItems(labels, checked) { dialog, which ->
+                val gameId = if (which == 0) "" else games[which - 1].id
+                val all = store.profiles
+
+                if (gameId.isNotBlank()) {
+                    all.forEachIndexed { index, profile ->
+                        if (index != store.activeIndex && profile.gameId == gameId) profile.gameId = ""
+                    }
+                }
+
+                all[store.activeIndex].gameId = gameId
+                store.profiles = all
+
+                buildSpinner()
+                dialog.dismiss()
+            }
+            .setNegativeButton(R.string.action_cancel, null)
             .show()
     }
 

@@ -43,6 +43,7 @@ class ProfileEditActivity : AppCompatActivity() {
         val existing = store.byId(editingId)
         if (existing != null) fill(existing) else fillNew()
 
+        com.abacus.dualscreen.ui.Nav.back(this, binding.backButton)
         binding.saveButton.setOnClickListener { save() }
         binding.testButton.setOnClickListener { test() }
         binding.deleteButton.setOnClickListener { confirmDelete() }
