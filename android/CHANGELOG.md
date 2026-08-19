@@ -7,6 +7,62 @@ time — so they say what the commits show and no more.
 
 ---
 
+## 0.10.0 — 2026-08-19
+
+Macros, layouts, and layout sharing. All three are optional: the app behaves exactly as before for
+anyone who never opens them, and nothing else depends on one existing.
+
+### Macro builder
+
+- **Macros are sequences you build and run**: press a key, hold a key down, release it, hold it for a
+  set time, type text, wait, send a game action, tap the second screen, open an app, open a tool.
+  Create, rename, duplicate, delete; reorder steps; run from the builder or from a pad button.
+- Reached from **Macros -> Macro builder**, and stored in their own preference file so wiping a
+  layout does not take every macro on the device with it.
+- **Keys now have a down and an up**, not just a tap, which is what a macro that holds one while
+  doing something else needs. Anything a macro pressed is released when it ends or is cancelled.
+- **Game steps POST to the companion mod** in the same `{type, index, to}` shape the second screen's
+  own buttons already use, so a macro reaches any of the mods without knowing which is running.
+- One macro runs at a time; starting another cancels the first rather than interleaving keystrokes.
+
+### Layout editor
+
+- **Several named layouts** for the macro pad, arranged on a canvas shaped like the screen: drag a
+  button to move it, drag its corner to resize. New, rename, duplicate, delete, set active, and reset
+  to the starting set.
+- **Buttons can run a macro**, holding its id rather than a copy of its steps -- so editing the macro
+  once changes every button on every layout that runs it.
+- The editor edits the same layouts the overlay has always drawn, at the same coordinates.
+
+### Layout sharing
+
+- **Export a layout** to `AynDualScreen/layouts/`, or hand it to another app through the share sheet.
+  The file carries the layout and the macros its buttons actually need -- not every macro on the
+  device.
+- **Import** from that folder or from pasted text. Malformed files are refused with a reason rather
+  than half-read: not JSON, not a layout, made by a newer version, or empty. Buttons from a
+  differently shaped screen are clamped onto this one instead of landing off the edge.
+- Versioned, so the format can change later without older files becoming unreadable.
+
+### Connection recovery
+
+- **Reconnecting waits for the host instead of reloading blind.** A retry used to reload the WebView
+  whether or not anything was there, throwing the page away and showing a browser error. It now asks
+  with one cheap request first and reloads once, at the moment that will work -- and if the page is
+  still fine it is left alone, so a recovered session keeps its state.
+- **Backoff** rather than a fixed delay: 1.5s for the first couple of attempts, then 4s, 10s, and 30s,
+  stopping after eight. The whole budget is about two and a half minutes.
+
+### Fixed
+
+- The layout editor's spinner re-entered its own callback forever, redrawing the canvas hundreds of
+  times a second and clearing the selected button every frame -- which presented as tapping a button
+  doing nothing at all.
+- Adding, removing and moving a button in the editor wrote to a freshly parsed copy of the layout
+  rather than the one on screen, so the change was lost on the next read.
+
+---
+
 ## 0.9.0 — 2026-08-18
 
 The largest release so far. The app stopped being a connect screen with tools bolted on and became a

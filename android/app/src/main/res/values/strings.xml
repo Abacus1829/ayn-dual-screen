@@ -468,4 +468,88 @@
         <item quantity="other">%1$d connections</item>
     </plurals>
 
+
+    <!-- Macro builder -->
+    <string name="macros_open_builder">Macro builder</string>
+    <string name="macros_open_layouts">Layout editor</string>
+    <string name="tool_macro_builder">Macros</string>
+    <string name="builder_title">Macros</string>
+    <string name="builder_new">New</string>
+    <string name="builder_new_name">Macro</string>
+    <string name="builder_empty">No macros yet. Tap New to build one.</string>
+    <string name="builder_empty_run">That macro has no steps yet.</string>
+    <string name="builder_running">Running \"%1$s\"</string>
+    <string name="builder_delete_confirm">Delete \"%1$s\"? Buttons that run it will stop working.</string>
+
+    <string name="editor_title">Macro</string>
+    <string name="editor_name_hint">Macro name</string>
+    <string name="editor_add">Add step</string>
+    <string name="editor_run">Run</string>
+    <string name="editor_empty">No steps yet. Tap Add step.</string>
+
+    <string name="step_title">Step</string>
+    <string name="step_kind">WHAT IT DOES</string>
+    <string name="step_key">KEY</string>
+    <string name="step_value">VALUE</string>
+    <string name="step_value_hint">Text</string>
+    <string name="step_game_type">ACTION TYPE</string>
+    <string name="step_package">APP PACKAGE</string>
+    <string name="step_tool">TOOL ID</string>
+    <string name="step_ms">MILLISECONDS</string>
+    <string name="step_index">INDEX (-1 to omit)</string>
+    <string name="step_to">TO (-1 to omit)</string>
+    <string name="step_x">X, IN TENTHS OF A PERCENT</string>
+    <string name="step_y">Y, IN TENTHS OF A PERCENT</string>
+
+    <string name="kind_key_press">Press a key</string>
+    <string name="kind_key_down">Hold a key down</string>
+    <string name="kind_key_up">Release a key</string>
+    <string name="kind_key_hold">Hold a key for a while</string>
+    <string name="kind_text">Type text</string>
+    <string name="kind_delay">Wait</string>
+    <string name="kind_game">Send a game action</string>
+    <string name="kind_tap">Tap the second screen</string>
+    <string name="kind_app">Open an app</string>
+    <string name="kind_tool">Open a tool</string>
+
+    <string name="macro_no_session">No second screen open, so there is nowhere to send that.</string>
+    <string name="macro_no_script">That macro has been deleted.</string>
+    <string name="macro_missing_script">deleted macro</string>
+    <string name="macros_kind_script">Runs %1$s</string>
+    <string name="macros_kind_script_name">Run a macro</string>
+
+    <!-- Layout editor -->
+    <string name="tool_layouts">Layouts</string>
+    <string name="layouts_title">Layouts</string>
+    <string name="layouts_hint">Drag a button to move it. Drag its corner to resize.</string>
+    <string name="layouts_selected">%1$s · %2$d dp</string>
+    <string name="layouts_add_button">Add</string>
+    <string name="layouts_edit_button">Edit</string>
+    <string name="layouts_delete_button">Remove</string>
+    <string name="layouts_delete_confirm">Remove \"%1$s\" from this layout?</string>
+    <string name="layouts_new">New layout</string>
+    <string name="layouts_new_name">Layout</string>
+    <string name="layouts_reset">Reset to default</string>
+    <string name="layouts_reset_confirm">Replace this layout\'s buttons with the starting set?</string>
+    <string name="layouts_delete_layout_confirm">Delete the layout \"%1$s\" and all its buttons?</string>
+    <string name="layouts_last">This is the only layout, so it cannot be deleted.</string>
+    <string name="layouts_export">Export layout</string>
+    <string name="layouts_export_done">Written to\n%1$s\n\nIt carries the macros its buttons need.</string>
+    <string name="layouts_import">Import layout</string>
+    <string name="layouts_imported">Imported \"%1$s\": %2$d buttons, %3$d macros.</string>
+    <string name="layouts_bad_json">That is not readable as JSON.</string>
+    <string name="layouts_not_layout">That file is not a layout.</string>
+    <string name="layouts_too_new">That layout was made by a newer version of the app.</string>
+    <string name="layouts_no_buttons">That layout has no buttons in it.</string>
+
+    <plurals name="builder_count">
+        <item quantity="one">%1$d macro</item>
+        <item quantity="other">%1$d macros</item>
+    </plurals>
+
+    <plurals name="editor_steps">
+        <item quantity="one">%1$d step</item>
+        <item quantity="other">%1$d steps</item>
+    </plurals>
+
 </resources>

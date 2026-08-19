@@ -32,7 +32,16 @@ data class Macro(
         APP("app"),
 
         /** Open one of this app's own tools. */
-        TOOL("tool");
+        TOOL("tool"),
+
+        /**
+         * Run a saved macro, by its id.
+         *
+         * The button holds the id rather than the steps, so one macro edited once changes every
+         * button on every layout that runs it -- and a layout can be shared as a small list of
+         * references plus the macros it actually needs.
+         */
+        SCRIPT("script");
 
         companion object {
             fun byId(id: String?) = entries.firstOrNull { it.id == id } ?: TEXT
@@ -136,19 +145,26 @@ class MacroStore(context: Context) {
     }
 
     /** Something on screen the first time, so the pad isn't an empty rectangle. */
-    private fun starter() = MacroProfile(
-        "Default",
-        mutableListOf(
-            Macro(id(), "GG", Macro.Kind.TEXT, "Good game", 0.08f, 0.30f, 64),
-            Macro(id(), "⏎", Macro.Kind.KEY, "ENTER", 0.08f, 0.50f, 64),
-            Macro(id(), "◈", Macro.Kind.TOOL, Tool.APPEARANCE.id, 0.08f, 0.70f, 64)
-        )
-    )
+    private fun starter() = starterProfile("Default")
 
     companion object {
         private const val KEY_PROFILES = "macro_profiles"
         private const val KEY_ACTIVE = "macro_active"
 
         fun id(): String = System.nanoTime().toString(36)
+
+        /**
+         * The layout a fresh install gets, and what Reset restores.
+         *
+         * Public so the layout editor can put it back without knowing what is in it.
+         */
+        fun starterProfile(name: String) = MacroProfile(
+            name,
+            mutableListOf(
+                Macro(id(), "GG", Macro.Kind.TEXT, "Good game", 0.08f, 0.30f, 64),
+                Macro(id(), "⏎", Macro.Kind.KEY, "ENTER", 0.08f, 0.50f, 64),
+                Macro(id(), "◈", Macro.Kind.TOOL, Tool.APPEARANCE.id, 0.08f, 0.70f, 64)
+            )
+        )
     }
 }

@@ -67,6 +67,17 @@ enum class Tool(
      */
     SCRIBBLE("scribble", R.string.tool_scribble, "✍"),
 
+    /**
+     * Build sequences of key presses, waits and game actions, and run them.
+     *
+     * Optional: the app works exactly as before without a single macro, and nothing else depends
+     * on one existing.
+     */
+    MACRO_BUILDER("macrobuilder", R.string.tool_macro_builder, "≡", hidden = true),
+
+    /** Arrange the macro pad, keep several layouts, and hand one to somebody else. */
+    LAYOUTS("layouts", R.string.tool_layouts, "▦", hidden = true),
+
     /** An FTP server on this device, so a PC can browse it over the network, like a homebrew file server. */
     FTP("ftp", R.string.tool_ftp, "⇅"),
 

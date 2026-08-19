@@ -193,6 +193,14 @@ class MacroOverlayService : Service() {
                 }
             }
 
+            Macro.Kind.SCRIPT -> {
+                val script = com.abacus.dualscreen.macro.MacroScriptStore(this)
+                    .byId(macro.payload)
+
+                if (script == null) toast(getString(R.string.macro_no_script))
+                else com.abacus.dualscreen.macro.MacroRunner.run(this, script)
+            }
+
             Macro.Kind.TOOL -> {
                 val target = when (Tool.byId(macro.payload)) {
                     Tool.NOTES -> NotesActivity::class.java

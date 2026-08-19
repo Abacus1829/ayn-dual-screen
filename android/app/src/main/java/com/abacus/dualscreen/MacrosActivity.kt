@@ -38,6 +38,9 @@ class MacrosActivity : AppCompatActivity() {
      *  is a confusing thing to offer in a picker. */
     private val macroTools = Tool.entries.filter { !it.hidden }
 
+    /** Saved macros, for buttons that run one. Read fresh each time the dialog opens. */
+    private val scriptStore by lazy { com.abacus.dualscreen.macro.MacroScriptStore(this) }
+
     private var suppressSpinner = false
     private var moving = false
 
@@ -51,6 +54,12 @@ class MacrosActivity : AppCompatActivity() {
 
         binding.backButton.setOnClickListener { finish() }
         binding.addMacro.setOnClickListener { edit(null) }
+        binding.builderButton.setOnClickListener {
+            startActivity(Intent(this, MacroBuilderActivity::class.java))
+        }
+        binding.layoutsButton.setOnClickListener {
+            startActivity(Intent(this, LayoutEditorActivity::class.java))
+        }
         binding.newProfile.setOnClickListener { newProfile() }
         binding.deleteProfile.setOnClickListener { deleteProfile() }
         binding.padButton.setOnClickListener { togglePad() }
@@ -67,7 +76,22 @@ class MacrosActivity : AppCompatActivity() {
         buildProfiles()
         buildList()
         Appearance.apply(this, binding.root, settings, binding.backgroundImage)
+
+        /*
+         * Opened straight onto one button, from the layout editor.
+         *
+         * The editor arranges buttons but does not duplicate this dialog, which already knows every
+         * kind of thing a button can do. Finishing afterwards puts the editor back in front rather
+         * than leaving this screen stacked behind it.
+         */
+        intent.getStringExtra(EXTRA_EDIT_ID)?.let { id ->
+            store.active.macros.firstOrNull { it.id == id }?.let { macro ->
+                editAndClose(macro)
+            }
+        }
     }
+
+    private fun editAndClose(macro: Macro) = edit(macro) { finish() }
 
     override fun onResume() {
         super.onResume()
@@ -223,6 +247,11 @@ class MacrosActivity : AppCompatActivity() {
             R.string.macros_kind_tool,
             Tool.byId(macro.payload)?.let { getString(it.label) } ?: macro.payload
         )
+        Macro.Kind.SCRIPT -> getString(
+            R.string.macros_kind_script,
+            com.abacus.dualscreen.macro.MacroScriptStore(this).byId(macro.payload)?.name
+                ?: getString(R.string.macro_missing_script)
+        )
     }
 
     private fun remove(macro: Macro) {
@@ -240,7 +269,13 @@ class MacrosActivity : AppCompatActivity() {
      * kind — free text for a snippet, a fixed list for a key or a tool — and one dialog that reshapes
      * itself beats four near-identical layouts.
      */
-    private fun edit(existing: Macro?) {
+    /**
+     * The button dialog.
+     *
+     * [onDismiss] exists for the layout editor, which opens this screen for one button and wants it
+     * to go away again afterwards -- finishing straight after show() would take the dialog with it.
+     */
+    private fun edit(existing: Macro?, onDismiss: (() -> Unit)? = null) {
         val body = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(12), dp(20), 0)
@@ -286,6 +321,8 @@ class MacrosActivity : AppCompatActivity() {
             val fixed = when (kind) {
                 Macro.Kind.KEY -> Macro.KEYS.map { it.first }
                 Macro.Kind.TOOL -> macroTools.map { it.id }
+                // Ids are what a button stores; the spinner shows names, below.
+                Macro.Kind.SCRIPT -> scriptStore.scripts.map { it.id }
                 else -> null
             }
 
@@ -295,7 +332,11 @@ class MacrosActivity : AppCompatActivity() {
             if (fixed != null) {
                 choices.adapter = ArrayAdapter(
                     this@MacrosActivity, android.R.layout.simple_spinner_item,
-                    if (kind == Macro.Kind.TOOL) macroTools.map { getString(it.label) } else fixed
+                    when (kind) {
+                        Macro.Kind.TOOL -> macroTools.map { getString(it.label) }
+                        Macro.Kind.SCRIPT -> scriptStore.scripts.map { it.name }
+                        else -> fixed
+                    }
                 ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
                 val at = fixed.indexOf(existing?.payload).takeIf { it >= 0 } ?: 0
                 choices.setSelection(at)
@@ -325,6 +366,7 @@ class MacrosActivity : AppCompatActivity() {
                 val value = when (kind) {
                     Macro.Kind.KEY -> Macro.KEYS.getOrNull(choices.selectedItemPosition)?.first.orEmpty()
                     Macro.Kind.TOOL -> macroTools.getOrNull(choices.selectedItemPosition)?.id.orEmpty()
+                    Macro.Kind.SCRIPT -> scriptStore.scripts.getOrNull(choices.selectedItemPosition)?.id.orEmpty()
                     else -> payload.text.toString()
                 }
 
@@ -352,6 +394,7 @@ class MacrosActivity : AppCompatActivity() {
                 refreshPad()
             }
             .setNegativeButton(R.string.action_cancel, null)
+            .setOnDismissListener { onDismiss?.invoke() }
             .show()
     }
 
@@ -360,6 +403,7 @@ class MacrosActivity : AppCompatActivity() {
         Macro.Kind.KEY -> R.string.macros_kind_key_name
         Macro.Kind.APP -> R.string.macros_kind_app_name
         Macro.Kind.TOOL -> R.string.macros_kind_tool_name
+        Macro.Kind.SCRIPT -> R.string.macros_kind_script_name
     }
 
     /*********
@@ -422,6 +466,11 @@ class MacrosActivity : AppCompatActivity() {
     }
 
     private fun canOverlay(): Boolean = AndroidSettings.canDrawOverlays(this)
+
+    companion object {
+        /** Open straight onto this button's dialog. Used by the layout editor. */
+        const val EXTRA_EDIT_ID = "editId"
+    }
 
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 }

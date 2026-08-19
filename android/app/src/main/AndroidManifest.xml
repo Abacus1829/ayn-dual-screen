@@ -87,6 +87,22 @@
             android:name=".DiscoverActivity"
             android:exported="false"
             android:resizeableActivity="true" />
+        <activity
+            android:name=".MacroBuilderActivity"
+            android:exported="false"
+            android:resizeableActivity="true" />
+
+        <activity
+            android:name=".MacroEditActivity"
+            android:exported="false"
+            android:resizeableActivity="true"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".LayoutEditorActivity"
+            android:exported="false"
+            android:resizeableActivity="true" />
+
 
         <activity
             android:name=".NotesActivity"

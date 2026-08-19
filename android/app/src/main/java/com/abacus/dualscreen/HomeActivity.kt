@@ -690,6 +690,8 @@ class HomeActivity : AppCompatActivity() {
             Tool.FTP -> startActivity(Intent(this, FtpActivity::class.java))
             Tool.STREAM -> startActivity(Intent(this, StreamActivity::class.java))
             Tool.PROFILES -> startActivity(Intent(this, ProfilesActivity::class.java))
+            Tool.MACRO_BUILDER -> startActivity(Intent(this, MacroBuilderActivity::class.java))
+            Tool.LAYOUTS -> startActivity(Intent(this, LayoutEditorActivity::class.java))
             Tool.SCRIBBLE -> startActivity(Intent(this, ScribbleActivity::class.java))
             Tool.THEMES -> startActivity(Intent(this, ThemesActivity::class.java))
             else -> Unit

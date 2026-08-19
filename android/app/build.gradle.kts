@@ -40,8 +40,8 @@ android {
          * The name lost its `-ftp` suffix here. It was chosen when the FTP server was the only new
          * thing in the release, and stopped being true several features ago.
          */
-        versionCode = 10
-        versionName = "0.9.0"
+        versionCode = 11
+        versionName = "0.10.0"
     }
 
     signingConfigs {
@@ -132,4 +132,12 @@ dependencies {
      * The rest of this app is UI and sockets, and is honestly tested by running it.
      */
     testImplementation("junit:junit:4.13.2")
+
+    /*
+     * org.json is an Android API, and the android.jar these tests compile against is stubs that
+     * throw. The macro and layout formats are JSON end to end, so testing them at all needs a real
+     * implementation on the test classpath -- this is the reference one, and it never ships in the
+     * APK because it is testImplementation only.
+     */
+    testImplementation("org.json:json:20240303")
 }

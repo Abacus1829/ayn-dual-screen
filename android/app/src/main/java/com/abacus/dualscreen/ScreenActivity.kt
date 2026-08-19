@@ -156,6 +156,16 @@ class ScreenActivity : AppCompatActivity() {
         buildControls()
         setLink(Link.CONNECTING)
 
+        /*
+         * Let macros reach this session.
+         *
+         * A game step needs somewhere to POST and a tap step needs a screen to land on, and this is
+         * the only thing that knows either. Both are cleared in onDestroy so a macro run after the
+         * session closes fails honestly instead of posting into the void.
+         */
+        com.abacus.dualscreen.macro.MacroRunner.target = url
+        com.abacus.dualscreen.macro.MacroRunner.tapper = { fx, fy -> tapPage(fx, fy) }
+
         // match the loading background to the game's own page, so there's no white flash on open
         binding.root.setBackgroundColor(getColor(game.background))
         binding.webView.setBackgroundColor(getColor(game.background))
@@ -271,6 +281,7 @@ class ScreenActivity : AppCompatActivity() {
     private fun moveToMainDisplay() {
         handler.removeCallbacks(retry)
         handler.removeCallbacks(healthCheck)
+        handler.removeCallbacks(waitForHost)
 
         val again = Intent(intent).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         runCatching { startActivity(again) }
@@ -518,6 +529,7 @@ class ScreenActivity : AppCompatActivity() {
         loadFailed = false
         pageArrived = false
         handler.removeCallbacks(retry)
+        handler.removeCallbacks(waitForHost)
 
         // A WebView pointed at an address that is simply not there can sit on its own connect
         // timeout for the better part of two minutes, showing a blank screen and saying nothing.
@@ -647,7 +659,54 @@ class ScreenActivity : AppCompatActivity() {
         binding.errorPanel.visibility = View.VISIBLE
 
         handler.removeCallbacks(retry)
-        handler.postDelayed(retry, if (attempt < 5) 1500L else 5000L)
+        handler.postDelayed(waitForHost, backoff(attempt))
+    }
+
+    /** See [com.abacus.dualscreen.connect.Backoff] for why the delays are shaped as they are. */
+    private fun backoff(attempt: Int): Long =
+        com.abacus.dualscreen.connect.Backoff.delayFor(attempt)
+
+    /**
+     * Wait for the host to come back, and only then reload the page.
+     *
+     * This is the difference between recovering and thrashing. Reloading a WebView at an address
+     * that is still down throws the page away, shows a browser error, and has to be undone when the
+     * host returns. Asking with one cheap HTTP request first costs a few hundred bytes and means the
+     * reload happens once, at the moment it will succeed.
+     */
+    private val waitForHost = object : Runnable {
+        override fun run() {
+            if (leaving) return
+
+            Thread {
+                val back = statusOf("$url/state") == HttpURLConnection.HTTP_OK ||
+                    statusOf(url) != null
+
+                runOnUiThread {
+                    if (leaving) return@runOnUiThread
+
+                    if (back) {
+                        // The page is very often still fine — the mod restarted underneath it and
+                        // its own polling has resumed. Reload only when the page is actually
+                        // broken, so a recovered session keeps its scroll position and its state.
+                        healthMisses = 0
+                        if (loadFailed) load() else setLink(Link.CONNECTED)
+                        if (!loadFailed) binding.errorPanel.visibility = View.GONE
+                        return@runOnUiThread
+                    }
+
+                    if (attempt >= MAX_ATTEMPTS) {
+                        setLink(Link.FAILED)
+                        quitToMenu(getString(R.string.session_gave_up))
+                        return@runOnUiThread
+                    }
+
+                    attempt++
+                    binding.errorDetail.text = getString(R.string.session_lost, attempt)
+                    handler.postDelayed(this, backoff(attempt))
+                }
+            }.start()
+        }
     }
 
     /**
@@ -680,7 +739,8 @@ class ScreenActivity : AppCompatActivity() {
         binding.errorPanel.visibility = View.VISIBLE
 
         handler.removeCallbacks(retry)
-        handler.postDelayed(retry, if (attempt < 5) 1500L else 5000L)
+        handler.removeCallbacks(waitForHost)
+        handler.postDelayed(waitForHost, backoff(attempt))
     }
 
     /** Come back from the wiki to the mod's own page, clearing the wiki out of history. */
@@ -697,6 +757,7 @@ class ScreenActivity : AppCompatActivity() {
 
         handler.removeCallbacks(retry)
         handler.removeCallbacks(healthCheck)
+        handler.removeCallbacks(waitForHost)
 
         reason?.let { Toast.makeText(this, it, Toast.LENGTH_LONG).show() }
 
@@ -711,10 +772,32 @@ class ScreenActivity : AppCompatActivity() {
         finish()
     }
 
+    /**
+     * Synthesise a tap on the page.
+     *
+     * Dispatched into this app's own WebView, which is the only surface it may touch -- injecting
+     * pointer events into another app needs root or an accessibility service. Coordinates arrive as
+     * fractions so a macro works on any panel size.
+     */
+    private fun tapPage(fx: Float, fy: Float) {
+        val x = fx.coerceIn(0f, 1f) * binding.webView.width
+        val y = fy.coerceIn(0f, 1f) * binding.webView.height
+        val now = android.os.SystemClock.uptimeMillis()
+
+        for (action in intArrayOf(android.view.MotionEvent.ACTION_DOWN, android.view.MotionEvent.ACTION_UP)) {
+            val event = android.view.MotionEvent.obtain(now, now, action, x, y, 0)
+            binding.webView.dispatchTouchEvent(event)
+            event.recycle()
+        }
+    }
+
     override fun onDestroy() {
         leaving = true
+        com.abacus.dualscreen.macro.MacroRunner.target = null
+        com.abacus.dualscreen.macro.MacroRunner.tapper = null
         handler.removeCallbacks(retry)
         handler.removeCallbacks(healthCheck)
+        handler.removeCallbacks(waitForHost)
         handler.removeCallbacks(hidePill)
         com.abacus.dualscreen.connect.Displays.stopListening(this, displayListener)
         displayListener = null
@@ -744,7 +827,7 @@ class ScreenActivity : AppCompatActivity() {
         private const val HEALTH_INTERVAL_MS = 4000L
         private const val HEALTH_TIMEOUT_MS = 2500
         private const val HEALTH_MISSES_ALLOWED = 2
-        private const val MAX_ATTEMPTS = 8
+        private val MAX_ATTEMPTS = com.abacus.dualscreen.connect.Backoff.MAX_ATTEMPTS
 
         /** How long the pill stays up after a successful connection before fading. */
         private const val PILL_LINGER_MS = 1800L

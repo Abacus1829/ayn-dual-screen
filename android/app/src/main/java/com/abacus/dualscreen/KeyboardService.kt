@@ -115,5 +115,23 @@ class KeyboardService : InputMethodService() {
             service.tap(keyCode)
             return true
         }
+
+        /**
+         * Half a keystroke.
+         *
+         * A macro that holds a key while doing something else needs the down and the up as separate
+         * steps -- running is a held key, not a tapped one. Whatever goes down here stays down until
+         * something sends [up], including if the macro is cancelled halfway, which is why
+         * [com.abacus.dualscreen.macro.MacroRunner] releases what it pressed on the way out.
+         */
+        fun down(keyCode: Int): Boolean = send(keyCode, KeyEvent.ACTION_DOWN)
+
+        fun up(keyCode: Int): Boolean = send(keyCode, KeyEvent.ACTION_UP)
+
+        private fun send(keyCode: Int, action: Int): Boolean {
+            val connection = live?.currentInputConnection ?: return false
+            connection.sendKeyEvent(KeyEvent(action, keyCode))
+            return true
+        }
     }
 }
