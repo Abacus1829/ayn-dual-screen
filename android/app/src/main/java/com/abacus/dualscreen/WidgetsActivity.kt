@@ -90,16 +90,64 @@ class WidgetsActivity : AppCompatActivity() {
         Appearance.apply(this, binding.root, settings, binding.backgroundImage)
     }
 
+    /**
+     * Live data from whatever companion is answering, if any.
+     *
+     * Started only when there is a saved connection to ask. With none, the dashboard is exactly what
+     * it was — no card, no polling, no error. "No game running" is the ordinary state of this screen
+     * and must not look like a failure.
+     */
+    private var telemetry: com.abacus.dualscreen.companion.TelemetrySource? = null
+
     override fun onResume() {
         super.onResume()
         binding.root.post(tick)
         binding.root.post(slowTick)
+        startTelemetry()
     }
 
     override fun onPause() {
         super.onPause()
         binding.root.removeCallbacks(tick)
         binding.root.removeCallbacks(slowTick)
+        telemetry?.stop()
+        telemetry = null
+    }
+
+    private fun startTelemetry() {
+        val profile = com.abacus.dualscreen.connect.ProfileStore(this).ordered()
+            .firstOrNull { it.usable } ?: return
+
+        telemetry = com.abacus.dualscreen.companion.TelemetrySource(profile.url) { reading ->
+            showGame(reading)
+        }.also { it.start() }
+    }
+
+    /**
+     * Show what the companion said, or nothing at all.
+     *
+     * The card only appears once something has actually answered, and disappears again when it stops
+     * — a companion that is not running should leave the dashboard in its normal state rather than
+     * leaving a stale reading on screen pretending to be live.
+     */
+    private fun showGame(reading: com.abacus.dualscreen.companion.Telemetry) {
+        if (!reading.reachable) {
+            binding.gameCard.visibility = android.view.View.GONE
+            return
+        }
+
+        val profile = com.abacus.dualscreen.companion.Companions.byId(reading.gameId)
+        val name = profile?.game?.let { getString(it.label) } ?: getString(R.string.widgets_game_unknown)
+
+        binding.gameCard.visibility = android.view.View.VISIBLE
+        binding.gameLabel.text = getString(R.string.widgets_game)
+        binding.gameValue.text = name
+
+        binding.gameDetail.text = when {
+            reading.place != null -> reading.place
+            reading.inGame -> getString(R.string.widgets_game_playing)
+            else -> getString(R.string.widgets_game_menu)
+        }
     }
 
     // ── the stopwatch ───────────────────────────────────────────────────────

@@ -182,7 +182,9 @@ class HomeActivity : AppCompatActivity() {
                     return@runOnUiThread
                 }
 
-                if (found != selected) {
+                // Manual selection wins when the user has said so. Detection still reports what it
+                // found -- it simply does not move them off the game they chose.
+                if (found != selected && settings.autoSwitchGame) {
                     commitFields(selected)
                     selected = found
                     settings.lastGame = found
@@ -232,6 +234,8 @@ class HomeActivity : AppCompatActivity() {
 
             binding.backgroundImage.visibility = View.GONE
         }
+
+        applyWaves(skinned && settings.consoleTheme == com.abacus.dualscreen.theme.ConsoleTheme.WILD.id)
 
         // Hide the app's chrome FIRST, then add the status strip.
         //
@@ -480,6 +484,27 @@ class HomeActivity : AppCompatActivity() {
      * and the strip itself -- so a single removal per rebuild left one behind, and buildTools()
      * runs on every resume: the bars stacked up and marched off the bottom of the screen.
      */
+    /**
+     * Put the drifting ribbons behind everything, or take them away.
+     *
+     * Added as the first child of the root so it sits under every card and every tile without any of
+     * them needing to know it is there. Removed rather than hidden when another theme is chosen, so
+     * a theme that does not use it costs nothing at all.
+     */
+    private fun applyWaves(wanted: Boolean) {
+        removeTagged(binding.root, WAVE_TAG)
+        if (!wanted) return
+
+        binding.root.addView(
+            com.abacus.dualscreen.theme.WaveView(this).apply { tag = WAVE_TAG },
+            0,
+            android.widget.FrameLayout.LayoutParams(
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+            ),
+        )
+    }
+
     private fun removeTagged(parent: ViewGroup, tag: String) {
         while (true) {
             val found = parent.findViewWithTag<View>(tag) ?: return
@@ -762,6 +787,10 @@ class HomeActivity : AppCompatActivity() {
         }
         addToggle(R.string.opt_remember_display, R.string.opt_remember_display_detail, settings.rememberDisplay) {
             settings.rememberDisplay = it
+        }
+
+        addToggle(R.string.opt_auto_switch, R.string.opt_auto_switch_detail, settings.autoSwitchGame) {
+            settings.autoSwitchGame = it
         }
     }
 
@@ -1050,5 +1079,8 @@ class HomeActivity : AppCompatActivity() {
 
         /** Same idea for the bottom shortcut strip. */
         const val TRAY_TAG = "console-tray"
+
+        /** The Wild theme's animated layer, so it is replaced rather than stacked. */
+        const val WAVE_TAG = "console-waves"
     }
 }

@@ -143,6 +143,14 @@ object Probe {
         return Game.entries.firstOrNull { it.id.equals(id, ignoreCase = true) && it.isMod }
     }
 
+    /**
+     * Which game a snapshot belongs to, for callers that already have one.
+     *
+     * Public so [com.abacus.dualscreen.companion.TelemetrySource] can reuse these rules rather than
+     * writing a second answer to the same question that could disagree with this one.
+     */
+    fun identifyFromState(state: JSONObject): Game? = named(state) ?: identify(state)?.first
+
     private fun identify(state: JSONObject): Pair<Game, String?>? {
         if (!state.optBoolean("ready", false))
             return null

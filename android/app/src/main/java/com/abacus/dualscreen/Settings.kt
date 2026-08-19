@@ -277,6 +277,29 @@ class Settings(context: Context) {
         get() = prefs.getString(KEY_NOTES, "").orEmpty()
         set(value) = prefs.edit().putString(KEY_NOTES, value).apply()
 
+    /**
+     * The page each game was last on, so returning to it lands where you left.
+     *
+     * Keyed by game id rather than kept as one value: somebody who reads the map in one game and
+     * the inventory in another should get each back as they had it.
+     */
+    fun lastPageFor(gameId: String): String =
+        prefs.getString("${KEY_LAST_PAGE}_$gameId", "").orEmpty()
+
+    fun setLastPageFor(gameId: String, pageId: String) =
+        prefs.edit().putString("${KEY_LAST_PAGE}_$gameId", pageId).apply()
+
+    /**
+     * Switch the app to whatever companion is actually answering.
+     *
+     * On by default because it is what people expect, and a switch because it is not what everybody
+     * wants: somebody deliberately looking at one game's screen while another is running should not
+     * be dragged away from it.
+     */
+    var autoSwitchGame: Boolean
+        get() = prefs.getBoolean(KEY_AUTO_SWITCH, true)
+        set(value) = prefs.edit().putBoolean(KEY_AUTO_SWITCH, value).apply()
+
     /** How the notes list is arranged. Remembered, because it is a preference and not a mode. */
     var noteSort: String
         get() = prefs.getString(KEY_NOTE_SORT, "recent").orEmpty()
@@ -350,6 +373,8 @@ class Settings(context: Context) {
 
         const val KEY_NOTES = "notes"
         const val KEY_NOTE_SORT = "note_sort"
+        const val KEY_LAST_PAGE = "last_page"
+        const val KEY_AUTO_SWITCH = "auto_switch_game"
         const val KEY_TOOLS = "tools"
 
         const val KEY_SCRIBBLE_NAME = "scribble_name"

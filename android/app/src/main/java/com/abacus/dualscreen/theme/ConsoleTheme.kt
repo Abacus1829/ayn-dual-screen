@@ -421,9 +421,49 @@ data class ConsoleTheme(
         )
 
         /** Every skin that ships with the app. */
+
+        /**
+         * Wild — deep water and drifting light.
+         *
+         * The app's own take on the early-2000s console look: near-black blues, a horizontal row of
+         * categories, glassy panels with a soft inner glow, and ribbons moving slowly behind
+         * everything. Original throughout — nothing here is copied from any machine's assets, and no
+         * trademarked name appears anywhere in it.
+         *
+         * The movement comes from [WaveView] rather than a background image, which is why this theme
+         * has no artwork file: it is drawn, so it scales to any panel and any orientation without a
+         * bitmap to stretch.
+         */
+        val WILD = ConsoleTheme(
+            id = "wild",
+            name = "Wild",
+            subtitle = "Dark blue, drifting ribbons",
+            background = 0xFF01030A.toInt(),
+            backgroundEnd = 0xFF0A1830.toInt(),
+            statusBackground = 0x2213284F,
+            statusText = 0xFFDCE8FF.toInt(),
+            statusPill = 0xFF58B0FF.toInt(),
+            showSignal = false,
+            showDate = true,
+            showBattery = true,
+            // Glassy rather than solid: a translucent face over the ribbons, a cool hairline edge,
+            // and a wide corner, which is what reads as a pane of glass rather than a button.
+            tileFace = 0x2E1B3358,
+            tileBorder = 0x664F7FBF,
+            tileCorner = 18,
+            tileGlyph = 0xFF7FD4FF.toInt(),
+            tileLabel = 0xFFE8F2FF.toInt(),
+            tileSelected = 0xFF9C7BFF.toInt(),
+            columns = 5,
+            tileScale = 1.05f,
+            showLabels = true,
+            trayBackground = 0x330A1830,
+            trayIcon = 0xFF7FD4FF.toInt(),
+        )
+
         // Ordered as they are numbered, so "Theme 3" is the third one in the list.
         val BUILT_IN = listOf(
-            DEFAULT, CLAMSHELL, TABLET_PAD, CHANNELS, HYBRID, CROSSBAR, BUBBLES, GREY_BOX, SILVER,
+            DEFAULT, WILD, CLAMSHELL, TABLET_PAD, CHANNELS, HYBRID, CROSSBAR, BUBBLES, GREY_BOX, SILVER,
         )
 
         fun byId(id: String?): ConsoleTheme = BUILT_IN.firstOrNull { it.id == id } ?: DEFAULT

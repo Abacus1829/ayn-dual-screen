@@ -139,6 +139,42 @@
                     </LinearLayout>
                 </LinearLayout>
 
+                <!--
+                    Live from whatever companion is answering. Gone entirely when none is, which
+                    is the normal state and must not look like a failure.
+                -->
+                <LinearLayout
+                    android:id="@+id/gameCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="vertical"
+                    android:padding="14dp"
+                    android:tag="card"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/gameLabel"
+                        style="@style/Label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                    <TextView
+                        android:id="@+id/gameValue"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:tag="accent"
+                        android:textSize="20sp" />
+
+                    <TextView
+                        android:id="@+id/gameDetail"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/text_dim"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
                 <!-- Everything else is a reading, built in code from Widget.ALL. -->
                 <LinearLayout
                     android:id="@+id/widgetGrid"

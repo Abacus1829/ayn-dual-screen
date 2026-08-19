@@ -240,6 +240,120 @@ the obvious one.
 Status wording distinguishes **sent** from **succeeded**. A request that left the device is not a
 request that worked, and only a protocol that answers earns a success state.
 
+## Themes
+
+**Appearance → Console themes** carries the app's own look plus alternatives. The selection persists
+and applies across the app.
+
+### Wild
+
+**Wild** is the app's own take on an early-2000s console interface: near-black blues, a horizontal
+row of categories, glassy translucent panels with a cool hairline edge, and ribbons of light drifting
+slowly behind everything.
+
+It is drawn rather than painted from a bitmap, which is why it has no artwork file and scales to any
+panel and orientation without stretching. Four sine ribbons at different speeds and phases are drawn
+over a vertical gradient; where they cross, they glow.
+
+Everything in it is original. No trademarked name, logo, or console asset appears anywhere in the
+theme, its code, or its text.
+
+**Motion is a courtesy, not a requirement.** The ribbons stop when the view leaves the window, so
+nothing animates behind a screen nobody is looking at, and they honour the system's **animator
+duration scale** — if animations are turned off in accessibility settings, in developer options, or
+by a battery saver, the ribbons are drawn once and left still. That system setting exists precisely
+so an app does not have to invent its own reduced-motion switch.
+
+The cost is four paths a frame, sampled every 18 pixels rather than every pixel.
+
+## Adding a game: the companion architecture
+
+A game the app can be a companion for is one entry in `companion/Companion.kt`. Everything else —
+the picker, discovery, the profile list, the dashboard — reads that list, so adding a game is a
+single change rather than a search for every place a game is mentioned.
+
+### 1. A game profile
+
+`GameProfile` is the single definition of a supported game:
+
+| Field | What it is |
+| --- | --- |
+| `id` | Stable identifier. Stored in saved connections and layouts, so it must not change |
+| `name` | Internal name; the user-facing string comes from the `Game` entry |
+| `defaultPort` | What discovery tries first |
+| `probePath` | A page only this companion serves, for identifying it at the menu |
+| `stateName` | What the companion calls itself in `/state` |
+| `capabilities` | What it can do — see below |
+| `pages` | Named pages on the second screen |
+| `game` | The `Game` entry carrying the strings and colours the UI already has |
+
+`GameProfile` also reaches the per-game things the app stores: `connection()` for the saved address,
+`controls()` for the assigned control profile, and `lastPage()` / `rememberPage()` for where the user
+was.
+
+### 2. Registering a companion
+
+`Companions.ALL` is built from `Game.entries`. To add a game, add a `Game` entry (id, label, hint,
+default port, probe path, colours) and it appears in the companion list automatically. Override
+`Companions.pagesFor` if it serves pages worth naming.
+
+The `Game` enum is kept rather than replaced because it already carries the string and colour
+resources; duplicating those in `GameProfile` would mean two places to change one name.
+
+### 3. Capabilities
+
+A companion declares what it can do, so the app can decide what to offer before it has spoken to
+anything:
+
+| Capability | Means |
+| --- | --- |
+| `SCREEN` | Serves a second-screen page. Every companion so far |
+| `TELEMETRY` | Answers `/state` with a snapshot |
+| `ACTIONS` | Accepts `POST /action` |
+| `PLACE` | Names the world or area the player is in |
+
+A capability that is absent means the app does not offer that thing. It is never an error: a
+companion with no inventory data is not broken.
+
+### 4. Telemetry
+
+`TelemetrySource` polls `/state` and reports a `Telemetry`. Polling rather than a socket because
+that is what the companions already serve — the second screen's own page reads the same endpoint.
+
+`Telemetry` carries the fields every mod already sends, plus the raw JSON. A companion that reports
+something this app has never heard of needs no app change for it to be read: the dashboard shows
+what it recognises and ignores the rest.
+
+### 5. Actions
+
+Actions are `POST /action` with `{"type": …, "index": …, "to": …}` — the shape all four mods accept
+and the same one the second screen's own buttons use. A macro's game step sends exactly this, so a
+macro works against any companion without knowing which is running.
+
+### 6. Game-specific macros and controls
+
+Macros are stored centrally and referenced by id. A control profile can be assigned to a game from
+**Macros → Layout editor → More → Use for a game**, and `MacroStore.profileFor(gameId)` returns the
+assigned profile falling back to the general one.
+
+### 7. Connecting
+
+Nothing game-specific is needed. A saved connection carries `preset = <game id>`, discovery sets it
+when it identifies what answered, and `GameProfile.connection()` finds it again.
+
+### 8. Third-party companions
+
+The contract a companion must satisfy is small and entirely on the wire:
+
+- serve a page at `/`
+- answer `GET /state` with JSON, ideally including `"game": "<id>"` and `"ready": true|false`
+- accept `POST /action` if it wants buttons to do anything
+
+Anything meeting that is usable today through a **Custom** connection, with no app change at all.
+Adding it to `Game.entries` is what earns it a name, an icon, automatic identification and a default
+port. There is deliberately no plugin loading or downloaded code: the extension point is the
+protocol, which cannot execute anything on the handheld.
+
 ## Games
 
 | Game | Mod required | Default port |

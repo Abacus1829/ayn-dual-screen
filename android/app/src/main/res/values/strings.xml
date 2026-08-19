@@ -576,6 +576,12 @@
     <string name="widgets_timer_hint">Minutes</string>
     <string name="widgets_timer_running">Counting down</string>
     <string name="widgets_timer_done">Time is up</string>
+    <string name="widgets_game">LIVE FROM THE GAME</string>
+    <string name="widgets_game_unknown">Companion connected</string>
+    <string name="widgets_game_playing">In game</string>
+    <string name="widgets_game_menu">At the menu</string>
+    <string name="opt_auto_switch">Follow the running game</string>
+    <string name="opt_auto_switch_detail">Switch to whichever companion is answering. Off: stay on the game you picked.</string>
     <string name="widgets_running">Running</string>
     <string name="widgets_stopped">Stopped</string>
 

@@ -7,6 +7,40 @@ time — so they say what the commits show and no more.
 
 ---
 
+## 0.12.0 — 2026-08-19
+
+### Wild theme
+
+- **A new selectable theme**: near-black blues, a horizontal row of categories, glassy translucent
+  panels, and ribbons of light drifting behind everything. Drawn rather than painted from a bitmap,
+  so it scales to any panel and orientation without stretching, and it costs four paths a frame.
+- **Motion respects the system.** The ribbons stop when the view leaves the window, and they honour
+  the animator duration scale -- animations turned off anywhere means the ribbons are drawn once and
+  left still, without the app inventing its own reduced-motion switch.
+- Original throughout: no trademarked name, logo or console asset appears in the theme, its code or
+  its text. Existing themes are untouched and the selection persists as before.
+
+### Game profiles and companions
+
+- **One definition per supported game**, in companion/Companion.kt: id, port, how to recognise it,
+  what it can do, which pages it has, and where its saved connection, control profile and last page
+  live. The picker, discovery, the profile list and the dashboard all read that list, so adding a
+  game is one entry rather than a search for every place a game is mentioned.
+- **Capabilities are declared**, so the app decides what to offer before it has spoken to anything.
+  A capability a companion does not have is simply not offered -- never an error.
+- **TelemetrySource** polls /state and reports a snapshot, reusing the identification rules that
+  already live in Probe rather than writing a second answer that could disagree.
+- **Automatic switching can be turned off.** Detection still reports what it found; with the setting
+  off it does not move you off the game you picked. Manual selection always works.
+
+### Dashboard
+
+- **A live card from the running companion**, showing which game answered and where the player is.
+  It appears only once something has actually answered and disappears when it stops -- no game
+  running is the ordinary state of that screen and must not look like a failure.
+
+---
+
 ## 0.11.0 — 2026-08-19
 
 Control profiles gain gestures and per-game assignment, the app gains a dashboard that needs no game
