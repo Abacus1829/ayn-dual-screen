@@ -100,6 +100,76 @@ class HomeActivity : AppCompatActivity() {
     }
 
     /**
+     * The gesture watcher, kept apart from the key ones.
+     *
+     * Its own instance because its steps are gestures rather than key codes, and its own progress
+     * glyphs because the last two are taps rather than buttons -- showing "B A" while somebody is
+     * being asked to tap would be a hint pointing the wrong way.
+     */
+    private val touchSecret by lazy {
+        val codes = com.abacus.dualscreen.codes.CodeSettings(this)
+        if (!codes.enabled) null
+        else com.abacus.dualscreen.codes.SecretSequence(
+            steps = com.abacus.dualscreen.codes.TouchCodes.UNLOCK,
+            onProgress = { at, total ->
+                showProgress(at, total, com.abacus.dualscreen.codes.TouchCodes.GLYPHS)
+            },
+        ) { toggleCodes() }
+    }
+    /**
+     * The gesture path into the hidden sequence.
+     *
+     * Watched from dispatchTouchEvent, which sees every touch before any view does — and, as with
+     * the key path, passes it straight on. Scrolling, tapping tiles and dragging all behave exactly
+     * as they did; this only measures what happened afterwards.
+     *
+     * This exists because the keyboard cannot be relied upon: a desktop emulator's key-mapping layer
+     * takes the arrow keys before the app sees them. A touch has nothing in between.
+     */
+    override fun dispatchTouchEvent(event: android.view.MotionEvent): Boolean {
+        when (event.actionMasked) {
+            android.view.MotionEvent.ACTION_DOWN -> {
+                touchX = event.x
+                touchY = event.y
+                touchAt = System.currentTimeMillis()
+            }
+
+            android.view.MotionEvent.ACTION_UP -> {
+                val dx = event.x - touchX
+                val dy = event.y - touchY
+                val far = dp(40).toFloat()
+
+                val gesture = when {
+                    kotlin.math.abs(dx) > kotlin.math.abs(dy) && kotlin.math.abs(dx) > far ->
+                        if (dx > 0) com.abacus.dualscreen.codes.TouchCodes.SWIPE_RIGHT
+                        else com.abacus.dualscreen.codes.TouchCodes.SWIPE_LEFT
+
+                    kotlin.math.abs(dy) > far ->
+                        if (dy > 0) com.abacus.dualscreen.codes.TouchCodes.SWIPE_DOWN
+                        else com.abacus.dualscreen.codes.TouchCodes.SWIPE_UP
+
+                    // A short, quick press is a tap. A long one is somebody holding something, and
+                    // counting that as a tap would advance the sequence while they meant to do
+                    // something else entirely.
+                    System.currentTimeMillis() - touchAt < 400 ->
+                        com.abacus.dualscreen.codes.TouchCodes.TAP
+
+                    else -> 0
+                }
+
+                if (gesture != 0) touchSecret?.onKey(gesture)
+            }
+        }
+
+        return super.dispatchTouchEvent(event)
+    }
+
+    private var touchX = 0f
+    private var touchY = 0f
+    private var touchAt = 0L
+
+
+    /**
      * Every key, before anything else sees it.
      *
      * dispatchKeyEvent rather than onKeyDown, and that distinction is the feature working or not:
@@ -197,7 +267,7 @@ class HomeActivity : AppCompatActivity() {
      * Rebuilt per press rather than animated — ten small views is nothing, and rebuilding makes it
      * impossible for the lit state and the counter to disagree.
      */
-    private fun showProgress(at: Int, total: Int) {
+    private fun showProgress(at: Int, total: Int, glyphs: List<String> = STEP_GLYPHS) {
         removeTagged(binding.root, STEPS_TAG)
         if (at < REVEAL_AFTER || at > total) return
 
@@ -218,7 +288,7 @@ class HomeActivity : AppCompatActivity() {
             ).apply { bottomMargin = dp(28) }
         }
 
-        STEP_GLYPHS.forEachIndexed { index, glyph ->
+        glyphs.forEachIndexed { index, glyph ->
             row.addView(TextView(this).apply {
                 text = glyph
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)

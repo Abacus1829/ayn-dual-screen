@@ -99,3 +99,36 @@ class SecretSequence(
         val UNLOCK_KEYBOARD: List<Int> = UNLOCK.dropLast(2) + listOf(KeyEvent.KEYCODE_B, KeyEvent.KEYCODE_A)
     }
 }
+
+/**
+ * The same sequence, entered by hand.
+ *
+ * Exists because the keyboard path cannot be relied on. On a desktop emulator the host's own
+ * key-mapping layer takes the arrow keys before the app sees them, and on a handheld the d-pad may
+ * arrive as motion axes rather than keys — neither is something the app can fix from its side.
+ * A swipe is a touch event, and nothing sits between a touch and the window it lands in.
+ *
+ * Eight swipes for the directions, then two taps for the two buttons. Same order, same rhythm, no
+ * hardware required.
+ */
+object TouchCodes {
+
+    /** Stand-in key codes for gestures, chosen from a range no real key uses. */
+    const val SWIPE_UP = 1001
+    const val SWIPE_DOWN = 1002
+    const val SWIPE_LEFT = 1003
+    const val SWIPE_RIGHT = 1004
+    const val TAP = 1005
+
+    /** Up, up, down, down, left, right, left, right, tap, tap. */
+    val UNLOCK: List<Int> = listOf(
+        SWIPE_UP, SWIPE_UP,
+        SWIPE_DOWN, SWIPE_DOWN,
+        SWIPE_LEFT, SWIPE_RIGHT,
+        SWIPE_LEFT, SWIPE_RIGHT,
+        TAP, TAP,
+    )
+
+    /** What to show for each step, matching the key display. */
+    val GLYPHS = listOf("↑", "↑", "↓", "↓", "←", "→", "←", "→", "●", "●")
+}
