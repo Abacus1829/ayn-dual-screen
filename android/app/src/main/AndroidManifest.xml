@@ -103,6 +103,11 @@
             android:exported="false"
             android:resizeableActivity="true" />
         <activity
+            android:name=".GameCodesActivity"
+            android:exported="false"
+            android:resizeableActivity="true" />
+
+        <activity
             android:name=".WidgetsActivity"
             android:exported="false"
             android:resizeableActivity="true" />

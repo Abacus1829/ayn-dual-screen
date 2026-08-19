@@ -101,6 +101,9 @@ namespace AynDualScreen
         private int TicksSincePanels;
 
         private readonly ConcurrentQueue<ActionDto> PendingActions = new();
+
+        /// <summary>Game codes waiting for the game thread. Separate from <see cref="PendingActions"/> so the feature can be switched off without touching the dashboard's own queue.</summary>
+        private readonly ConcurrentQueue<CodeDto> PendingCodes = new();
         private readonly ConcurrentDictionary<string, byte[]> IconCache = new();
         private readonly ConcurrentDictionary<string, byte[]> AssetCache = new();
         private readonly ConcurrentDictionary<string, byte[]> NpcIconCache = new();
@@ -1106,6 +1109,23 @@ namespace AynDualScreen
                     this.Monitor.Log($"Couldn't apply '{action.Type}' from the second screen: {ex.Message}", LogLevel.Warn);
                 }
             }
+
+            // Game codes drain on the same thread and the same tick, from their own queue. Cheap to
+            // check when empty, which is every tick for anyone who has left the feature off.
+            int codeBudget = 4;
+            while (codeBudget-- > 0 && this.PendingCodes.TryDequeue(out CodeDto code))
+            {
+                try
+                {
+                    string refused = GameCodes.Apply(this.Config, this.Monitor, code.Command, code.Value);
+                    if (refused != null)
+                        this.Monitor.Log($"Game code '{code.Command}' refused: {refused}", LogLevel.Debug);
+                }
+                catch (Exception ex)
+                {
+                    this.Monitor.Log($"Game code '{code.Command}' failed: {ex.Message}", LogLevel.Warn);
+                }
+            }
         }
 
         private void ApplyAction(ActionDto action)
@@ -1264,6 +1284,35 @@ namespace AynDualScreen
 
             if (path.StartsWith("/worldmap/", StringComparison.Ordinal))
                 return this.ServeCachedPng(this.AssetCache, "world:" + TrimPng(path.Substring("/worldmap/".Length)));
+
+            // ── game codes ──────────────────────────────────────────────────
+            //
+            // Both paths exist only while the feature is enabled. With it off they 404 exactly as
+            // any unknown path does, so a client cannot tell this mod from one built without the
+            // feature -- which is what lets somebody keep the mod strictly local.
+            if (path == "/codes" && request.Method == "GET")
+            {
+                if (!this.Config.EnableGameCodes)
+                    return HttpResponse.NotFound();
+
+                return HttpResponse.Json(GameCodes.CatalogueJson(this.Config));
+            }
+
+            if (path == "/code" && request.Method == "POST")
+            {
+                if (!this.Config.EnableGameCodes)
+                    return HttpResponse.NotFound();
+
+                CodeDto code = JsonConvert.DeserializeObject<CodeDto>(request.Body);
+                if (string.IsNullOrWhiteSpace(code?.Command))
+                    return new HttpResponse { Status = 400, Body = Encoding.UTF8.GetBytes("{\"ok\":false,\"reason\":\"No command\"}"), ContentType = "application/json" };
+
+                // Queued rather than run here: this is the web server's thread, and Stardew is not
+                // thread-safe. The queue is drained on the game thread by the same pump the second
+                // screen's ordinary actions already use.
+                this.PendingCodes.Enqueue(code);
+                return HttpResponse.Json("{\"ok\":true}");
+            }
 
             if (path == "/action" && request.Method == "POST")
             {

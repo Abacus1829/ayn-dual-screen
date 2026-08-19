@@ -85,6 +85,15 @@ enum class Tool(
      */
     WIDGETS("widgets", R.string.tool_widgets, "◴"),
 
+    /**
+     * Game codes, when a companion offers any.
+     *
+     * Hidden by default and shown only once the feature has been found and switched on. The grid
+     * filters it through [hidden] like any other, so nothing about the home screen had to learn
+     * about this feature specially.
+     */
+    GAME_CODES("gamecodes", R.string.tool_game_codes, "⌘", hidden = true),
+
     /** An FTP server on this device, so a PC can browse it over the network, like a homebrew file server. */
     FTP("ftp", R.string.tool_ftp, "⇅"),
 

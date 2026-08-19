@@ -49,6 +49,18 @@ namespace AynDualScreen
         /// <summary>Whether farm animals appear on the minimap.</summary>
         public bool ShowAnimals { get; set; } = true;
 
+        /// <summary>Whether the optional game-codes endpoints are served at all.</summary>
+        /// <remarks>
+        /// Off by default and deliberately so. With this false the mod serves no <c>/codes</c> and no
+        /// <c>/code</c>, advertises nothing, and rejects any request to either -- it is the dashboard
+        /// it always was, entirely local, with nothing that can alter a save. Turning it on is a
+        /// decision, not an upgrade that happened to you.
+        ///
+        /// Nothing else in the mod reads this. Telemetry, the map, the inventory panel and every
+        /// existing action work identically either way.
+        /// </remarks>
+        public bool EnableGameCodes { get; set; } = false;
+
         /// <summary>How many entries the journal panel sends. Zero hides it entirely.</summary>
         public int MaxQuests { get; set; } = 6;
 

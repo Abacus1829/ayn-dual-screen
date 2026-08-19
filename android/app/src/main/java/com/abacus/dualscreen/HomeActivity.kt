@@ -76,6 +76,81 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * The hidden way in.
+     *
+     * Two sequences watched at once so it can be entered with a pad or with a keyboard; neither
+     * consumes the press, so the d-pad keeps navigating this screen exactly as it did. Built only
+     * when the feature is switched on — with it off there is no listener at all, which is what
+     * "behaves as though it does not exist" has to mean.
+     */
+    private val secrets by lazy {
+        val codes = com.abacus.dualscreen.codes.CodeSettings(this)
+        if (!codes.enabled) emptyList()
+        else listOf(
+            com.abacus.dualscreen.codes.SecretSequence(
+                com.abacus.dualscreen.codes.SecretSequence.UNLOCK
+            ) { unlockCodes() },
+            com.abacus.dualscreen.codes.SecretSequence(
+                com.abacus.dualscreen.codes.SecretSequence.UNLOCK_KEYBOARD
+            ) { unlockCodes() },
+        )
+    }
+
+    override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
+        // Fed first, handled normally afterwards. onKeyDown is only reached while this screen has
+        // focus, which gives "only when the app is focused" for free.
+        secrets.forEach { it.onKey(keyCode) }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    /** Found it. Idempotent, so entering it again on an unlocked device celebrates nothing twice. */
+    private fun unlockCodes() {
+        val codes = com.abacus.dualscreen.codes.CodeSettings(this)
+        if (!codes.enabled || codes.unlocked) return
+
+        codes.unlocked = true
+        com.abacus.dualscreen.ui.Feedback.success(binding.root)
+        celebrate()
+        buildTools()
+    }
+
+    /**
+     * The celebration.
+     *
+     * A banner that rises, holds and fades, drawn in code so it costs no layout and inherits the
+     * chosen accent. Original wording and original artwork — it names nothing but the feature.
+     */
+    private fun celebrate() {
+        val banner = TextView(this).apply {
+            text = getString(R.string.codes_unlocked)
+            gravity = Gravity.CENTER
+            setTextColor(getColor(R.color.text))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
+            setPadding(dp(28), dp(18), dp(28), dp(18))
+            background = Appearance.panel(
+                this@HomeActivity, settings,
+                Appearance.blend(getColor(R.color.card_hi), Appearance.accentOf(settings), 0.35f),
+                Appearance.accentOf(settings), 2,
+            )
+            alpha = 0f
+            layoutParams = android.widget.FrameLayout.LayoutParams(
+                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER,
+            )
+        }
+
+        binding.root.addView(banner)
+        banner.translationY = dp(24).toFloat()
+
+        banner.animate().alpha(1f).translationY(0f).setDuration(260).withEndAction {
+            banner.animate().alpha(0f).setStartDelay(1600).setDuration(420).withEndAction {
+                binding.root.removeView(banner)
+            }.start()
+        }.start()
+    }
+
     override fun onResume() {
         super.onResume()
         // appearance may have been changed in the Appearance screen and we've come back: the grid and the
@@ -254,9 +329,12 @@ class HomeActivity : AppCompatActivity() {
 
         // saved order first, then anything added by a later version that the saved list can't know about
         val ordered = settings.toolOrder.mapNotNull { Tool.byId(it) }
+        // Game codes are the one hidden tool that can become visible: found, and switched on.
+        val codesVisible = com.abacus.dualscreen.codes.CodeSettings(this).visible
+
         val tools = (ordered + Tool.entries)
             .distinct()
-            .filter { it.id !in hidden && !it.hidden }
+            .filter { it.id !in hidden && (!it.hidden || (it == Tool.GAME_CODES && codesVisible)) }
 
         if (tools.isEmpty()) {
             binding.toolGrid.visibility = View.GONE
@@ -716,6 +794,7 @@ class HomeActivity : AppCompatActivity() {
             Tool.STREAM -> startActivity(Intent(this, StreamActivity::class.java))
             Tool.PROFILES -> startActivity(Intent(this, ProfilesActivity::class.java))
             Tool.WIDGETS -> startActivity(Intent(this, WidgetsActivity::class.java))
+            Tool.GAME_CODES -> startActivity(Intent(this, GameCodesActivity::class.java))
             Tool.MACRO_BUILDER -> startActivity(Intent(this, MacroBuilderActivity::class.java))
             Tool.LAYOUTS -> startActivity(Intent(this, LayoutEditorActivity::class.java))
             Tool.SCRIBBLE -> startActivity(Intent(this, ScribbleActivity::class.java))

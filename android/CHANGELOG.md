@@ -7,6 +7,39 @@ time — so they say what the commits show and no more.
 
 ---
 
+## 0.13.0 — 2026-08-19
+
+### Game codes (hidden, optional, off at the game end by default)
+
+- **A hidden feature, found rather than shown.** Nothing appears on the home screen until a button
+  sequence is entered there. Found once, it stays found.
+- **Three states, and "off" means off**: disabled entirely (no listener, no tile, no request ever
+  sent to any companion), enabled but not yet found (machinery present, still no tile), or found
+  (the tile appears). Turning it off also re-hides it, because off should not mean merely hidden.
+- **Per-game switches** on top of the global one.
+- **Codes are advertised by the companion, never assumed.** The app holds no game logic: it asks what
+  a companion offers and draws that. A mod with codes off advertises none and the screen says so
+  rather than showing buttons that would silently fail.
+- **Separate endpoints.** `/codes` and `/code` are their own paths, not extra cases on the action
+  queue the dashboard uses -- which is what lets a mod refuse them and stay an ordinary local
+  dashboard companion.
+- **Refusals are reported as refusals.** A companion that says no is shown saying no.
+- Supports toggles, one-shot actions, numbers, text, item and entity choices, presets, confirmation
+  for anything drastic, and typed codes.
+
+### Stardew Valley mod
+
+- **EnableGameCodes, off by default.** With it off the mod serves no code endpoints at all -- they
+  404 like any unknown path, so it is indistinguishable from a build without the feature. Telemetry,
+  the map, the inventory panel and every existing action are untouched either way.
+- Codes when enabled: restore health, restore energy, add gold, set gold, set time, set tomorrow's
+  weather. All run on the game thread through their own queue, because the game is not thread-safe
+  and the web server answers on another thread.
+- Both switches are re-checked on the game thread, so a code in flight when the feature is switched
+  off does not still land.
+
+---
+
 ## 0.12.0 — 2026-08-19
 
 ### Wild theme

@@ -231,6 +231,15 @@ namespace AynDualScreen
     }
 
     /// <summary>A command sent from the second screen's touch UI.</summary>
+    /// <summary>A game code the second screen asked to run.</summary>
+    /// <remarks>Its own type rather than another ActionDto case, so the two paths cannot be confused and the code path can be removed wholesale.</remarks>
+    internal sealed class CodeDto
+    {
+        public string Code { get; set; }
+        public string Command { get; set; }
+        public string Value { get; set; }
+    }
+
     internal sealed class ActionDto
     {
         public string Type { get; set; }

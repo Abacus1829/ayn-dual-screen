@@ -585,4 +585,36 @@
     <string name="widgets_running">Running</string>
     <string name="widgets_stopped">Stopped</string>
 
+
+    <!-- Game codes -->
+    <string name="tool_game_codes">Game Codes</string>
+    <string name="codes_title">Game Codes</string>
+    <string name="codes_unlocked">GAME CODES UNLOCKED</string>
+    <string name="codes_settings">Settings</string>
+    <string name="codes_type">Type a code</string>
+    <string name="codes_type_hint">Code</string>
+    <string name="codes_unknown">No code by that name.</string>
+    <string name="codes_loading">Asking the game what it offers…</string>
+    <string name="codes_no_connection">No saved connection to ask.</string>
+    <string name="codes_off_global">Game codes are switched off.</string>
+    <string name="codes_off_game">Game codes are off for this game.</string>
+    <string name="codes_none">This game offers none. The mod may have them switched off.</string>
+    <string name="codes_run">Run</string>
+    <string name="codes_set">Set</string>
+    <string name="codes_on">ON</string>
+    <string name="codes_off">OFF</string>
+    <string name="codes_confirm">Run \"%1$s\"?</string>
+    <string name="codes_range">%1$d to %2$d</string>
+    <string name="codes_sending">Sending %1$s…</string>
+    <string name="codes_done">%1$s done</string>
+    <string name="codes_failed">Could not reach the game.</string>
+    <string name="codes_enable_global">Game codes enabled</string>
+    <string name="codes_enable_game">Enabled for this game</string>
+    <string name="codes_settings_detail">Switching this off entirely hides the feature again and stops the app asking any game about codes.</string>
+
+    <plurals name="codes_count">
+        <item quantity="one">%1$d code available</item>
+        <item quantity="other">%1$d codes available</item>
+    </plurals>
+
 </resources>
