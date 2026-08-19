@@ -135,17 +135,60 @@ class DoodleView @JvmOverloads constructor(
     }
 
     /**
-     * The doodle as an image, or null when nothing has been drawn.
+     * The doodle as an image, cropped to the ink, or null when nothing has been drawn.
      *
-     * Transparent rather than filled, so the bubble it lands in supplies the paper colour and a
-     * doodle looks the same on a light skin as on a dark one. Anything opening the PNG on a PC gets
-     * transparency too, which is the right answer for ink.
+     * Cropped rather than the whole pad, which is the difference between a message bubble the width
+     * of the screen and one the width of the drawing. The pad is as wide as the display and a doodle
+     * usually occupies a corner of it; saving all that transparent space makes every bubble
+     * enormous, every PNG bigger than it needs to be, and every send slower.
+     *
+     * Transparent rather than filled, so the bubble supplies the paper colour and a doodle looks the
+     * same on a light skin as on a dark one. Anything opening the PNG on a PC gets transparency too,
+     * which is the right answer for ink.
      */
     fun toBitmap(): Bitmap? {
         if (isEmpty || width <= 0 || height <= 0) return null
 
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        drawStrokes(Canvas(bitmap))
+        val bounds = inkBounds() ?: return null
+
+        val bitmap = Bitmap.createBitmap(
+            bounds.width().toInt().coerceAtLeast(1),
+            bounds.height().toInt().coerceAtLeast(1),
+            Bitmap.Config.ARGB_8888,
+        )
+
+        val canvas = Canvas(bitmap)
+        canvas.translate(-bounds.left, -bounds.top)
+        drawStrokes(canvas)
         return bitmap
+    }
+
+    /**
+     * The rectangle the ink actually occupies, padded by half the widest stroke.
+     *
+     * Eraser strokes are left out on purpose: they take ink away, so letting them widen the box
+     * would pad the picture with the empty space somebody just rubbed out.
+     */
+    private fun inkBounds(): android.graphics.RectF? {
+        val ink = strokes.filterNot { it.erase }
+        if (ink.isEmpty()) return null
+
+        val union = android.graphics.RectF()
+        val each = android.graphics.RectF()
+        var widest = 0f
+
+        for (stroke in ink) {
+            stroke.path.computeBounds(each, true)
+            if (union.isEmpty) union.set(each) else union.union(each)
+            widest = maxOf(widest, stroke.width)
+        }
+
+        // A stroke's path is its centre line; half its width hangs outside the bounds on each side.
+        val pad = widest / 2f + 2f
+        union.inset(-pad, -pad)
+
+        // Never past the pad itself, or the bitmap carries transparent margins again.
+        union.intersect(0f, 0f, width.toFloat(), height.toFloat())
+        return union.takeIf { it.width() >= 1f && it.height() >= 1f }
     }
 }

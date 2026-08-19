@@ -165,7 +165,11 @@ class NoteEditorActivity : AppCompatActivity() {
         val words = text.split(Regex("\\s+")).count { it.isNotBlank() }
 
         binding.notesStatus.text = getString(
-            R.string.notes_status, lines, words, text.length, file.name
+            R.string.notes_status,
+            resources.getQuantityString(R.plurals.notes_lines, lines, lines),
+            resources.getQuantityString(R.plurals.notes_words, words, words),
+            resources.getQuantityString(R.plurals.notes_chars, text.length, text.length),
+            file.name,
         )
     }
 

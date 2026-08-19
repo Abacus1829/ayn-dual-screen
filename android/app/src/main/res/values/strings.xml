@@ -318,7 +318,7 @@
     <string name="notes_share_failed">Nothing on this device can take shared text.</string>
     <string name="notes_folder_shared">%1$s</string>
     <string name="notes_folder_private">app-private storage — grant All files access to reach them over FTP</string>
-    <string name="notes_status">%1$d lines · %2$d words · %3$d characters · %4$s</string>
+    <string name="notes_status">%1$s · %2$s · %3$s · %4$s</string>
 
     <!-- Doodle rooms -->
     <string name="tool_scribble">Doodles</string>
@@ -342,6 +342,16 @@
     <plurals name="notes_count">
         <item quantity="one">%1$d note</item>
         <item quantity="other">%1$d notes</item>
+    </plurals>
+
+    <plurals name="notes_lines">
+        <item quantity="one">%1$d line</item>
+        <item quantity="other">%1$d lines</item>
+    </plurals>
+
+    <plurals name="notes_words">
+        <item quantity="one">%1$d word</item>
+        <item quantity="other">%1$d words</item>
     </plurals>
 
     <plurals name="notes_chars">

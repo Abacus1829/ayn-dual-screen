@@ -263,7 +263,19 @@ class ScribbleActivity : AppCompatActivity() {
         store.image(room, message)?.let { bitmap ->
             card.addView(ImageView(this).apply {
                 setImageBitmap(bitmap)
+
+                /*
+                 * Scaled down, hard.
+                 *
+                 * The pad is as wide as the screen, so a doodle at its natural size is a bubble the
+                 * height of the conversation — two messages and you are scrolling past a single
+                 * drawing. adjustViewBounds with both maxima set shrinks it in proportion, so the
+                 * doodle stays legible and the log stays a log.
+                 */
                 adjustViewBounds = true
+                maxHeight = dp(64)
+                maxWidth = (resources.displayMetrics.widthPixels * 0.6f).toInt()
+
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -278,6 +290,9 @@ class ScribbleActivity : AppCompatActivity() {
                 setTextColor(getColor(R.color.text))
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
                 setPadding(0, dp(3), 0, 0)
+                // Same reason as the doodle: a long line should wrap inside a bubble rather than
+                // stretch one across the whole screen and lose the left/right "who said it" cue.
+                maxWidth = (resources.displayMetrics.widthPixels * 0.6f).toInt()
             })
         }
 
