@@ -150,6 +150,7 @@ class ScreenActivity : AppCompatActivity() {
         }
 
         applyOrientation()
+        applyFocus()
         watchDisplay()
         goImmersive()
         configureWebView()
@@ -197,6 +198,20 @@ class ScreenActivity : AppCompatActivity() {
             backToScreen()
         }
 
+        binding.focusButton.setOnClickListener {
+            com.abacus.dualscreen.ui.Feedback.tap(it)
+            val settings = Settings(this)
+            settings.keepGameFocus = !settings.keepGameFocus
+            applyFocus()
+            com.abacus.dualscreen.ui.Feedback.toast(
+                this,
+                getString(
+                    if (settings.keepGameFocus) R.string.focus_now_game else R.string.focus_now_screen
+                ),
+                long = true,
+            )
+        }
+
         // back steps out one layer at a time: menu, then the wiki, then the session
         onBackPressedDispatcher.addCallback(this) {
             when {
@@ -209,6 +224,25 @@ class ScreenActivity : AppCompatActivity() {
 
         load()
         handler.postDelayed(healthCheck, HEALTH_INTERVAL_MS)
+    }
+
+    /**
+     * Decide whether this window takes the controller, and say so on the button.
+     *
+     * The default is that it does not. A second screen exists to sit beside a game, and Android
+     * focuses one window at a time across every display — so without this, opening a session on the
+     * lower panel silently stops the pad reaching the game on the upper one until you touch the game
+     * again. See [com.abacus.dualscreen.ui.Focus].
+     *
+     * Re-applied whenever it changes rather than only at startup, so the toggle in the menu takes
+     * effect on the session already open instead of the next one.
+     */
+    private fun applyFocus() {
+        val keepGameFocus = Settings(this).keepGameFocus
+        com.abacus.dualscreen.ui.Focus.passive(this, keepGameFocus)
+        binding.focusButton.setText(
+            if (keepGameFocus) R.string.focus_take_input else R.string.focus_give_back
+        )
     }
 
     /** A second screen that sleeps after 30 seconds is useless, so hold the screen on by default. */

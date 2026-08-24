@@ -127,6 +127,16 @@
             android:exported="false"
             android:resizeableActivity="true" />
 
+        <activity
+            android:name=".InputTestActivity"
+            android:exported="false"
+            android:resizeableActivity="true" />
+
+        <activity
+            android:name=".DeveloperActivity"
+            android:exported="false"
+            android:resizeableActivity="true" />
+
         <!--
             Hands a downloaded APK to the system installer, and nothing else to anybody.
 

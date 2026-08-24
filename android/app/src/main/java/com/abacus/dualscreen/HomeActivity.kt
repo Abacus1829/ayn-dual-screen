@@ -160,12 +160,11 @@ class HomeActivity : AppCompatActivity() {
         val codes = com.abacus.dualscreen.codes.CodeSettings(this)
         if (!codes.enabled) emptyList()
         else listOf(
+            // One watcher now rather than a pad one and a keyboard one: each step accepts every
+            // code that button might arrive as, so a device that reports one button the pad way and
+            // the other the keyboard way satisfies this instead of neither.
             com.abacus.dualscreen.codes.SecretSequence(
                 steps = com.abacus.dualscreen.codes.SecretSequence.UNLOCK,
-                onProgress = { at, total -> showProgress(at, total) },
-            ) { toggleCodes() },
-            com.abacus.dualscreen.codes.SecretSequence(
-                steps = com.abacus.dualscreen.codes.SecretSequence.UNLOCK_KEYBOARD,
                 onProgress = { at, total -> showProgress(at, total) },
             ) { toggleCodes() },
         )
@@ -264,19 +263,42 @@ class HomeActivity : AppCompatActivity() {
     /**
      * A real gamepad's d-pad, which is not keys at all.
      *
-     * Plenty of pads — this handheld's included — report their d-pad as the HAT_X/HAT_Y axes of a
-     * motion event rather than as DPAD key codes. Without this the sequence is enterable on a
-     * keyboard and quietly impossible on the device it was designed for.
+     * Plenty of pads — this handheld's included — report their d-pad as motion axes rather than as
+     * DPAD key codes. Without this the sequence is enterable on a keyboard and quietly impossible on
+     * the device it was designed for.
+     *
+     * **dispatchGenericMotionEvent, not onGenericMotionEvent**, and that is the same distinction
+     * that broke the key path before it: `onGenericMotionEvent` is only reached for motion events
+     * that no view consumed, and a scrolling list or a spinner on this screen will consume joystick
+     * movement long before the activity hears about it. `dispatch` sees every event first and still
+     * passes it on — this watches, it does not intercept.
+     *
+     * Both the hat axes and the left stick are read, because which of the two a d-pad reports is a
+     * per-device decision and not one the app can influence. The edge detection in [feedAxis] means
+     * a device that reports both does not count a push twice.
      */
-    override fun onGenericMotionEvent(event: android.view.MotionEvent): Boolean {
-        if (event.source and android.view.InputDevice.SOURCE_CLASS_JOYSTICK != 0 &&
-            event.action == android.view.MotionEvent.ACTION_MOVE
-        ) {
-            feedAxis(event.getAxisValue(android.view.MotionEvent.AXIS_HAT_X), horizontal = true)
-            feedAxis(event.getAxisValue(android.view.MotionEvent.AXIS_HAT_Y), horizontal = false)
+    override fun dispatchGenericMotionEvent(event: android.view.MotionEvent): Boolean {
+        val fromPad = event.source and android.view.InputDevice.SOURCE_CLASS_JOYSTICK != 0 ||
+            event.source and android.view.InputDevice.SOURCE_DPAD == android.view.InputDevice.SOURCE_DPAD
+
+        if (fromPad && event.action == android.view.MotionEvent.ACTION_MOVE) {
+            feedAxis(
+                pick(event, android.view.MotionEvent.AXIS_HAT_X, android.view.MotionEvent.AXIS_X),
+                horizontal = true,
+            )
+            feedAxis(
+                pick(event, android.view.MotionEvent.AXIS_HAT_Y, android.view.MotionEvent.AXIS_Y),
+                horizontal = false,
+            )
         }
 
-        return super.onGenericMotionEvent(event)
+        return super.dispatchGenericMotionEvent(event)
+    }
+
+    /** The hat if it is doing anything, otherwise the stick. */
+    private fun pick(event: android.view.MotionEvent, hat: Int, stick: Int): Float {
+        val fromHat = event.getAxisValue(hat)
+        return if (kotlin.math.abs(fromHat) > 0.5f) fromHat else event.getAxisValue(stick)
     }
 
     /** Where each hat axis was last time, so one push is one press rather than one per frame. */
@@ -1063,7 +1085,9 @@ class HomeActivity : AppCompatActivity() {
         when (tool) {
             Tool.SECOND_SCREEN -> open()
             Tool.NOTES -> startActivity(Intent(this, NotesActivity::class.java))
-            Tool.VOLUME, Tool.BRIGHTNESS -> startActivity(Intent(this, ControlsActivity::class.java))
+            // Two tiles, one screen, but each opens on the half it names.
+            Tool.VOLUME -> startActivity(ControlsActivity.volume(this))
+            Tool.BRIGHTNESS -> startActivity(ControlsActivity.brightness(this))
             Tool.APPEARANCE -> startActivity(Intent(this, AppearanceActivity::class.java))
             Tool.KEYBOARD -> startActivity(Intent(this, KeyboardActivity::class.java))
             Tool.MIRROR -> startActivity(Intent(this, MirrorActivity::class.java))

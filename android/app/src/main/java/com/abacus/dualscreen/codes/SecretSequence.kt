@@ -19,7 +19,15 @@ import android.view.KeyEvent
  *   the d-pad keeps navigating the screen while this listens.
  */
 class SecretSequence(
-    private val steps: List<Int>,
+    /**
+     * What counts at each step, as a set of alternatives.
+     *
+     * A set rather than a single code because the same physical button is not the same key code on
+     * every handheld: a face button may arrive as `BUTTON_A` on one device and as the letter `A`
+     * from an attached keyboard on another, and a sequence that insists on one of them is a
+     * sequence that silently cannot be entered on half the hardware it ships to.
+     */
+    private val steps: List<Set<Int>>,
     private val timeoutMs: Long = 5_000L,
     /** How far in, out of how many. Fired on every press so a progress display can follow along. */
     private val onProgress: (Int, Int) -> Unit = { _, _ -> },
@@ -43,11 +51,11 @@ class SecretSequence(
         lastAt = now
 
         when {
-            keyCode == steps[at] -> at++
+            keyCode in steps[at] -> at++
 
             // A wrong press resets — but if it happens to be the first button, this is the start of
             // a fresh attempt rather than nothing at all.
-            keyCode == steps[0] -> at = 1
+            keyCode in steps[0] -> at = 1
 
             else -> at = 0
         }
@@ -77,26 +85,38 @@ class SecretSequence(
          *
          * B before A, in that order — the classic ordering, and the one people try first.
          */
-        val UNLOCK: List<Int> = listOf(
-            KeyEvent.KEYCODE_DPAD_UP,
-            KeyEvent.KEYCODE_DPAD_UP,
-            KeyEvent.KEYCODE_DPAD_DOWN,
-            KeyEvent.KEYCODE_DPAD_DOWN,
-            KeyEvent.KEYCODE_DPAD_LEFT,
-            KeyEvent.KEYCODE_DPAD_RIGHT,
-            KeyEvent.KEYCODE_DPAD_LEFT,
-            KeyEvent.KEYCODE_DPAD_RIGHT,
-            KeyEvent.KEYCODE_BUTTON_B,
-            KeyEvent.KEYCODE_BUTTON_A,
-        )
+        private val UP = setOf(KeyEvent.KEYCODE_DPAD_UP)
+        private val DOWN = setOf(KeyEvent.KEYCODE_DPAD_DOWN)
+        private val LEFT = setOf(KeyEvent.KEYCODE_DPAD_LEFT)
+        private val RIGHT = setOf(KeyEvent.KEYCODE_DPAD_RIGHT)
 
         /**
-         * The same sequence for a device with no pad.
+         * The two face buttons, and every code a handheld might call them.
          *
-         * Letter keys stand in for the two face buttons. Everything else is the d-pad, which a
-         * keyboard's arrow keys already produce.
+         * `BUTTON_A`/`BUTTON_B` are what a pad reports. The letters are what an attached keyboard
+         * sends. Some handhelds route their face buttons through the system as `ENTER` and `BACK`
+         * instead — `ENTER` is accepted, `BACK` is not, because taking over the back button on the
+         * home screen would break the way out of the app to hide a feature nobody has found yet.
          */
-        val UNLOCK_KEYBOARD: List<Int> = UNLOCK.dropLast(2) + listOf(KeyEvent.KEYCODE_B, KeyEvent.KEYCODE_A)
+        private val FACE_A = setOf(
+            KeyEvent.KEYCODE_BUTTON_A,
+            KeyEvent.KEYCODE_A,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER,
+        )
+
+        private val FACE_B = setOf(KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_B)
+
+        /**
+         * The sequence that reveals game codes.
+         *
+         * One list now rather than a pad version and a keyboard version: each step carries every
+         * code that counts for it, so a pad, a keyboard and a handheld that reports something in
+         * between all enter the same sequence. Two watchers matching two lists was how a device that
+         * sent `BUTTON_A` for one button and `B` for the other could satisfy neither.
+         */
+        val UNLOCK: List<Set<Int>> =
+            listOf(UP, UP, DOWN, DOWN, LEFT, RIGHT, LEFT, RIGHT, FACE_B, FACE_A)
     }
 }
 
@@ -121,13 +141,13 @@ object TouchCodes {
     const val TAP = 1005
 
     /** Up, up, down, down, left, right, left, right, tap, tap. */
-    val UNLOCK: List<Int> = listOf(
+    val UNLOCK: List<Set<Int>> = listOf(
         SWIPE_UP, SWIPE_UP,
         SWIPE_DOWN, SWIPE_DOWN,
         SWIPE_LEFT, SWIPE_RIGHT,
         SWIPE_LEFT, SWIPE_RIGHT,
         TAP, TAP,
-    )
+    ).map { setOf(it) }
 
     /** What to show for each step, matching the key display. */
     val GLYPHS = listOf("↑", "↑", "↓", "↓", "←", "→", "←", "→", "●", "●")

@@ -35,6 +35,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:tag="accent"
+                    android:id="@+id/screenTitle"
                     android:text="@string/controls_title"
                     android:textSize="20sp"
                     android:textStyle="bold" />
@@ -48,6 +49,7 @@
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/volumeCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
@@ -112,13 +114,14 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="Some streams stay locked while Do Not Disturb is on."
+                    android:text="@string/vol_dnd_note"
                     android:textColor="@color/state_busy"
                     android:textSize="11sp"
                     android:visibility="gone" />
             </LinearLayout>
 
             <LinearLayout
+                android:id="@+id/brightnessCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"

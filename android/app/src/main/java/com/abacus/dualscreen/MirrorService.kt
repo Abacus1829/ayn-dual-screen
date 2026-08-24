@@ -109,6 +109,10 @@ class MirrorService : android.app.Service() {
         val window = Presentation(this, target).apply {
             setContentView(host)
             window?.setType(android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
+            // A mirror is a picture: it has nothing to type into and nothing to press. Taking the
+            // input focus would stop the controller reaching whatever is being mirrored, which is
+            // the one thing a mirror must not do.
+            window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         }
         presentation = window
 

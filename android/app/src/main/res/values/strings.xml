@@ -716,4 +716,51 @@
     <string name="update_err_permission">Android has not been told this app may install apps. Grant it on the page below, then press Install again.</string>
     <string name="update_err_install">The installer could not be started. You can install the downloaded file yourself from a file manager.</string>
     <string name="update_err_cancelled">Download cancelled.</string>
+    <!-- ===== keeping the controller on the game ===== -->
+    <string name="focus_take_input">Type on this screen</string>
+    <string name="focus_give_back">Give the pad back to the game</string>
+    <string name="focus_now_game">The game keeps the controller. This screen still takes taps — it just no longer steals the buttons.</string>
+    <string name="focus_now_screen">This screen has the controller now, so it can be typed into. The game will not respond to the pad until you hand it back.</string>
+    <string name="opt_keep_game_focus">Let the game keep the controller</string>
+    <string name="opt_keep_game_focus_detail">Android gives one window the buttons at a time, across both panels. On: a second screen never takes them, so the game keeps responding while you use it. Off: the second screen can be typed into.</string>
+
+    <string name="vol_dnd_note">Some streams stay locked while Do Not Disturb is on.</string>
+
+    <!-- ===== input diagnostics ===== -->
+    <string name="tool_input">Input test</string>
+    <string name="input_title">Input test</string>
+    <string name="input_blurb">Press buttons, move the sticks, swipe the screen. Whatever this device actually sends turns up below — which is the only way to tell why a control works on one handheld and not another.</string>
+    <string name="input_waiting">Waiting for input. Press anything.</string>
+    <string name="input_clear">Clear</string>
+    <string name="input_copy">Copy</string>
+    <string name="input_copied">Copied the log.</string>
+    <string name="input_summary">%1$d events · %2$s</string>
+    <string name="input_sequence">Secret sequence</string>
+    <string name="input_sequence_detail">The same watcher the home screen uses, so what it makes of your input is what the home screen would make of it.</string>
+    <string name="input_seq_progress">%1$d of %2$d</string>
+    <string name="input_seq_done">Sequence completed.</string>
+    <string name="input_devices">Attached input devices</string>
+    <!-- ===== developer ===== -->
+    <string name="settings_developer">Developer</string>
+    <string name="dev_title">Developer</string>
+    <string name="dev_blurb">Tools for working on this app on the device it runs on, rather than on the PC it was built on.</string>
+    <string name="dev_wifi">Connect over Wi-Fi</string>
+    <string name="dev_wifi_detail">Lets a PC reach this device with adb without a cable — to install a build, read a log, or take a screenshot. This app cannot switch it on for you, and should not be able to: it is the switch that lets another machine on your network install software.</string>
+    <string name="dev_address">This device</string>
+    <string name="dev_command">On the PC, run</string>
+    <string name="dev_port_modern">Android 11 and later give wireless debugging a new random port each time it is turned on. The number is on the Wireless debugging page, next to the pairing option.</string>
+    <string name="dev_port_legacy">5555 is the usual port once ADB over TCP is running.</string>
+    <string name="dev_adb_off">USB debugging is off. Turn on Developer options, then USB debugging, then Wireless debugging.</string>
+    <string name="dev_adb_usb_only">USB debugging is on, but wireless debugging is not. Turn it on in Developer options to connect without a cable.</string>
+    <string name="dev_adb_wireless_on">Wireless debugging is on. Pair the PC once from the Wireless debugging page, then connect with the command above.</string>
+    <string name="dev_open_options">Developer options</string>
+    <string name="dev_copy_command">Copy</string>
+    <string name="dev_open_input">Open the input test</string>
+    <string name="dev_device">This device</string>
+    <string name="dev_copy_info">Copy device info</string>
+    <string name="dev_copied">Copied.</string>
+    <string name="dev_no_network">No network address. Join a Wi-Fi network first.</string>
+    <string name="dev_no_settings_page">This device has no settings page to open.</string>
+    <string name="dev_pair">First time on this PC: pair</string>
+    <string name="dev_pair_detail">On the Wireless debugging page, tap "Pair device with pairing code". It shows a pairing port and a six-digit code — run the command with that port, then type the code. Once per PC, not once per session.</string>
 </resources>

@@ -40,6 +40,20 @@ class Settings(context: Context) {
         get() = prefs.getBoolean(KEY_BOOT_ANIMATION, true)
         set(value) = prefs.edit().putBoolean(KEY_BOOT_ANIMATION, value).apply()
 
+    /**
+     * Let whatever is playing keep the controller while a second screen is open.
+     *
+     * On by default, because it is what a second screen is for. Android focuses one window at a
+     * time across every display, so a session window on the lower panel otherwise takes the pad
+     * away from the game on the upper one until you touch the game again.
+     *
+     * Turning it off gives the session window the focus, which is what a page with a text field in
+     * it needs — nothing else in the app wants it.
+     */
+    var keepGameFocus: Boolean
+        get() = prefs.getBoolean(KEY_KEEP_GAME_FOCUS, true)
+        set(value) = prefs.edit().putBoolean(KEY_KEEP_GAME_FOCUS, value).apply()
+
     /** Probe the saved address on launch and switch the picker to whatever is actually running. */
     var autoDetect: Boolean
         get() = prefs.getBoolean(KEY_AUTO_DETECT, true)
@@ -346,6 +360,7 @@ class Settings(context: Context) {
         const val KEY_LAST_GAME = "last_game"
         const val KEY_ADVANCED = "advanced"
         const val KEY_BOOT_ANIMATION = "boot_animation"
+        const val KEY_KEEP_GAME_FOCUS = "keep_game_focus"
         const val KEY_AUTO_DETECT = "auto_detect"
         const val KEY_RECONNECT = "auto_reconnect"
         const val KEY_KEEP_AWAKE = "keep_awake"

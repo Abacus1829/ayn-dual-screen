@@ -7,6 +7,88 @@ time — so they say what the commits show and no more.
 
 ---
 
+## 0.16.0 — 2026-08-24
+
+### The app no longer takes the controller away from your game
+
+The worst bug in the app, and the one hardest to describe until you know the cause: open a second
+screen while a game is running and the game stops responding to the pad until you touch it again.
+
+Android gives **one window the input focus at a time, across every display**. Per-display focus
+exists from Android 10 but is off unless the manufacturer enables it, and on these handhelds it is
+off. So a session window appearing on the lower panel took the buttons, exactly as the system is
+documented to do, and the game sat there ignoring them.
+
+- Second-screen sessions now ask for no focus at all. They stay visible and they still take taps —
+  they simply no longer take the buttons.
+- The screen mirror does the same. It is a picture; it had no business holding the pad.
+- **Settings → Let the game keep the controller** turns it off, for the rare page with a text field
+  in it, and there is a switch in the session's own menu that flips it without leaving the session.
+- One consequence, stated because it is real: a window that receives no key events receives no back
+  button either. The session's on-screen menu is the way out, as it already was.
+
+### Brightness opens brightness
+
+The Brightness tile opened a page headed "Quick controls" with four audio sliders at the top and the
+brightness sliders below the fold. Nothing was miswired — the screen simply never acknowledged which
+half you came for, which from the outside is indistinguishable from the wrong screen opening. Each
+tile now opens on its own half, and names the screen after it. The other half stays below, because
+they are two halves of one page.
+
+### The brightness icon is the right colour
+
+It rendered as a yellow sun while every tile around it followed the accent. The cause is that `☀`
+has an *emoji presentation* in the system font, and a colour emoji is a picture rather than a glyph —
+so no amount of tinting was ever going to work. It is a drawn vector now, like the mirror icon, and
+takes the accent like everything else.
+
+### Changing the accent changes the app
+
+Picking a new accent repainted the headings and the tool grid and left every control on every screen
+the same blue: checkboxes, sliders, spinners, the ordinary buttons. They were taking their colour
+from the theme's `colorAccent`, which is a fixed resource compiled into the APK and cannot change at
+runtime.
+
+They are painted centrally now, **by type rather than by tag** — a checkbox is themed because it is a
+checkbox, not because somebody remembered to mark it up, so a screen added next month is themed
+without being told to be. A view that wants to keep its own look says so with a `plain` tag.
+
+Ordinary buttons gained a ripple while this was being done, in the accent. A button that does not
+acknowledge a press feels broken long before anybody works out why.
+
+### The hidden sequence, on real hardware
+
+It worked on a desktop emulator and did nothing on the handheld. Two causes, both found by reading
+rather than by testing, and both the same mistake in different places:
+
+- **Motion events were watched with `onGenericMotionEvent`**, which is only reached for events no
+  view consumed — and a scrolling list or a spinner on the home screen consumes joystick movement
+  first. It is `dispatchGenericMotionEvent` now, which sees everything and still passes it on. This
+  is precisely the bug that was fixed for keys in 0.14.0 and left in place for axes.
+- **Only the hat axes were read.** Which axis a d-pad reports is a per-device decision; the left
+  stick is read as a fallback, with edge detection so a device reporting both does not count twice.
+- Each step of the sequence now accepts **every code that button might arrive as** — the pad code,
+  the letter, and Enter — instead of there being a pad sequence and a keyboard sequence that a
+  device reporting one of each could satisfy neither of.
+
+### Developer tools
+
+New section in Settings, listed plainly rather than hidden behind a gesture, because this app is
+sideloaded by the people who work on it.
+
+- **Connect over Wi-Fi.** The device's address, the exact `adb pair` and `adb connect` commands, and
+  whether wireless debugging appears to be on — with a button to the system page. The app cannot
+  switch it on and should not be able to: that is the switch that lets another machine on the
+  network install software.
+- **Input test.** Every key, axis and gesture this device sends, as it sends it, with the *same*
+  sequence watcher the home screen uses running underneath — so its progress display answers the
+  real question rather than a proxy for it. A copy button puts the whole log, plus the device and
+  its displays, on the clipboard.
+- **This device**: version, build, ABIs, and every display the system reports with its size and
+  density. The first question every second-screen bug turns into.
+
+---
+
 ## 0.15.0 — 2026-08-24
 
 ### Updates, from GitHub, without a store

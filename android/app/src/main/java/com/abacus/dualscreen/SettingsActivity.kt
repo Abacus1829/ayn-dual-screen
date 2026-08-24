@@ -100,6 +100,18 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         /*
+         * The one that decides whether a game keeps working while you use the app.
+         *
+         * Here rather than buried in the session, because somebody whose controller has stopped
+         * responding in the game will come looking for it in Settings.
+         */
+        toggle(
+            R.string.opt_keep_game_focus,
+            R.string.opt_keep_game_focus_detail,
+            settings.keepGameFocus,
+        ) { settings.keepGameFocus = it }
+
+        /*
          * Updates, near the top rather than buried.
          *
          * This app is installed by downloading an APK, so the update path is the only one there is
@@ -109,6 +121,17 @@ class SettingsActivity : AppCompatActivity() {
         section(R.string.settings_updates)
         link(R.string.settings_check_updates) {
             startActivity(Intent(this, UpdateActivity::class.java))
+        }
+
+        /*
+         * Developer tools, listed plainly rather than hidden behind a tap-seven-times gesture.
+         *
+         * This app is sideloaded from a repository by the people who work on it, and the questions
+         * it answers — what this device sends, what it calls its displays, how to reach it without a
+         * cable — are asked by whoever is holding the handheld when something misbehaves.
+         */
+        link(R.string.settings_developer) {
+            startActivity(Intent(this, DeveloperActivity::class.java))
         }
 
         section(R.string.settings_look)

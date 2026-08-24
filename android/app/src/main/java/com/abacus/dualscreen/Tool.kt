@@ -49,7 +49,9 @@ enum class Tool(
     SECOND_SCREEN("screen", R.string.tool_second_screen, "▣"),
     NOTES("notes", R.string.tool_notes, "✎"),
     VOLUME("volume", R.string.tool_volume, "◧"),
-    BRIGHTNESS("brightness", R.string.tool_brightness, "☀"),
+    // Drawn rather than typed: ☀ has an emoji presentation, so on some devices it rendered as a
+    // yellow sun that ignored the accent while every tile around it followed it.
+    BRIGHTNESS("brightness", R.string.tool_brightness, "☀", icon = R.drawable.ic_brightness),
     APPEARANCE("appearance", R.string.tool_appearance, "◈"),
     KEYBOARD("keyboard", R.string.tool_keyboard, "⌨"),
     // Drawn rather than typed: see the icon field above.

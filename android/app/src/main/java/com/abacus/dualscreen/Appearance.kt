@@ -13,6 +13,16 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import android.content.res.ColorStateList
+import android.graphics.drawable.RippleDrawable
+import android.graphics.drawable.StateListDrawable
+import android.widget.Button
+import android.widget.CompoundButton
+import android.widget.EditText
+import android.widget.ProgressBar
+import android.widget.SeekBar
+import android.widget.Spinner
+import androidx.appcompat.widget.SwitchCompat
 
 /**
  * The one place that decides what the app looks like.
@@ -131,9 +141,130 @@ object Appearance {
                 "card" -> view.background = panel(
                     activity, settings, surface(activity, settings), activity.getColor(R.color.edge)
                 )
+
+                // Nothing to do, and deliberately so: a view that styles itself says so here.
+                "plain" -> Unit
+
+                else -> repaint(activity, settings, view, accent)
             }
         }
     }
+
+    /**
+     * The widgets that were still the stock blue whatever accent you picked.
+     *
+     * Tags cover the pieces a layout deliberately marks up. Everything else — checkboxes, sliders,
+     * spinners, the ordinary buttons — took its colour from the theme's `colorAccent`, which is a
+     * fixed resource compiled into the APK. So changing the accent repainted the headings and the
+     * tool grid and left every control on every screen the same blue, which is what "it only
+     * changes the text" was describing.
+     *
+     * Done by type rather than by tag because that is what makes it *central*: a new screen with a
+     * checkbox on it is themed because it is a checkbox, not because somebody remembered to tag it.
+     * A view that wants none of this tags itself `plain`.
+     */
+    private fun repaint(activity: Activity, settings: Settings, view: View, accent: Int) {
+        val tint = ColorStateList.valueOf(accent)
+
+        when (view) {
+            // Checkboxes, radio buttons and switches. Before Button, which they all extend.
+            is CompoundButton -> {
+                view.buttonTintList = tint
+                if (view is SwitchCompat) {
+                    view.thumbTintList = tint
+                    view.trackTintList = ColorStateList.valueOf(
+                        Color.argb(120, Color.red(accent), Color.green(accent), Color.blue(accent))
+                    )
+                }
+            }
+
+            is SeekBar -> {
+                view.progressTintList = tint
+                view.thumbTintList = tint
+                view.progressBackgroundTintList =
+                    ColorStateList.valueOf(activity.getColor(R.color.edge_hi))
+            }
+
+            is ProgressBar -> {
+                view.progressTintList = tint
+                view.indeterminateTintList = tint
+            }
+
+            is Spinner -> view.backgroundTintList = tint
+
+            is EditText -> view.background = field(activity, settings, accent)
+
+            /*
+             * Only the buttons still wearing their XML background.
+             *
+             * @style/Action is a <selector>, so it arrives as a StateListDrawable; a button that a
+             * screen has styled in code carries a GradientDrawable or a LayerDrawable instead. That
+             * distinction is what lets this repaint every ordinary button in the app without
+             * flattening the handful that are drawn deliberately.
+             */
+            is Button -> if (view.background is StateListDrawable)
+                view.background = actionButton(activity, settings, accent)
+        }
+    }
+
+    /**
+     * The ordinary button: card fill, accent-lifted edge, and a ripple.
+     *
+     * The ripple is the one piece of motion added here, and it earns its place on a handheld: a
+     * button that does not acknowledge a press feels broken long before anybody works out why. It
+     * replaces a state selector that changed colour instantly.
+     */
+    fun actionButton(activity: Activity, settings: Settings, accent: Int): Drawable {
+        val corner = settings.corners * activity.resources.displayMetrics.density
+
+        fun face(fill: Int, stroke: Int) = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = corner
+            setColor(fill)
+            setStroke(dp(activity, 1), stroke)
+        }
+
+        val states = StateListDrawable().apply {
+            addState(
+                intArrayOf(-android.R.attr.state_enabled),
+                face(activity.getColor(R.color.card), activity.getColor(R.color.edge)),
+            )
+            addState(
+                intArrayOf(android.R.attr.state_pressed),
+                face(blend(activity.getColor(R.color.edge_hi), accent, 0.25f), accent),
+            )
+            addState(
+                intArrayOf(),
+                face(
+                    activity.getColor(R.color.card_hi),
+                    blend(activity.getColor(R.color.edge_hi), accent, 0.35f),
+                ),
+            )
+        }
+
+        val mask = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = corner
+            setColor(Color.WHITE)
+        }
+
+        return RippleDrawable(
+            ColorStateList.valueOf(
+                Color.argb(80, Color.red(accent), Color.green(accent), Color.blue(accent))
+            ),
+            states,
+            mask,
+        )
+    }
+
+    /** A text field, in the current corner radius, with an edge that knows what the accent is. */
+    fun field(activity: Activity, settings: Settings, accent: Int): Drawable =
+        GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = settings.corners * activity.resources.displayMetrics.density
+            setColor(activity.getColor(R.color.bg))
+            setStroke(dp(activity, 1), blend(activity.getColor(R.color.edge_hi), accent, 0.30f))
+        }
 
     /**
      * The primary button: a soft accent glow behind an accent-edged fill.

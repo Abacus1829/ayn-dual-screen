@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Brightness: a sun.
+
+    A drawn icon rather than the ☀ character, and for a reason that is invisible until it is not:
+    U+2600 has an *emoji presentation* in the system font, so on a device that picks it the tile
+    renders as a yellow sun that ignores the accent colour entirely — while every other tile follows
+    it. It read as "the brightness icon is the wrong colour", and no amount of tinting fixed it,
+    because a colour emoji is a picture rather than a glyph.
+
+    A vector always draws, and takes the tint the grid gives it, exactly like ic_mirror.
+
+    tint is set in code so it can follow the skin's glyph colour.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFF">
+
+    <!-- The disc. -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M12,7.6 A4.4,4.4 0 1 1 11.99,7.6 Z" />
+
+    <!-- Eight rays, on the axes and the diagonals. -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M11.1,1.4h1.8v3.2h-1.8z M11.1,19.4h1.8v3.2h-1.8z M1.4,11.1h3.2v1.8h-3.2z M19.4,11.1h3.2v1.8h-3.2z" />
+
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M4.32,5.59 L5.59,4.32 L7.85,6.58 L6.58,7.85 Z M16.15,17.42 L17.42,16.15 L19.68,18.41 L18.41,19.68 Z M18.41,4.32 L19.68,5.59 L17.42,7.85 L16.15,6.58 Z M5.59,19.68 L4.32,18.41 L6.58,16.15 L7.85,17.42 Z" />
+</vector>

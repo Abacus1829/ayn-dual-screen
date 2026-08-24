@@ -100,6 +100,19 @@
             android:text="@string/action_back_to_screen"
             android:visibility="gone" />
 
+        <!--
+            Whether this window takes the controller. Off by default, so the game keeps it; on for
+            the rare page with a text field in it, which cannot be typed into otherwise.
+        -->
+        <Button
+            android:id="@+id/focusButton"
+            style="@style/Action"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:minWidth="240dp"
+            android:text="@string/focus_take_input" />
+
         <Button
             android:id="@+id/quitButton"
             style="@style/Action"

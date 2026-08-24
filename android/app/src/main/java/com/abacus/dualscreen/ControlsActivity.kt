@@ -50,6 +50,7 @@ class ControlsActivity : AppCompatActivity() {
         com.abacus.dualscreen.ui.Nav.back(this, binding.backButton)
         binding.grantButton.setOnClickListener { requestWriteSettings() }
 
+        showRequestedPanel()
         wireVolume()
         wireBrightness()
 
@@ -60,6 +61,35 @@ class ControlsActivity : AppCompatActivity() {
         super.onResume()
         refreshVolume()
         refreshSystemBrightness()
+    }
+
+    /**
+     * Put the panel that was asked for first, and name the screen after it.
+     *
+     * Both tiles opened this screen and this screen always led with the volume sliders, so tapping
+     * **Brightness** landed on a page headed "Quick controls" with four audio sliders at the top.
+     * Nothing was wrong with the mapping — the screen simply never acknowledged which half you came
+     * for, which is indistinguishable from the wrong screen opening.
+     *
+     * The other panel stays below rather than being hidden: they are two halves of one page, and
+     * somebody who wanted the other one should not have to go back out to reach it.
+     */
+    private fun showRequestedPanel() {
+        val brightness = intent.getStringExtra(EXTRA_PANEL) == PANEL_BRIGHTNESS
+
+        binding.screenTitle.setText(
+            when {
+                brightness -> R.string.controls_brightness
+                intent.hasExtra(EXTRA_PANEL) -> R.string.controls_volume
+                else -> R.string.controls_title
+            }
+        )
+
+        if (!brightness) return
+
+        val parent = binding.brightnessCard.parent as? android.view.ViewGroup ?: return
+        parent.removeView(binding.brightnessCard)
+        parent.addView(binding.brightnessCard, parent.indexOfChild(binding.volumeCard))
     }
 
     /*********
@@ -155,5 +185,19 @@ class ControlsActivity : AppCompatActivity() {
             Intent(AndroidSettings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:$packageName"))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         )
+    }
+
+    companion object {
+        private const val EXTRA_PANEL = "panel"
+        private const val PANEL_VOLUME = "volume"
+        private const val PANEL_BRIGHTNESS = "brightness"
+
+        /** Open on the volume sliders. */
+        fun volume(context: Context): Intent =
+            Intent(context, ControlsActivity::class.java).putExtra(EXTRA_PANEL, PANEL_VOLUME)
+
+        /** Open on the brightness sliders, which is what the Brightness tile means by it. */
+        fun brightness(context: Context): Intent =
+            Intent(context, ControlsActivity::class.java).putExtra(EXTRA_PANEL, PANEL_BRIGHTNESS)
     }
 }
