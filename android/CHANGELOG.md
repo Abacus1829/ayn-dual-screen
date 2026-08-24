@@ -7,6 +7,67 @@ time — so they say what the commits show and no more.
 
 ---
 
+## 0.18.0 — 2026-08-24
+
+### A first run that explains itself
+
+The permissions were spread across five screens, each asking at the moment it needed something. That
+is the right *time* to ask and the wrong place to keep the list: nobody could see what the app wanted
+in total, and somebody could use it for a week without learning that the macro pad and the mirror
+were behind a permission they refused in passing.
+
+- **One screen, shown once**, between the boot animation and the home screen, and reachable
+  afterwards from **Settings → Permissions**.
+- Built on a claim that happens to be true: **none of it is required**. The second screen works with
+  everything switched off. So each row is an offer with a stated benefit *and* a stated cost, Skip is
+  a first-class answer, and finishing with nothing granted is a fine outcome the app does not nag
+  about.
+- **Refusals are handled honestly.** Android will not show a runtime prompt a third time, so the
+  button becomes a way to the app's settings page rather than one that silently does nothing.
+- The update prompt waits for setup rather than arriving on top of it. Two unfamiliar dialogs before
+  somebody has seen the app is not a first run worth having.
+- There is no accessibility service and there will not be one for convenience. The screen says so.
+
+### Cheat system: it now knows which game you are playing
+
+The codes screen took the first saved connection whose host and port were filled in and asked that
+one for its catalogue. That is not the same as the game you are playing — with three connections
+saved it was usually the wrong one, and the screen never said which it had picked.
+
+- **Detection.** Every saved connection is probed at once and the answer is whichever is actually
+  running, preferring one with a save loaded, because a companion at its main menu will list codes it
+  then refuses. The screen says what it found.
+- **Disagree with it.** A picker appears when there is more than one connection to choose between,
+  and *Rescan* drops any manual choice — "look again" while pinned to a hand-picked target would be
+  a lie.
+- **Search**, once the list reaches eight, over name, description and the typed code. People remember
+  any of the three.
+- **Favourites**, per game, pinned above the categories and each appearing once: the point of a
+  favourite is not having to know which category somebody filed it under. The star is its own touch
+  target on the left, because the row itself runs the code.
+
+### The hidden sequence gets a door beside it
+
+The sequence needs the handheld to report its d-pad in a way the app recognises. When it does not,
+the feature is not hidden — it is **unreachable**, and from the outside those are indistinguishable.
+
+**Show the tile without the sequence** is off by default and lives in the codes settings. The
+sequence is still the intended way in. Switching the feature off, or hiding the tab, clears it too,
+so the tile can never be hidden and shown at once.
+
+### Compatibility, written down
+
+[`COMPATIBILITY.md`](../COMPATIBILITY.md) records what each mod serves, what the app does when it
+does not, and — kept separate on purpose — what has been verified by reading the code versus what
+still needs a game and a device.
+
+The short version: only `/state` is required of a mod. Every other endpoint is a feature that
+degrades on its own rather than taking the connection with it. Only the Stardew mod implements game
+codes, its off switch is total (both paths 404, indistinguishable from a build without the feature),
+and it re-checks that switch after dequeuing because a queued code can outlive the request.
+
+---
+
 ## 0.17.0 — 2026-08-24
 
 Consistency, mostly. Nothing here is a new feature; all of it is the app disagreeing with itself in

@@ -99,6 +99,10 @@ shipped alongside. That text is cosmetic. It does not limit what the app can con
 Each mod is self-contained: they share no files, no build and no output, and none needs the others
 to be present. Ideas were carried across by hand.
 
+What each mod actually serves — and what the app does when it does not serve something — is in
+[`COMPATIBILITY.md`](COMPATIBILITY.md). Only `/state` is required of a mod; every other endpoint is a
+feature that degrades on its own rather than taking the connection with it.
+
 Detailed docs live in [`android/README.md`](android/README.md) (the app) and in each mod's own
 README — [`stardew/`](stardew/README.md), [`terraria/`](terraria/README.md),
 [`minecraft/`](minecraft/README.md), [`falloutnv/`](falloutnv/README.md) — covering its HTTP
