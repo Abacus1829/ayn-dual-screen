@@ -3,4 +3,6 @@
     <!-- Remembers a TextView's original size so the font-scale setting can be re-applied
          repeatedly without compounding. -->
     <item name="tag_base_size" type="id" />
+    <!-- The colour a status dot is currently showing, so a change can be crossfaded from it. -->
+    <item name="tag_dot_colour" type="id" />
 </resources>

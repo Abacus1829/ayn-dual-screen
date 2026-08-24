@@ -7,6 +7,54 @@ time — so they say what the commits show and no more.
 
 ---
 
+## 0.17.0 — 2026-08-24
+
+Consistency, mostly. Nothing here is a new feature; all of it is the app disagreeing with itself in
+ways that add up to feeling unfinished.
+
+### Icons
+
+- **Every tool has an icon in every style.** The four icon styles covered eight of the eighteen
+  tools, so switching style changed half the grid and left the rest on their default glyph — two
+  styles on one screen at once, which reads as a rendering fault rather than as a setting.
+- **Characters that Android may draw as colour emoji are now asked not to be.** The brightness sun
+  was the reported case: a yellow picture in a grid of accent-coloured symbols, ignoring every
+  attempt to tint it, because a colour emoji is a bitmap and not text. The keyboard, gear, pen and
+  play glyphs were all one font update away from the same fate; they now carry a text-presentation
+  request, which fonts that were never going to use colour ignore.
+
+### One transition for the whole app
+
+Screens arrived with whatever the platform default was, which differs by Android version and by
+manufacturer skin — so the app moved differently on the handheld than on an emulator, and
+differently again on somebody else's device. Every screen now enters with the same short fade and
+lift: 160ms, which is about the shortest a movement can be and still read as movement. It plays
+every time anybody opens anything, so it is deliberately restrained.
+
+### A spacing and type scale
+
+Cards were 12dp or 14dp apart, padding was 13dp here and 14dp there, captions 11sp or 12sp depending
+on the screen. None of it wrong, all of it slightly inconsistent, which is most of what "it feels a
+bit janky" means when you look closely.
+
+`res/values/dimens.xml` now holds the scale — deliberately few values, named for what they are for
+rather than for their size. The shared styles use them, so every button, label, caption and field on
+every screen moves together. Existing layouts keep their own literals and can be converted a screen
+at a time.
+
+Buttons and fields also gained a 48dp minimum height, Android's own floor for something you hit with
+a thumb.
+
+### The status dot
+
+Two screens had each built their own oval and they had drifted — one tinted the drawable, the other
+replaced it, so the same status looked different depending on where you saw it. There is one now, and
+its colour **crossfades** rather than switching between frames: this is the one piece of the interface
+whose entire job is to be noticed changing, and on a handheld at arm's length an instant switch is
+easy to miss.
+
+---
+
 ## 0.16.0 — 2026-08-24
 
 ### The app no longer takes the controller away from your game

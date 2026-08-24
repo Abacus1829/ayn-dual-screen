@@ -1202,22 +1202,23 @@ class HomeActivity : AppCompatActivity() {
         binding.toggleGroup.addView(row)
     }
 
-    private fun say(state: State, message: String) {
-        binding.statusText.text = message
-        binding.statusDot.background = GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            setColor(
-                getColor(
-                    when (state) {
-                        State.IDLE -> R.color.state_idle
-                        State.BUSY -> R.color.state_busy
-                        State.OK -> R.color.state_ok
-                        State.BAD -> R.color.state_bad
-                    }
-                )
-            )
-        }
-    }
+    /**
+     * The status line, drawn by the one thing that knows how a status looks.
+     *
+     * This screen's own [State] is kept because it is what the connection logic speaks; it is
+     * translated at the boundary rather than everywhere it is raised.
+     */
+    private fun say(state: State, message: String) = com.abacus.dualscreen.ui.Feedback.say(
+        binding.statusText,
+        binding.statusDot,
+        when (state) {
+            State.IDLE -> com.abacus.dualscreen.ui.Feedback.State.IDLE
+            State.BUSY -> com.abacus.dualscreen.ui.Feedback.State.BUSY
+            State.OK -> com.abacus.dualscreen.ui.Feedback.State.OK
+            State.BAD -> com.abacus.dualscreen.ui.Feedback.State.BAD
+        },
+        message,
+    )
 
     /*********
      * Displays

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The spacing and type scale, in one place.
+
+    Every layout in this app was written with whatever number looked right at the time: cards are
+    12dp or 14dp apart, padding is 13dp here and 14dp there, captions are 11sp or 12sp depending on
+    the screen. None of it is *wrong* and all of it is slightly inconsistent, which is most of what
+    "the app feels a bit janky" turns out to mean when you look closely.
+
+    These are the values to reach for from now on. They are deliberately few — a scale nobody can
+    remember is a scale nobody uses — and they are named for what they are for rather than for their
+    size, so a screen asks for "the gap between cards" rather than for "12dp".
+
+    The shared styles below already use them, so every button, label, caption and field on every
+    screen moves together. Existing layouts still carry their own literals; they can be converted a
+    screen at a time without anything breaking in between.
+-->
+<resources>
+
+    <!-- ===== spacing ===== -->
+    <!-- Inside a row: between a glyph and its label, a checkbox and its detail. -->
+    <dimen name="space_tight">4dp</dimen>
+    <!-- Between related things: a heading and the control under it. -->
+    <dimen name="space_small">8dp</dimen>
+    <!-- Between cards, and around the content inside one. -->
+    <dimen name="space">12dp</dimen>
+    <!-- Screen edges. -->
+    <dimen name="space_screen">16dp</dimen>
+    <!-- Between sections that are about different subjects. -->
+    <dimen name="space_section">18dp</dimen>
+
+    <!-- ===== type ===== -->
+    <dimen name="text_title">20sp</dimen>
+    <dimen name="text_heading">17sp</dimen>
+    <dimen name="text_body">15sp</dimen>
+    <dimen name="text_detail">13sp</dimen>
+    <dimen name="text_caption">12sp</dimen>
+    <dimen name="text_label">11sp</dimen>
+
+    <!-- ===== touch ===== -->
+    <!--
+        A handheld is used with thumbs, often while holding it with both hands, and sometimes while
+        a game is going on the other panel. 48dp is Android's own minimum and it is a floor rather
+        than a target.
+    -->
+    <dimen name="touch_min">48dp</dimen>
+    <dimen name="button_padding">14dp</dimen>
+
+    <!-- ===== corners =====
+         The user's corner-radius setting overrides these wherever Appearance draws a background in
+         code. These are the fallbacks compiled into the XML drawables, and match the default. -->
+    <dimen name="corner">12dp</dimen>
+    <dimen name="corner_small">9dp</dimen>
+
+</resources>

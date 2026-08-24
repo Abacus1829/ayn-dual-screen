@@ -7,16 +7,38 @@
         <item name="android:navigationBarColor">@color/bg</item>
         <item name="android:textColor">@color/text</item>
         <item name="colorAccent">@color/accent</item>
+
+        <!--
+            One transition for the whole app.
+
+            Screens used to arrive with whatever the platform default was, which differs by Android
+            version and by manufacturer skin — so the app moved differently on the handheld than it
+            did on the emulator, and differently again on somebody else's device. Setting it here
+            makes every screen enter and leave the same way, and makes it one line to change.
+        -->
+        <item name="android:windowAnimationStyle">@style/Animation.DualScreen</item>
     </style>
 
     <style name="Theme.DualScreen.Fullscreen">
         <item name="android:windowBackground">@android:color/black</item>
     </style>
 
+    <!--
+        A short fade with a small lift. Deliberately restrained and deliberately quick: 160ms is
+        about the shortest a movement can be and still read as a movement, and this plays every time
+        anybody opens anything. An animation you notice on the tenth use is too long.
+    -->
+    <style name="Animation.DualScreen" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/screen_enter</item>
+        <item name="android:activityOpenExitAnimation">@anim/screen_hold</item>
+        <item name="android:activityCloseEnterAnimation">@anim/screen_hold</item>
+        <item name="android:activityCloseExitAnimation">@anim/screen_exit</item>
+    </style>
+
     <!-- A section heading inside a card. -->
     <style name="Label" parent="">
         <item name="android:textColor">@color/text_faint</item>
-        <item name="android:textSize">11sp</item>
+        <item name="android:textSize">@dimen/text_label</item>
         <item name="android:textAllCaps">true</item>
         <item name="android:letterSpacing">0.10</item>
         <item name="android:textStyle">bold</item>
@@ -25,8 +47,8 @@
     <!-- Explanatory line under a heading. -->
     <style name="Caption" parent="">
         <item name="android:textColor">@color/text_faint</item>
-        <item name="android:textSize">11sp</item>
-        <item name="android:layout_marginTop">4dp</item>
+        <item name="android:textSize">@dimen/text_label</item>
+        <item name="android:layout_marginTop">@dimen/space_tight</item>
         <item name="android:lineSpacingExtra">2dp</item>
     </style>
 
@@ -34,10 +56,11 @@
         <item name="android:background">@drawable/bg_button</item>
         <item name="android:textColor">@color/text</item>
         <item name="android:textAllCaps">false</item>
-        <item name="android:textSize">15sp</item>
+        <item name="android:textSize">@dimen/text_body</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:paddingTop">14dp</item>
-        <item name="android:paddingBottom">14dp</item>
+        <item name="android:paddingTop">@dimen/button_padding</item>
+        <item name="android:paddingBottom">@dimen/button_padding</item>
+        <item name="android:minHeight">@dimen/touch_min</item>
         <item name="android:stateListAnimator">@null</item>
     </style>
 
@@ -47,6 +70,7 @@
         <item name="android:textColorHint">@color/text_faint</item>
         <item name="android:padding">13dp</item>
         <item name="android:textSize">16sp</item>
+        <item name="android:minHeight">@dimen/touch_min</item>
         <item name="android:fontFamily">monospace</item>
     </style>
 

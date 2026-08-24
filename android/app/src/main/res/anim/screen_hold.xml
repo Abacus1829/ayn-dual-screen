@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The screen underneath: stays put.
+
+    A no-op animation rather than no animation at all. Without one the platform supplies its own,
+    which on some skins slides the whole screen sideways under the one arriving: two movements
+    where the design calls for one.
+-->
+<alpha xmlns:android="http://schemas.android.com/apk/res/android"
+    android:duration="160"
+    android:fromAlpha="1.0"
+    android:toAlpha="1.0" />

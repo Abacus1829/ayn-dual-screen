@@ -73,29 +73,72 @@ object Appearance {
     /** Icon styles for the tool grid. Text glyphs, so no artwork ships and nothing needs licensing. */
     val ICON_SETS = listOf("glyph" to "Glyph", "block" to "Block", "line" to "Line", "text" to "Text")
 
+    /**
+     * A glyph per tool per style — and every tool in every style.
+     *
+     * These covered eight of the eighteen tools, so switching icon style changed half the grid and
+     * left the rest on their default glyph: two styles on one screen, which reads as a rendering
+     * bug rather than as a setting. Filling them in is most of what "icons update correctly" means.
+     *
+     * Characters are drawn from Geometric Shapes, Arrows and Math Operators, which the stock font
+     * covers. That is not a matter of taste — ⧉ was tried for Mirror and rendered as tofu on the
+     * test device, which is why Mirror has a drawn vector instead.
+     */
     private val ICONS = mapOf(
         "glyph" to mapOf(
-            "screen" to "▣", "notes" to "✎", "volume" to "◧", "brightness" to "☀",
-            "appearance" to "◈", "keyboard" to "⌨", "macros" to "⚙", "mirror" to "⧉"
+            "profiles" to "⇢", "screen" to "▣", "notes" to "✎", "volume" to "◧",
+            "brightness" to "☀", "appearance" to "◈", "keyboard" to "⌨", "mirror" to "⧉",
+            "macros" to "◉", "scribble" to "✎", "macrobuilder" to "≡", "layouts" to "▦",
+            "widgets" to "◴", "gamecodes" to "◈", "settings" to "⚙", "ftp" to "⇅",
+            "themes" to "◐", "stream" to "▶"
         ),
         "block" to mapOf(
-            "screen" to "■", "notes" to "▤", "volume" to "▮", "brightness" to "◐",
-            "appearance" to "◆", "keyboard" to "▦", "macros" to "▩", "mirror" to "▥"
+            "profiles" to "▸", "screen" to "■", "notes" to "▤", "volume" to "▮",
+            "brightness" to "◐", "appearance" to "◆", "keyboard" to "▦", "mirror" to "▥",
+            "macros" to "▩", "scribble" to "▰", "macrobuilder" to "▬", "layouts" to "▨",
+            "widgets" to "◕", "gamecodes" to "◼", "settings" to "▧", "ftp" to "▲",
+            "themes" to "◑", "stream" to "▶"
         ),
         "line" to mapOf(
-            "screen" to "□", "notes" to "≡", "volume" to "◫", "brightness" to "○",
-            "appearance" to "◇", "keyboard" to "⊞", "macros" to "⊕", "mirror" to "⊡"
+            "profiles" to "▹", "screen" to "□", "notes" to "≡", "volume" to "◫",
+            "brightness" to "○", "appearance" to "◇", "keyboard" to "⊞", "mirror" to "⊡",
+            "macros" to "⊕", "scribble" to "⊙", "macrobuilder" to "≣", "layouts" to "⊟",
+            "widgets" to "◔", "gamecodes" to "◌", "settings" to "⊚", "ftp" to "⇕",
+            "themes" to "◑", "stream" to "▷"
         ),
         "text" to mapOf(
-            "screen" to "2ND", "notes" to "TXT", "volume" to "VOL", "brightness" to "LUM",
-            "appearance" to "UI", "keyboard" to "KEY", "macros" to "MAC", "mirror" to "MIR"
+            "profiles" to "SAV", "screen" to "2ND", "notes" to "TXT", "volume" to "VOL",
+            "brightness" to "LUM", "appearance" to "UI", "keyboard" to "KEY", "mirror" to "MIR",
+            "macros" to "MAC", "scribble" to "DRW", "macrobuilder" to "SEQ", "layouts" to "LAY",
+            "widgets" to "INF", "gamecodes" to "COD", "settings" to "SET", "ftp" to "FTP",
+            "themes" to "THM", "stream" to "STR"
         )
     )
 
+    /**
+     * Characters that the system font may draw as a colour emoji rather than as a glyph.
+     *
+     * The brightness sun was the one that got reported — a yellow picture sitting in a grid of
+     * accent-coloured symbols, ignoring every attempt to tint it, because a colour emoji is a
+     * bitmap and not text. These are the others in the same position.
+     */
+    private val EMOJI_RISK = setOf('☀', '⌨', '⚙', '✍', '▶', '◉', '⏱')
+
+    /** U+FE0E: "draw the preceding character as text, not as emoji". */
+    private const val TEXT_PRESENTATION = '︎'
+
     fun accentOf(settings: Settings): Int = settings.accent.takeIf { it != 0 } ?: ACCENTS[0]
 
-    fun iconFor(settings: Settings, tool: Tool): String =
-        ICONS[settings.iconSet]?.get(tool.id) ?: tool.glyph
+    /**
+     * The glyph for a tool, with a text-presentation request where one is needed.
+     *
+     * The variation selector is ignored by fonts that were never going to draw the character in
+     * colour, so it costs nothing to add and fixes the ones that would have.
+     */
+    fun iconFor(settings: Settings, tool: Tool): String {
+        val glyph = ICONS[settings.iconSet]?.get(tool.id) ?: tool.glyph
+        return if (glyph.length == 1 && glyph[0] in EMOJI_RISK) glyph + TEXT_PRESENTATION else glyph
+    }
 
     fun applyPreset(settings: Settings, preset: Preset) {
         settings.accent = preset.accent

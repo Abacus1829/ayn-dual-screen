@@ -61,19 +61,49 @@ object Feedback {
      * Paint a status line.
      *
      * [dot] is optional so a screen with no indicator can still use the same wording and colours.
+     *
+     * The dot's drawable is created here rather than in each layout, because two screens had each
+     * built their own oval and they had drifted: one tinted an existing background and the other
+     * replaced it, so the same status looked different depending on where you saw it.
+     *
+     * The colour **crossfades** rather than switching. A status that changes between two frames is
+     * easy to miss entirely on a handheld held at arm's length, and this is the one piece of the UI
+     * whose whole job is to be noticed changing.
      */
     fun say(text: TextView?, dot: View?, state: State, message: String) {
         text?.text = message
 
-        val colour = when (state) {
-            State.IDLE -> R.color.state_idle
-            State.BUSY, State.SENT -> R.color.state_busy
-            State.OK -> R.color.state_ok
-            State.BAD -> R.color.state_bad
+        val context = text?.context ?: dot?.context ?: return
+        val colour = androidx.core.content.ContextCompat.getColor(
+            context,
+            when (state) {
+                State.IDLE -> R.color.state_idle
+                State.BUSY, State.SENT -> R.color.state_busy
+                State.OK -> R.color.state_ok
+                State.BAD -> R.color.state_bad
+            },
+        )
+
+        dot ?: return
+
+        val oval = dot.background as? android.graphics.drawable.GradientDrawable
+            ?: android.graphics.drawable.GradientDrawable()
+                .apply { shape = android.graphics.drawable.GradientDrawable.OVAL }
+                .also { dot.background = it }
+
+        val was = dot.getTag(R.id.tag_dot_colour) as? Int
+        dot.setTag(R.id.tag_dot_colour, colour)
+
+        if (was == null || was == colour) {
+            oval.setColor(colour)
+            return
         }
 
-        val context = text?.context ?: dot?.context ?: return
-        dot?.background?.setTint(androidx.core.content.ContextCompat.getColor(context, colour))
+        android.animation.ValueAnimator.ofArgb(was, colour).apply {
+            duration = 220
+            addUpdateListener { oval.setColor(it.animatedValue as Int) }
+            start()
+        }
     }
 
     fun toast(activity: Activity?, message: String, long: Boolean = false) {

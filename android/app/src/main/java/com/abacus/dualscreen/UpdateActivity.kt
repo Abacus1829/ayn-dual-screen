@@ -257,22 +257,8 @@ class UpdateActivity : AppCompatActivity() {
         return if (failure.detail.isNullOrBlank()) message else message + " (" + failure.detail + ")"
     }
 
-    private fun say(state: Feedback.State, message: String) {
-        binding.statusText.text = message
-        binding.statusDot.background = GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            setColor(
-                getColor(
-                    when (state) {
-                        Feedback.State.IDLE -> R.color.state_idle
-                        Feedback.State.BUSY, Feedback.State.SENT -> R.color.state_busy
-                        Feedback.State.OK -> R.color.state_ok
-                        Feedback.State.BAD -> R.color.state_bad
-                    }
-                )
-            )
-        }
-    }
+    private fun say(state: Feedback.State, message: String) =
+        Feedback.say(binding.statusText, binding.statusDot, state, message)
 
     // ── preferences ─────────────────────────────────────────────────────────
 
