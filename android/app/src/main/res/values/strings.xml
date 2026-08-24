@@ -640,4 +640,80 @@
     <string name="codes_hide_detail">Takes the tile away without switching game codes off. Your settings are kept.</string>
     <string name="codes_hidden">Hidden. Enter the sequence again to bring it back.</string>
 
+    <!-- ===== boot animation ===== -->
+    <string name="boot_wordmark">ABACUS</string>
+    <string name="boot_status">Getting things ready…</string>
+
+    <!-- ===== updates ===== -->
+    <string name="settings_updates">Updates</string>
+    <string name="settings_check_updates">App updates</string>
+
+    <string name="update_title">Updates</string>
+    <string name="update_blurb">This app installs from GitHub rather than a store, so this screen is how it stays current.</string>
+    <string name="update_installed">Installed</string>
+    <string name="update_latest">Available</string>
+    <string name="update_unknown">unknown</string>
+    <string name="update_source">Updates come from github.com/%1$s. Downloads are checked against the digest GitHub holds, and installed by Android, not by this app.</string>
+    <string name="update_release_line">%1$s · published %2$s</string>
+
+    <string name="update_status_idle">Ready to check.</string>
+    <string name="update_status_checking">Asking GitHub what is published…</string>
+    <string name="update_status_current">You are on the latest version (%1$s).</string>
+    <string name="update_status_available">Version %1$s is available.</string>
+    <string name="update_status_downloading">Downloading…</string>
+    <string name="update_status_verifying">Checking the download…</string>
+    <string name="update_status_ready">Downloaded and checked. Android will ask you to confirm the install.</string>
+    <string name="update_status_needs_permission">Downloaded and checked. Android needs your permission before this app can start an install.</string>
+
+    <string name="update_check_now">Check for updates</string>
+    <string name="update_check_again">Check again</string>
+    <string name="update_now">Update now</string>
+    <string name="update_now_size">Update now · %1$s</string>
+    <string name="update_install">Install now</string>
+    <string name="update_retry">Try again</string>
+    <string name="update_later">Remind me later</string>
+    <string name="update_skip">Skip this version</string>
+    <string name="update_progress">%1$s of %2$s · %3$d%%</string>
+
+    <string name="update_notes">What is new</string>
+    <string name="update_no_notes">This release came with no notes.</string>
+
+    <string name="update_permission_title">Install permission</string>
+    <string name="update_permission_detail">Android asks for this per app: it lets this app hand the downloaded file to the system installer, which is what actually installs it. You still confirm the install yourself, and you can turn it back off afterwards.</string>
+    <string name="update_permission_open">Open the permission page</string>
+
+    <string name="update_prefs">Preferences</string>
+    <string name="update_auto">Check for updates on startup</string>
+    <string name="update_auto_detail">Runs in the background while the app opens, at most once every six hours. Off: nothing is checked unless you press the button above.</string>
+    <string name="update_boot_animation">Play the boot animation</string>
+    <string name="update_boot_animation_detail">The abacus, for about two seconds when the app opens. Tap it to skip. Devices with system animations turned off never show it.</string>
+    <string name="update_channel">Releases to offer</string>
+    <string name="update_channel_stable">Stable</string>
+    <string name="update_channel_beta">Stable and beta</string>
+    <string name="update_channel_stable_detail">Finished releases only.</string>
+    <string name="update_channel_beta_detail">Includes pre-releases. Expect rough edges, and expect to report them.</string>
+
+    <string name="update_prompt_title">Update available</string>
+    <string name="update_prompt_versions">You have %1$s. Version %2$s is out.</string>
+    <string name="update_prompt_size">Download size: %1$s</string>
+
+    <!-- One sentence each, and each says what to do about it rather than only what went wrong. -->
+    <string name="update_err_offline">No internet connection, so there was nothing to ask. Connect to Wi-Fi and try again.</string>
+    <string name="update_err_network">Could not reach GitHub. The connection may have dropped, or a VPN or firewall may be in the way.</string>
+    <string name="update_err_rate_limited">GitHub is rate-limiting this network. It allows 60 anonymous requests an hour and this address has used them; try again later.</string>
+    <string name="update_err_not_found">The release could not be found. The repository may have been renamed or made private.</string>
+    <string name="update_err_server">GitHub returned an error of its own. Nothing to fix at this end — try again later.</string>
+    <string name="update_err_malformed">GitHub returned something this app could not read. Try again later.</string>
+    <string name="update_err_no_asset">The latest release carries no APK, so there is nothing to install from it.</string>
+    <string name="update_err_unknown_version">The latest release does not say which app version it contains, so it cannot be compared with this one.</string>
+    <string name="update_err_download">The download did not finish. Trying again continues from where it stopped.</string>
+    <string name="update_err_no_space">Not enough free space on this device for the download.</string>
+    <string name="update_err_checksum">The downloaded file does not match what GitHub says it published, so it was deleted rather than installed. Try again.</string>
+    <string name="update_err_not_apk">The downloaded file is not a readable APK, so it was deleted rather than installed.</string>
+    <string name="update_err_wrong_package">That APK is a different app, so it was not installed.</string>
+    <string name="update_err_wrong_signer">That APK was signed with a different key than the copy you have installed. Android would refuse to install it over the top, and this app will not offer it. Install it by hand only if you know where it came from.</string>
+    <string name="update_err_not_newer">That release turned out not to be newer than what is installed.</string>
+    <string name="update_err_permission">Android has not been told this app may install apps. Grant it on the page below, then press Install again.</string>
+    <string name="update_err_install">The installer could not be started. You can install the downloaded file yourself from a file manager.</string>
+    <string name="update_err_cancelled">Download cancelled.</string>
 </resources>

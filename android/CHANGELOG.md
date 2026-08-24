@@ -7,6 +7,127 @@ time — so they say what the commits show and no more.
 
 ---
 
+## 0.15.0 — 2026-08-24
+
+### Updates, from GitHub, without a store
+
+- **The app can now update itself.** It asks GitHub what the latest release is, compares it with what
+  is installed, and — when there is something newer — downloads the APK, checks it over, and hands it
+  to Android's own installer. There is no silent install and there cannot be one: that needs a
+  permission granted only to system apps. Every install still goes through the system's confirmation
+  screen.
+- **Checked on startup, while the boot animation plays.** The request leaves on a background thread
+  as the app opens and takes as long as it takes; nothing waits for it. If it finds something, the
+  prompt appears once the animation has finished rather than interrupting it. If it finds nothing, or
+  the network is not there, the app opens exactly as it always did and says nothing.
+- **Throttled to once every six hours**, and an unchanged release list costs nothing at all: GitHub's
+  ETag is sent back and a 304 is free. This app is opened many times an evening and GitHub allows
+  sixty anonymous requests an hour per address.
+- **Three answers, and all three mean something.** *Update now* downloads. *Remind me later* is a
+  day, not a launch. *Skip this version* is about that version only — the next release asks again,
+  because refusing one build is not the same as switching updates off. That switch is in Settings →
+  Updates, where somebody looking for it can find it.
+- **Settings → Updates** shows what is installed, what is published, the release notes, and a Check
+  for updates button that ignores the throttle.
+
+### Reading a version out of a release written for people
+
+This repository's releases are not shaped for a machine, and the updater had to cope with that
+rather than ask the releases to change:
+
+- **The tag is a date.** `v2026.08.19` parses perfectly well as version 2026.8.19, which is newer
+  than everything forever. The tag is never consulted; if it were, the update prompt would never
+  stop appearing.
+- **One release carries five projects.** The title says *"app 0.14.0, Stardew 0.4.1, …"*, and in
+  older releases another project is named first — so the version is read from the number next to the
+  word *app*, not the first number in the line.
+- **The APK filename deliberately has no version in it**, so the README's
+  `releases/latest/download/…` links keep working. Nothing to read there either.
+- **From 0.15.0 a release may carry `AynDualScreen-App.json`**, which states the version, the
+  versionCode, the file and its SHA-256 outright. When it is there it is believed over anything
+  written in prose. `android/tools/make-update-manifest.ps1` writes it from the built APK.
+- **An unchanged APK carried forward is recognised as unchanged.** A Stardew-only release re-uploads
+  the identical app APK under a new tag; if its digest matches the installed APK it is the same
+  build, whatever the title says, and nothing is offered.
+
+### Before anything is installed
+
+Four checks, each with a message that says what to do about it:
+
+- the SHA-256 of the download against the digest GitHub holds for the asset;
+- that the file is an APK Android can read at all;
+- that it is *this* application id;
+- that its versionCode is genuinely higher, read from the file rather than trusted from the notes;
+- and that it was signed with the same key as the copy already installed. Android refuses that one
+  anyway, with an error nobody can act on; checking first means the app can say what happened.
+
+A file that fails any of them is deleted rather than kept, so a retry cannot find it and offer the
+same broken thing again.
+
+### Downloads that survive a handheld's Wi-Fi
+
+- Resumed, not restarted: the part already on disk goes out as a `Range` header, so a dropped
+  connection costs the kilobytes it dropped rather than four megabytes.
+- Cancellable, and cancelling keeps what arrived.
+- Progress in bytes and percent, and it keeps running while you go elsewhere in the app — the state
+  lives outside the screen, so rotating the device or wandering into a tool does not restart it.
+- Free space is checked before starting, with room for the installer to unpack.
+
+### Errors that say what to do
+
+No internet, GitHub rate-limiting this address, a 5xx, a release with no APK, a release that never
+says what version it is, a download that stopped, a checksum that does not match, a corrupt APK, a
+different signing key, install permission not granted, no installer on the device — each is its own
+sentence rather than "update failed".
+
+### The boot animation
+
+- **The logo, drawn rather than played back — and it ends *on* the logo.** The mark itself: a thick
+  black rounded frame on white, two rods, three beads each, one red at the top right. The last frame
+  is that image exactly, rather than a gesture at it.
+- **The beads are simulated, not animated.** A small 1-D physics model — six particles, elastic
+  collisions, fixed 4 ms sub-steps so a 60 Hz panel and a 120 Hz one run the identical simulation.
+  Gravity along a rod is `g·sin(θ)` for the very θ the frame is drawn rotated by, so the beads slide
+  *because* the frame is spinning rather than being keyframed to look as though they do.
+- **The red goes with the momentum.** On each collision it passes to whichever bead comes out
+  travelling faster — for equal masses, the one that was struck. Where it ends up is decided by the
+  collisions. Each hand-off is a short crossfade, because a colour that teleports reads as a bug and
+  one that travels reads as a pass; a 150 ms cooldown keeps one pulse reading as one pass rather
+  than as the four contacts a rattling stack actually makes.
+- **The last two-thirds of a second is choreographed, and the code says so.** Free dynamics do not
+  come to rest on a fixed pose — several thousand parameter combinations were tried and the closest
+  landed a fifth of a rod out with the beads still moving. So friction takes over: each bead is drawn
+  home by a critically damped spring, the red is handed outward one neighbour at a time as the stack
+  compresses, and that outer bead slides on to the far stop. It lands on the mark to within 0.0006 of
+  a rod width.
+- Canvas primitives — two rounded rectangles, two bars, six circles. No bitmaps, no frames to
+  decode, nothing to load, because this is the first thing that happens when the app opens.
+- **The launcher icon is the same mark**, so the icon you tap and the thing that appears a moment
+  later are the same object. Sized to fit the safe *circle* rather than the safe square: a square
+  mark is the worst case for a circular mask, because its diagonal is what gets clipped.
+- The mark keeps its own colours; the accent you have chosen becomes the halo behind it, so the
+  screen still belongs to your theme without repainting the logo.
+- About two and a half seconds, and **a tap ends it immediately**. The home screen builds underneath
+  while it plays, so nothing is waiting on it.
+- **Honours the system animator duration scale**: a device with animations turned off never sees it,
+  whatever the setting says. There is a switch of its own in Settings → Updates as well.
+- Plays once per launch, not once per screen.
+
+### Under the hood
+
+- The update system is a package of its own (`update/`) written against an `UpdateSource` interface
+  rather than against the app: a repository, an artefact name, and a way to read a version out of a
+  release. The checker, downloader, retry, cancellation and error vocabulary know nothing about
+  APKs — only the installer does, and a plugin would bring its own. That is the plugin-update
+  mechanism the roadmap wants, built in advance rather than retrofitted.
+- Stable and beta channels are already in place. Beta includes pre-releases; stable refuses them
+  twice over — by GitHub's own flag and by a `-beta` suffix on the version.
+- `-PtestVersionCode=14 -PtestVersionName=0.13.0` builds this same code labelled as an older
+  release, which is the only way to exercise "an update is available" without publishing one. Never
+  ship a build made that way.
+
+---
+
 ## 0.14.0 — 2026-08-19
 
 ### Settings

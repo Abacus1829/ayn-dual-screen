@@ -25,6 +25,21 @@ class Settings(context: Context) {
         get() = prefs.getBoolean(KEY_ADVANCED, false)
         set(value) = prefs.edit().putBoolean(KEY_ADVANCED, value).apply()
 
+    /**
+     * Play the abacus animation when the app opens.
+     *
+     * On rather than off, because it is the app introducing itself and it costs two seconds. Off is
+     * for people who open this fifteen times an evening and have seen it. Note that a device with
+     * system animations switched off never sees it either, whatever this says — that setting is
+     * honoured in the view itself.
+     *
+     * Lives here rather than with the update preferences: the animation is the app's, and the
+     * update check merely happens to run underneath it.
+     */
+    var bootAnimation: Boolean
+        get() = prefs.getBoolean(KEY_BOOT_ANIMATION, true)
+        set(value) = prefs.edit().putBoolean(KEY_BOOT_ANIMATION, value).apply()
+
     /** Probe the saved address on launch and switch the picker to whatever is actually running. */
     var autoDetect: Boolean
         get() = prefs.getBoolean(KEY_AUTO_DETECT, true)
@@ -330,6 +345,7 @@ class Settings(context: Context) {
 
         const val KEY_LAST_GAME = "last_game"
         const val KEY_ADVANCED = "advanced"
+        const val KEY_BOOT_ANIMATION = "boot_animation"
         const val KEY_AUTO_DETECT = "auto_detect"
         const val KEY_RECONNECT = "auto_reconnect"
         const val KEY_KEEP_AWAKE = "keep_awake"

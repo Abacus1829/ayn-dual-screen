@@ -1,21 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Two stacked screens: the game above, the touch panel below. -->
+<!--
+    The abacus mark: black frame on white, two rods, three beads to a rod, one of them red.
+
+    The same geometry the boot animation settles into (boot/AbacusBootView.kt), so the icon somebody
+    taps and the thing that appears a moment later are the same object rather than two drawings of
+    the same idea.
+
+    Sized to fit the safe *circle*, not the safe square. An adaptive icon is 108 units with a 72-unit
+    visible area, and a launcher may mask it to a circle of that diameter — so anything that fits the
+    72 square but not the 72 circle loses its corners on exactly the devices that round icons off. A
+    square mark is the worst case for that: its diagonal is what gets clipped. This one is 52 across
+    with a 4.4 corner radius, which puts its furthest point 34.9 from the centre against a radius of
+    36. Widen it and the corners start to go.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
+    <!-- frame -->
     <path
-        android:fillColor="#E9ECF5"
-        android:pathData="M28,26h52a5,5 0 0 1 5,5v22a5,5 0 0 1 -5,5h-52a5,5 0 0 1 -5,-5v-22a5,5 0 0 1 5,-5z" />
+        android:fillColor="#0A0A0C"
+        android:pathData="M32.42,28h43.16a4.42,4.42 0 0 1 4.42,4.42v43.16a4.42,4.42 0 0 1 -4.42,4.42h-43.16a4.42,4.42 0 0 1 -4.42,-4.42v-43.16a4.42,4.42 0 0 1 4.42,-4.42z" />
 
+    <!-- the white it encloses -->
     <path
-        android:fillColor="#6EC1FF"
-        android:pathData="M33,64h42a5,5 0 0 1 5,5v13a5,5 0 0 1 -5,5h-42a5,5 0 0 1 -5,-5v-13a5,5 0 0 1 5,-5z" />
+        android:fillColor="#F7F8FC"
+        android:pathData="M34,31.51h39.98a2.49,2.49 0 0 1 2.49,2.49v39.98a2.49,2.49 0 0 1 -2.49,2.49h-39.98a2.49,2.49 0 0 1 -2.49,-2.49v-39.98a2.49,2.49 0 0 1 2.49,-2.49z" />
 
+    <!-- rods -->
     <path
-        android:fillColor="#171A26"
-        android:pathData="M37,70h13v4h-13z M37,77h20v4h-20z" />
+        android:fillColor="#0A0A0C"
+        android:pathData="M31.51,45.03h44.98v2.95h-44.98z M31.51,60.02h44.98v2.95h-44.98z" />
+
+    <!-- beads: two on the upper rod, three on the lower -->
+    <path
+        android:fillColor="#0A0A0C"
+        android:pathData="M31.51,46.5a4.45,4.45 0 1 0 8.9,0a4.45,4.45 0 1 0 -8.9,0z M40.59,46.5a4.45,4.45 0 1 0 8.9,0a4.45,4.45 0 1 0 -8.9,0z M31.51,61.49a4.45,4.45 0 1 0 8.9,0a4.45,4.45 0 1 0 -8.9,0z M40.59,61.49a4.45,4.45 0 1 0 8.9,0a4.45,4.45 0 1 0 -8.9,0z M49.67,61.49a4.45,4.45 0 1 0 8.9,0a4.45,4.45 0 1 0 -8.9,0z" />
+
+    <!-- the one that is counted, alone at the far right of the upper rod -->
+    <path
+        android:fillColor="#F0121A"
+        android:pathData="M67.59,46.5a4.45,4.45 0 1 0 8.9,0a4.45,4.45 0 1 0 -8.9,0z" />
 
 </vector>

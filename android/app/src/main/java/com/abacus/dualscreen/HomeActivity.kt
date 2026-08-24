@@ -74,6 +74,78 @@ class HomeActivity : AppCompatActivity() {
         binding.openButton.setOnClickListener {
             if (!advanced && binding.hostField.text.isBlank()) find(thenOpen = true) else open()
         }
+
+        startUp(fresh = savedInstanceState == null)
+    }
+
+    /*********
+     * Startup
+     *********/
+    private val updates by lazy { com.abacus.dualscreen.update.UpdateManager.get(this) }
+
+    /** Set once the boot animation is out of the way, whether it played or not. */
+    private var booted = false
+
+    /** True only between onResume and onPause: a dialog cannot be shown outside that. */
+    private var showable = false
+
+    /** Re-checked whenever the update state moves, in case the check outlives the animation. */
+    private val updateListener: (com.abacus.dualscreen.update.UpdateManager.State) -> Unit =
+        { maybePrompt() }
+
+    /**
+     * What happens when the app opens.
+     *
+     * Two things at once, deliberately not waiting for each other:
+     *
+     * - the update check leaves for GitHub on a background thread, and takes as long as it takes;
+     * - the abacus plays over the top of a home screen that is already building itself underneath.
+     *
+     * Whichever finishes second is the one that decides when the prompt appears. If the check is
+     * still out when the animation ends, the home screen simply appears and the prompt arrives a
+     * moment later — no spinner, no frozen frame, and nothing held up waiting for a network that
+     * may not be there at all.
+     */
+    private fun startUp(fresh: Boolean) {
+        updates.checkOnStartup()
+
+        if (fresh && com.abacus.dualscreen.boot.Boot.due(settings)) {
+            com.abacus.dualscreen.boot.Boot.play(this, binding.bootView, settings) { onBooted() }
+        } else {
+            onBooted()
+        }
+    }
+
+    private fun onBooted() {
+        booted = true
+        maybePrompt()
+    }
+
+    /**
+     * Offer the update, if there is one worth offering.
+     *
+     * Every rule about *whether* to interrupt lives in the manager; this only knows that the screen
+     * is on and the animation has finished.
+     */
+    private fun maybePrompt() {
+        if (!booted || !showable || isFinishing) return
+        val update = updates.promptable() ?: return
+        com.abacus.dualscreen.update.UpdatePrompt.show(this, update)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        updates.observe(updateListener)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        updates.forget(updateListener)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        showable = false
     }
 
     /**
@@ -371,6 +443,9 @@ class HomeActivity : AppCompatActivity() {
             else View.VISIBLE
 
         if (settings.autoDetect) detect(announce = false)
+
+        showable = true
+        maybePrompt()
     }
 
     /*********

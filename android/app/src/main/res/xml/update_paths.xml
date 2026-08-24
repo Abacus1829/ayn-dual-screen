@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    What the update FileProvider is allowed to hand out: one folder inside the app's own cache,
+    holding downloaded APKs and nothing else.
+
+    Narrow on purpose. A provider that exported the whole cache, or external storage, would let any
+    app that got hold of a URI read whatever happened to be there. This one can only ever produce a
+    URI for a file this app just downloaded, and only the installer ever receives one — for a single
+    intent, through FLAG_GRANT_READ_URI_PERMISSION.
+-->
+<paths>
+    <cache-path
+        name="updates"
+        path="updates/" />
+</paths>

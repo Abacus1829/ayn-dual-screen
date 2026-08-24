@@ -36,6 +36,15 @@ whatever was last built and pushed — no waiting for a tagged release to try a 
 still come from releases, where their install notes live. What changed in each app version is in
 [`android/CHANGELOG.md`](android/CHANGELOG.md).
 
+**After the first install, the app updates itself.** From 0.15.0 it checks this repository's
+releases when it opens, and offers what it finds: current version, new version, the release notes,
+and *Update now* / *Remind me later* / *Skip this version*. It downloads the APK, checks it against
+the digest GitHub holds, and hands it to Android's installer — which asks you to confirm, as it does
+for any sideloaded app. It can be turned off in **Settings → Updates**, where there is also a manual
+*Check for updates*. Note that it reads **releases**, not `dist/latest/`: a build pushed there
+without a release is invisible to it, which is intentional — an update offered with no notes and no
+version is not one worth offering.
+
 The app is **optional** — any browser pointed at the address the mod prints gives you the same second
 screen. What it adds is launching onto the Thor's lower panel, saved connections with one-tap
 reconnect, and a network scan so the address never has to be typed.
@@ -175,14 +184,40 @@ mirroring — each behind its own activity or service.
 Permissions, in [`AndroidManifest.xml`](android/app/src/main/AndroidManifest.xml):
 
 - `INTERNET`, `ACCESS_NETWORK_STATE` — reach the mod on the local network, and tell "no network"
-  apart from "wrong address" in the connection test.
+  apart from "wrong address" in the connection test. Also the update check, below.
 - `SYSTEM_ALERT_WINDOW`, `FOREGROUND_SERVICE*`, `POST_NOTIFICATIONS` — the macro overlay and the
   mirroring service, which are opt-in and idle unless you turn them on.
 - `MODIFY_AUDIO_SETTINGS`, `WRITE_SETTINGS` — the controls page.
+- `CHANGE_WIFI_MULTICAST_STATE` — the doodle rooms find each other by UDP broadcast, which Wi-Fi
+  drops while the radio dozes unless something holds a multicast lock.
+- `MANAGE_EXTERNAL_STORAGE` (plus `READ_EXTERNAL_STORAGE` on API ≤ 32 and `WRITE_EXTERNAL_STORAGE`
+  on API ≤ 29) — the optional FTP server, and nothing else in the app. Granted by you on a system
+  settings page rather than by a prompt, and with the server switched off nothing reads it. This is
+  the permission that makes the app a sideloaded APK rather than a Play Store listing: Google
+  restricts it to file managers and backup tools.
+- `REQUEST_INSTALL_PACKAGES` — lets the app hand a downloaded APK to Android's installer when you
+  choose to update it. It grants nothing by itself: you turn it on per-app in system settings, and
+  every install still goes through Android's own confirmation screen.
 
-No storage, camera, microphone, location or contacts permissions. No analytics SDK, no ad SDK, no
-crash reporter, no telemetry, no auto-update mechanism, and no third-party dependency beyond the
-three AndroidX libraries above.
+No camera, microphone, location or contacts permissions. No analytics SDK, no ad SDK, no crash
+reporter, no telemetry, and no third-party dependency beyond the three AndroidX libraries above.
+
+**There is an update check**, added in 0.15.0, and it is worth being exact about since it is the one
+thing here that reaches outside your own network:
+
+- It asks `api.github.com` for this repository's releases — a plain unauthenticated GET, at most
+  once every six hours, and only while the app is starting. Nothing about your device is sent: no
+  identifier, no token, no query string beyond the page size.
+- It can be switched off entirely in **Settings → Updates**, and it is the only thing in the app that
+  contacts anything other than the address you typed.
+- **It cannot install anything on its own.** It downloads the APK, checks it against the SHA-256
+  GitHub publishes for that file, refuses it if it is not this app, not newer, or signed with a
+  different key — and then opens Android's package installer, where you confirm it yourself. There
+  is no silent install path, and there is no privileged one: that needs `INSTALL_PACKAGES`, which is
+  granted to system apps only.
+- The downloaded file lives in the app's own cache and is exposed to the installer through a
+  [`FileProvider`](android/app/src/main/res/xml/update_paths.xml) scoped to that one folder, for the
+  single intent that carries it.
 
 **Cleartext HTTP is enabled**
 ([`network_security_config.xml`](android/app/src/main/res/xml/network_security_config.xml)) because

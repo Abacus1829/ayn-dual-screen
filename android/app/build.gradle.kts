@@ -39,9 +39,15 @@ android {
          *
          * The name lost its `-ftp` suffix here. It was chosen when the FTP server was the only new
          * thing in the release, and stopped being true several features ago.
+         *
+         * `-PtestVersionCode=14 -PtestVersionName=0.13.0` builds this same code labelled as an
+         * older release, and exists for one job: testing the updater. You cannot exercise "an
+         * update is available" without a build to be updated *from*, and hand-editing these two
+         * lines before every test is how a wrong number eventually ships. Like `testMinSdk` above,
+         * a build made this way is NOT shippable — it claims to be a version it is not.
          */
-        versionCode = 15
-        versionName = "0.14.0"
+        versionCode = (project.findProperty("testVersionCode") as String?)?.toInt() ?: 16
+        versionName = (project.findProperty("testVersionName") as String?) ?: "0.15.0"
     }
 
     signingConfigs {

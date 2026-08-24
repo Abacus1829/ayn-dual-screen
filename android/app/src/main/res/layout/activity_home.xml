@@ -339,4 +339,20 @@
 
         </LinearLayout>
     </ScrollView>
+
+    <!--
+        The boot animation, over everything and clickable so a tap skips it.
+
+        Last child, so it covers the home screen while that screen builds itself underneath — which
+        is the point: nothing waits for the animation, and the animation waits for nothing.
+    -->
+    <com.abacus.dualscreen.boot.AbacusBootView
+        android:id="@+id/bootView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/bg"
+        android:clickable="true"
+        android:contentDescription="@string/boot_wordmark"
+        android:focusable="true"
+        android:visibility="gone" />
 </FrameLayout>

@@ -99,3 +99,98 @@ version-stamped copy alongside if you want one, but the stable name has to be th
 
 Re-uploading the unchanged four is cheap: pull them off the previous release with
 `gh release download <previous-tag>` and upload them again with the new one.
+
+## The second rule: the app updates itself from these releases
+
+Since app 0.15.0 the Android app checks this repository on startup and offers to install what it
+finds. That makes a release something a program reads as well as a person, and there are two things
+it needs.
+
+### Carry `AynDualScreen-App.json` whenever the APK changes
+
+Write it from the built APK — never by hand, because every field in it is a fact about that file:
+
+```powershell
+cd android\tools
+.\make-update-manifest.ps1 -Apk ..\app\build\outputs\apk\release\app-release.apk
+```
+
+It prints the version, size and SHA-256 it read, and writes a small JSON next to the APK. Upload it
+under exactly that name:
+
+```
+AynDualScreen-App.json
+```
+
+With it there, the app knows the version, the versionCode and the digest outright. Without it, the
+app falls back to reading the version out of the release title, which works but is guesswork — and
+guesswork that fails *silently*, by simply never offering an update again.
+
+### Name the app version in the release title
+
+Keep writing titles the way they already are written:
+
+```
+Ayn Dual Screen — app 0.15.0, Stardew 0.4.1, Terraria 0.3.1, Minecraft 0.7.0, Fallout NV 0.1.0
+```
+
+The number **next to the word "app"** is what the fallback reads. Two things it deliberately does
+not read:
+
+- **The tag.** `v2026.08.19` is a perfectly good version number — it is just not the app's, and
+  treating it as one would mean every release looks newer than every installed build, forever.
+- **The first number in the title.** Older releases list Stardew first, and offering Stardew's
+  version number as an app update would be worse than offering nothing.
+
+A release that changes no app code needs neither: carrying the previous APK forward is fine, and the
+app recognises the unchanged file by its digest and stays quiet even if the title still names an
+older app version.
+
+### Publishing a release, end to end
+
+```powershell
+# 1. Build the APK, and check the version is the one you mean.
+cd android
+.\gradlew assembleRelease
+
+# 2. Write the update manifest from that exact file.
+cd tools
+.\make-update-manifest.ps1 -Apk ..\app\build\outputs\apk\release\app-release.apk
+
+# 3. Collect the unchanged mod binaries from the previous release.
+gh release download <previous-tag> --dir dist\carry
+
+# 4. Publish, with every asset under its stable name.
+gh release create <new-tag> --title "Ayn Dual Screen — app <version>, Stardew …" --notes-file notes.md `
+    app-release.apk#AynDualScreen-App.apk `
+    AynDualScreen-App.json `
+    dist\carry\AynDualScreen-Stardew.zip `
+    dist\carry\AynDualScreen-Terraria.tmod `
+    dist\carry\AynDualScreen-Minecraft-mc1.21.1.jar `
+    dist\carry\AynDualScreen-FalloutNV.zip
+```
+
+Then check it from the other end: open the app on a device running the *previous* version and let it
+find the release. If it does not appear, the manifest or the title is wrong, and the six other
+downloads on this page will not tell you.
+
+### Signing, and why it is worth fixing
+
+The app refuses to install an update signed with a different key than the copy already running —
+Android would refuse it too, and this way the refusal comes with an explanation.
+
+That check is only as strong as the key. **The releases so far are signed with the Android SDK's
+debug key**, which is the same key on every machine with the SDK installed, so anybody can produce
+an APK that passes it. Creating a real keystore and pointing `keystore.properties` at it makes
+signature continuity mean something. Do it on a release where an uninstall is acceptable: changing
+keys means existing installs cannot be updated in place and have to be removed first.
+
+### Testing the updater without publishing anything
+
+Build the same code labelled as an older release, install that, and let it find the real one:
+
+```powershell
+.\gradlew assembleDebug -PtestVersionCode=14 -PtestVersionName=0.13.0
+```
+
+Never publish a build made that way — it claims to be a version it is not.

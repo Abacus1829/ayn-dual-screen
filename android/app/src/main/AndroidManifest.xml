@@ -6,6 +6,17 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!--
+        Lets the app ask the system installer to run, for its own updates.
+
+        It grants nothing by itself: the user turns it on for this app in a system settings page,
+        and every install still goes through Android's own confirmation screen. Android 8 replaced
+        the old device-wide "unknown sources" switch with this per-app one precisely so a sideloaded
+        app cannot open the door for anything else. There is no silent install here and there cannot
+        be — that needs INSTALL_PACKAGES, which is granted to system apps only.
+    -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <!--
         Wi-Fi drops broadcast packets while the radio dozes unless something holds a multicast lock,
         and the doodle rooms find each other by broadcast. Without this the app talks and hears
         nobody, which is indistinguishable from nobody being there.
@@ -110,6 +121,29 @@
             android:name=".SettingsActivity"
             android:exported="false"
             android:resizeableActivity="true" />
+
+        <activity
+            android:name=".UpdateActivity"
+            android:exported="false"
+            android:resizeableActivity="true" />
+
+        <!--
+            Hands a downloaded APK to the system installer, and nothing else to anybody.
+
+            Not exported, so no other app can ask it for anything: the installer receives a
+            content:// URI with a one-shot read grant attached to the intent, which is how a file in
+            this app's private cache becomes readable to the installer for exactly as long as it
+            takes to read. See res/xml/update_paths.xml for the single folder it can reach.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.updates"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/update_paths" />
+        </provider>
 
 
         <activity

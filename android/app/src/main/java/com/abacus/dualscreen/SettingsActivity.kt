@@ -99,6 +99,18 @@ class SettingsActivity : AppCompatActivity() {
             settings.showControls = it
         }
 
+        /*
+         * Updates, near the top rather than buried.
+         *
+         * This app is installed by downloading an APK, so the update path is the only one there is
+         * — there is no store quietly doing it in the background. Somebody who wants to know
+         * whether they are current should not have to hunt for the answer.
+         */
+        section(R.string.settings_updates)
+        link(R.string.settings_check_updates) {
+            startActivity(Intent(this, UpdateActivity::class.java))
+        }
+
         section(R.string.settings_look)
         link(R.string.settings_appearance) {
             startActivity(Intent(this, AppearanceActivity::class.java))
