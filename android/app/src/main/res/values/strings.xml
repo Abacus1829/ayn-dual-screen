@@ -763,4 +763,40 @@
     <string name="dev_no_settings_page">This device has no settings page to open.</string>
     <string name="dev_pair">First time on this PC: pair</string>
     <string name="dev_pair_detail">On the Wireless debugging page, tap "Pair device with pairing code". It shows a pairing port and a six-digit code — run the command with that port, then type the code. Once per PC, not once per session.</string>
+    <!-- ===== first run and permissions ===== -->
+    <string name="setup_title">What the app can use</string>
+    <string name="setup_blurb">None of these are required. The second screen — the thing this app is for — works with all of them switched off. Each one turns on an optional tool, and skipping is a perfectly good answer.</string>
+    <string name="setup_summary">%1$d of %2$d granted</string>
+    <string name="setup_continue">Continue</string>
+    <string name="setup_allow">Allow</string>
+    <string name="setup_open_app_settings">Open app settings</string>
+    <string name="setup_state_on">ON</string>
+    <string name="setup_state_off">OFF</string>
+    <string name="setup_state_blocked">REFUSED</string>
+    <string name="setup_no_accessibility">This app has no accessibility service and asks for no location, camera, microphone or contacts access. You can change any of this later in Settings → Permissions.</string>
+    <string name="settings_permissions">Permissions</string>
+
+    <string name="perm_notifications">Notifications</string>
+    <string name="perm_notifications_unlocks">Lets the FTP server, the screen mirror and the macro pad show that they are running — and each notification carries the Stop button that is the quickest way to end them.</string>
+    <string name="perm_notifications_cost">Without it those tools still work; they just run without saying so, which Android otherwise requires them to do.</string>
+
+    <string name="perm_install">Install updates</string>
+    <string name="perm_install_unlocks">Lets the app hand a downloaded update to Android\'s installer, so a new version is one tap from the update screen.</string>
+    <string name="perm_install_cost">It grants nothing by itself: you still confirm every install on Android\'s own screen. Without it, updates download and you install them by hand from a file manager.</string>
+
+    <string name="perm_overlay">Draw over other apps</string>
+    <string name="perm_overlay_unlocks">The macro pad and the screen mirror, both of which exist to keep working after you leave this app for a game.</string>
+    <string name="perm_overlay_cost">A powerful permission: an app that holds it can draw anything anywhere. This one draws the buttons you placed and the mirror you started, and nothing when both are off.</string>
+
+    <string name="perm_storage">All files access</string>
+    <string name="perm_storage_unlocks">The FTP server, so a PC can browse this device the way homebrew file servers do, rather than a handful of media folders.</string>
+    <string name="perm_storage_cost">The broadest permission Android grants, and the reason this app is a sideloaded APK rather than a Play Store listing. Nothing else in the app reads it, and with the server off nothing reads it at all.</string>
+
+    <string name="perm_brightness">Change system settings</string>
+    <string name="perm_brightness_unlocks">The system brightness slider on the Brightness screen.</string>
+    <string name="perm_brightness_cost">Device-wide, because Android offers no way to dim one panel. Without it the app can still dim its own window, which needs no permission.</string>
+
+    <string name="perm_battery">Ignore battery optimisation</string>
+    <string name="perm_battery_unlocks">Stops the system dozing a long FTP transfer or a long mirroring session part way through.</string>
+    <string name="perm_battery_cost">Most people should skip this. It costs battery, and everything else in the app runs while you are looking at it.</string>
 </resources>

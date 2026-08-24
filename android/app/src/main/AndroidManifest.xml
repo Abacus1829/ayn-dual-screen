@@ -137,6 +137,11 @@
             android:exported="false"
             android:resizeableActivity="true" />
 
+        <activity
+            android:name=".SetupActivity"
+            android:exported="false"
+            android:resizeableActivity="true" />
+
         <!--
             Hands a downloaded APK to the system installer, and nothing else to anybody.
 

@@ -116,8 +116,25 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * The animation is done. Setup comes before anything else that wants the screen.
+     *
+     * Order matters here and it is the order the first run should read in: the app introduces
+     * itself, then explains what it can use and why, and only then offers an update. An update
+     * prompt arriving on top of a permissions screen on somebody's first launch would be two
+     * unfamiliar dialogs in a row before they have seen the app at all.
+     *
+     * The update prompt is not lost by waiting — it is offered from onResume, so it appears when
+     * setup closes and the home screen comes back.
+     */
     private fun onBooted() {
         booted = true
+
+        if (!settings.setupDone) {
+            startActivity(SetupActivity.firstRun(this))
+            return
+        }
+
         maybePrompt()
     }
 

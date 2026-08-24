@@ -54,6 +54,17 @@ class Settings(context: Context) {
         get() = prefs.getBoolean(KEY_KEEP_GAME_FOCUS, true)
         set(value) = prefs.edit().putBoolean(KEY_KEEP_GAME_FOCUS, value).apply()
 
+    /**
+     * Whether the first-run setup screen has been seen.
+     *
+     * Seen, not completed: leaving it by any route counts. A screen whose whole point is that
+     * everything on it is optional has no business reappearing until somebody has agreed to
+     * something.
+     */
+    var setupDone: Boolean
+        get() = prefs.getBoolean(KEY_SETUP_DONE, false)
+        set(value) = prefs.edit().putBoolean(KEY_SETUP_DONE, value).apply()
+
     /** Probe the saved address on launch and switch the picker to whatever is actually running. */
     var autoDetect: Boolean
         get() = prefs.getBoolean(KEY_AUTO_DETECT, true)
@@ -360,6 +371,7 @@ class Settings(context: Context) {
         const val KEY_LAST_GAME = "last_game"
         const val KEY_ADVANCED = "advanced"
         const val KEY_BOOT_ANIMATION = "boot_animation"
+        const val KEY_SETUP_DONE = "setup_done"
         const val KEY_KEEP_GAME_FOCUS = "keep_game_focus"
         const val KEY_AUTO_DETECT = "auto_detect"
         const val KEY_RECONNECT = "auto_reconnect"

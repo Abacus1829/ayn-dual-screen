@@ -134,6 +134,16 @@ class SettingsActivity : AppCompatActivity() {
             startActivity(Intent(this, DeveloperActivity::class.java))
         }
 
+        /*
+         * The same screen the first run shows, minus the first-run wording.
+         *
+         * One place to see what has been granted and what each one turned on — which is the thing
+         * that was missing while every permission lived on the screen that happened to need it.
+         */
+        link(R.string.settings_permissions) {
+            startActivity(Intent(this, SetupActivity::class.java))
+        }
+
         section(R.string.settings_look)
         link(R.string.settings_appearance) {
             startActivity(Intent(this, AppearanceActivity::class.java))
