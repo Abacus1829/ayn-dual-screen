@@ -128,8 +128,43 @@ class CodeSettings(context: Context) {
         get() = prefs.getBoolean(KEY_UNLOCKED, false)
         set(value) { prefs.edit().putBoolean(KEY_UNLOCKED, value).commit() }
 
+    /**
+     * Shown without having entered the sequence.
+     *
+     * Added because the sequence is not enterable on every device. It depends on the handheld
+     * reporting its d-pad in a way the app recognises, and when it does not, the feature is not
+     * hidden — it is unreachable, with no way to tell those apart from the outside.
+     *
+     * A secret with no other door is a bug waiting for a bug report. The sequence still works and is
+     * still the intended way in; this is the door for somebody whose hardware will not open it.
+     */
+    var shown: Boolean
+        get() = prefs.getBoolean(KEY_SHOWN, false)
+        set(value) { prefs.edit().putBoolean(KEY_SHOWN, value).commit() }
+
     /** Everything must be true for a tile to appear or a request to go out. */
-    val visible: Boolean get() = enabled && unlocked
+    val visible: Boolean get() = enabled && (unlocked || shown)
+
+    /**
+     * The codes somebody reaches for, keyed by game and code.
+     *
+     * Per game rather than global: the same id means different things to different companions, and
+     * a favourite is a statement about one game's list rather than about a word.
+     */
+    fun isFavourite(gameId: String, codeId: String): Boolean =
+        favourites.contains(key(gameId, codeId))
+
+    fun toggleFavourite(gameId: String, codeId: String) {
+        val key = key(gameId, codeId)
+        val next = favourites.toMutableSet()
+        if (!next.remove(key)) next += key
+        prefs.edit().putStringSet(KEY_FAVOURITES, next).apply()
+    }
+
+    private val favourites: Set<String>
+        get() = prefs.getStringSet(KEY_FAVOURITES, emptySet()) ?: emptySet()
+
+    private fun key(gameId: String, codeId: String) = "$gameId:$codeId"
 
     /** Per game, so one can be off while the rest are on. On unless turned off. */
     fun enabledFor(gameId: String): Boolean =
@@ -145,6 +180,8 @@ class CodeSettings(context: Context) {
         const val PREFS = "gamecodes"
         const val KEY_ENABLED = "enabled"
         const val KEY_UNLOCKED = "unlocked"
+        const val KEY_SHOWN = "shown"
+        const val KEY_FAVOURITES = "favourites"
         const val KEY_GAME = "game_"
     }
 }

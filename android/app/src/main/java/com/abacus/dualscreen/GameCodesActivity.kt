@@ -16,6 +16,7 @@ import com.abacus.dualscreen.codes.CodeResult
 import com.abacus.dualscreen.codes.CodeSettings
 import com.abacus.dualscreen.codes.Category
 import com.abacus.dualscreen.codes.GameCode
+import com.abacus.dualscreen.codes.GameDetector
 import com.abacus.dualscreen.codes.InputType as CodeInput
 import com.abacus.dualscreen.databinding.ActivityGameCodesBinding
 import com.abacus.dualscreen.ui.Feedback
@@ -38,6 +39,12 @@ class GameCodesActivity : AppCompatActivity() {
     private var gameId: String = ""
     private var loaded: List<GameCode> = emptyList()
 
+    /** A connection the user picked by hand, which outranks anything detection concludes. */
+    private var manual: com.abacus.dualscreen.connect.ConnectionProfile? = null
+
+    /** What is typed in the search box, lower-cased once rather than per row. */
+    private var query: String = ""
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityGameCodesBinding.inflate(layoutInflater)
@@ -49,6 +56,23 @@ class GameCodesActivity : AppCompatActivity() {
         Nav.back(this, binding.backButton)
         binding.settingsButton.setOnClickListener { Feedback.tap(it); settingsDialog() }
         binding.typeButton.setOnClickListener { Feedback.tap(it); typeCode() }
+        binding.rescanButton.setOnClickListener {
+            Feedback.tap(it)
+            // An explicit rescan drops any manual choice: the button means "look again", and
+            // looking again while still pinned to a hand-picked connection would be a lie.
+            manual = null
+            load()
+        }
+
+        binding.searchField.addTextChangedListener(object : android.text.TextWatcher {
+            override fun afterTextChanged(text: android.text.Editable?) {
+                query = text?.toString()?.trim().orEmpty()
+                build()
+            }
+
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
+        })
 
         Appearance.apply(this, binding.root, settings, binding.backgroundImage)
     }
@@ -61,22 +85,72 @@ class GameCodesActivity : AppCompatActivity() {
     // ── loading ─────────────────────────────────────────────────────────────
 
     /**
-     * Ask the connected companion what it offers.
+     * Work out what is running, then ask it what it can do.
      *
-     * Off the main thread, because it is a network call. With no saved connection there is nothing
-     * to ask and the screen says so — an empty list here is a state, not a failure.
+     * The old version took the first saved connection whose host and port were filled in and asked
+     * that one — which is not the same as the game you are playing, and with three connections saved
+     * it was usually the wrong one. [GameDetector] probes them all and answers with whichever is
+     * actually running, preferring one with a save loaded.
+     *
+     * A manual choice, once made, wins until the screen is left: somebody who overrides the guess
+     * has told us something the network cannot.
      */
     private fun load() {
         binding.codeList.removeAllViews()
-        say(getString(R.string.codes_loading))
 
-        val profile = com.abacus.dualscreen.connect.ProfileStore(this).ordered()
-            .firstOrNull { it.usable }
-
-        if (profile == null) {
-            say(getString(R.string.codes_no_connection))
+        if (!codes.enabled) {
+            detected(Feedback.State.IDLE, getString(R.string.codes_off_global))
+            say(getString(R.string.codes_off_global))
             return
         }
+
+        val chosen = manual
+        if (chosen != null) {
+            useProfile(chosen, getString(R.string.codes_detected_manual, chosen.name))
+            return
+        }
+
+        detected(Feedback.State.BUSY, getString(R.string.codes_detecting))
+        say(getString(R.string.codes_loading))
+
+        GameDetector.detectAsync(this) { result ->
+            when (result) {
+                is GameDetector.Result.NothingSaved -> {
+                    detected(Feedback.State.BAD, getString(R.string.codes_no_connection))
+                    say(getString(R.string.codes_no_connection))
+                }
+
+                is GameDetector.Result.NothingRunning -> {
+                    detected(Feedback.State.BAD, getString(R.string.codes_none_running))
+                    say(getString(R.string.codes_none_running))
+                    buildPicker()
+                }
+
+                is GameDetector.Result.Found -> {
+                    val label = getString(result.game.label)
+                    useProfile(
+                        result.profile,
+                        when {
+                            result.place != null ->
+                                getString(R.string.codes_detected_in, label, result.place)
+                            result.inGame -> getString(R.string.codes_detected, label)
+                            else -> getString(R.string.codes_detected_menu, label)
+                        },
+                        detectedGame = result.inGame,
+                    )
+                }
+            }
+        }
+    }
+
+    /** Point the screen at one connection and fetch its catalogue. */
+    private fun useProfile(
+        profile: com.abacus.dualscreen.connect.ConnectionProfile,
+        status: String,
+        detectedGame: Boolean = true,
+    ) {
+        detected(if (detectedGame) Feedback.State.OK else Feedback.State.BUSY, status)
+        buildPicker()
 
         gameId = profile.preset
         val target = CodeClient(this, profile.url, gameId)
@@ -90,6 +164,53 @@ class GameCodesActivity : AppCompatActivity() {
             }
         }.start()
     }
+
+    /**
+     * The manual fallback, offered only when there is a choice to make.
+     *
+     * One saved connection and no picker: a dropdown with a single entry is furniture, not a
+     * feature.
+     */
+    private fun buildPicker() {
+        val profiles = com.abacus.dualscreen.connect.ProfileStore(this).ordered().filter { it.usable }
+        if (profiles.size < 2) {
+            binding.gamePicker.visibility = View.GONE
+            return
+        }
+
+        val labels = listOf(getString(R.string.codes_auto)) + profiles.map { it.name }
+        binding.gamePicker.visibility = View.VISIBLE
+        binding.gamePicker.adapter = android.widget.ArrayAdapter(
+            this, android.R.layout.simple_spinner_item, labels
+        ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+
+        val selected = manual?.let { profiles.indexOf(it) + 1 } ?: 0
+        binding.gamePicker.setSelection(selected)
+
+        // Posted, because a Spinner delivers its first selection asynchronously and would otherwise
+        // fire for a choice nobody made.
+        binding.gamePicker.post {
+            binding.gamePicker.onItemSelectedListener =
+                object : android.widget.AdapterView.OnItemSelectedListener {
+                    override fun onItemSelected(
+                        parent: android.widget.AdapterView<*>?,
+                        view: View?,
+                        position: Int,
+                        id: Long,
+                    ) {
+                        val wanted = if (position == 0) null else profiles.getOrNull(position - 1)
+                        if (wanted == manual) return
+                        manual = wanted
+                        load()
+                    }
+
+                    override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+                }
+        }
+    }
+
+    private fun detected(state: Feedback.State, message: String) =
+        Feedback.say(binding.detectedText, binding.detectedDot, state, message)
 
     private fun build() {
         binding.codeList.removeAllViews()
@@ -105,20 +226,57 @@ class GameCodesActivity : AppCompatActivity() {
         }
 
         if (loaded.isEmpty()) {
+            binding.searchField.visibility = View.GONE
             say(getString(R.string.codes_none))
             return
         }
 
-        say(resources.getQuantityString(R.plurals.codes_count, loaded.size, loaded.size))
+        /*
+         * Search appears once the list is long enough to scroll past what you wanted.
+         *
+         * A search box over six rows is clutter; over forty it is the only way anybody finds
+         * anything. The threshold is a judgement, not a measurement, and it is here rather than
+         * scattered through the drawing code so it can be changed in one place.
+         */
+        binding.searchField.visibility = if (loaded.size >= SEARCH_FROM) View.VISIBLE else View.GONE
+
+        val matching = loaded.filter { matches(it) }
+        if (matching.isEmpty()) {
+            say(getString(R.string.codes_no_match, query))
+            return
+        }
+
+        say(resources.getQuantityString(R.plurals.codes_count, matching.size, matching.size))
+
+        /*
+         * Favourites first, out of their categories.
+         *
+         * The point of a favourite is not having to know which category somebody filed it under, so
+         * pinning it while also leaving it in place below would defeat the exercise. Each one
+         * appears once, at the top.
+         */
+        val favourites = matching.filter { codes.isFavourite(gameId, it.id) }
+        if (favourites.isNotEmpty()) {
+            binding.codeList.addView(header(getString(R.string.codes_favourites)))
+            favourites.forEach { binding.codeList.addView(row(it)) }
+        }
 
         // Grouped, in the enum's order, so the same game always reads the same way round.
         for (category in Category.entries) {
-            val group = loaded.filter { it.category == category }
+            val group = matching.filter { it.category == category && it !in favourites }
             if (group.isEmpty()) continue
 
             binding.codeList.addView(header(category.label))
             group.forEach { binding.codeList.addView(row(it)) }
         }
+    }
+
+    /** Name, description and the typed code all count — people remember any of the three. */
+    private fun matches(code: GameCode): Boolean {
+        if (query.isBlank()) return true
+        return code.name.contains(query, true) ||
+            code.description.contains(query, true) ||
+            code.secret.contains(query, true)
     }
 
     private fun header(text: String) = TextView(this).apply {
@@ -147,6 +305,29 @@ class GameCodesActivity : AppCompatActivity() {
             isEnabled = code.available
             if (code.available) setOnClickListener { run(code) }
         }
+
+        /*
+         * The star, first in the row and its own touch target.
+         *
+         * Left of the name rather than right, because the row itself runs the code when tapped and
+         * a favourite control at the far edge of a full-width button is a mis-tap waiting to happen.
+         * 44dp of its own, and it stops the tap from reaching the row underneath.
+         */
+        val favourite = codes.isFavourite(gameId, code.id)
+        row.addView(TextView(this).apply {
+            text = if (favourite) "★" else "☆"
+            setTextColor(
+                if (favourite) Appearance.accentOf(settings) else getColor(R.color.text_faint)
+            )
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+            gravity = Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(dp(40), dp(44))
+            setOnClickListener {
+                Feedback.tap(it)
+                codes.toggleFavourite(gameId, code.id)
+                build()
+            }
+        })
 
         val column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -360,8 +541,29 @@ class GameCodesActivity : AppCompatActivity() {
             isChecked = false
         }
 
+        /*
+         * A way in that does not depend on the hardware.
+         *
+         * The sequence needs this handheld to report its d-pad in a way the app recognises, and when
+         * it does not, the feature is not hidden — it is unreachable, and from the outside those
+         * look identical. The sequence is still the intended door; this is the one for somebody
+         * whose device will not open it.
+         */
+        val show = android.widget.CheckBox(this).apply {
+            text = getString(R.string.codes_show_tile)
+            setTextColor(getColor(R.color.text))
+            isChecked = codes.shown
+        }
+
         body.addView(global)
         body.addView(perGame)
+        body.addView(show)
+        body.addView(TextView(this).apply {
+            text = getString(R.string.codes_show_tile_detail)
+            setTextColor(getColor(R.color.text_faint))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+            setPadding(0, dp(4), 0, dp(6))
+        })
         body.addView(hide)
         body.addView(TextView(this).apply {
             text = getString(R.string.codes_hide_detail)
@@ -381,18 +583,23 @@ class GameCodesActivity : AppCompatActivity() {
             .setView(body)
             .setPositiveButton(R.string.notes_save) { _, _ ->
                 codes.enabled = global.isChecked
+                codes.shown = show.isChecked
                 if (gameId.isNotBlank()) codes.setEnabledFor(gameId, perGame.isChecked)
 
                 when {
                     // Off entirely: the feature stops existing, so the tile goes with it.
                     !global.isChecked -> {
                         codes.relock()
+                        codes.shown = false
                         finish()
                     }
 
                     // Just put away. The feature stays on, so the sequence finds it again.
+                    // "Shown" has to go too, or the tile would be hidden and visible at once and
+                    // the one that wins would be an accident of which line ran last.
                     hide.isChecked -> {
                         codes.relock()
+                        codes.shown = false
                         Feedback.success(binding.root)
                         Feedback.toast(this, getString(R.string.codes_hidden))
                         finish()
@@ -410,4 +617,9 @@ class GameCodesActivity : AppCompatActivity() {
     }
 
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
+
+    private companion object {
+        /** Codes in the list before a search box is worth its space. */
+        const val SEARCH_FROM = 8
+    }
 }

@@ -799,4 +799,18 @@
     <string name="perm_battery">Ignore battery optimisation</string>
     <string name="perm_battery_unlocks">Stops the system dozing a long FTP transfer or a long mirroring session part way through.</string>
     <string name="perm_battery_cost">Most people should skip this. It costs battery, and everything else in the app runs while you are looking at it.</string>
+    <!-- ===== cheat system: detection, search, favourites ===== -->
+    <string name="codes_detecting">Looking for a running game…</string>
+    <string name="codes_detected">%1$s is running.</string>
+    <string name="codes_detected_in">%1$s — %2$s is loaded.</string>
+    <string name="codes_detected_menu">%1$s is running, but it is at the main menu. Codes it lists may refuse until a save is loaded.</string>
+    <string name="codes_detected_manual">Using %1$s, because you chose it.</string>
+    <string name="codes_none_running">No saved connection answered as a running game. Start the game, or pick one below.</string>
+    <string name="codes_auto">Detect automatically</string>
+    <string name="codes_rescan">Rescan</string>
+    <string name="codes_search">Search codes</string>
+    <string name="codes_no_match">Nothing matches "%1$s".</string>
+    <string name="codes_favourites">Favourites</string>
+    <string name="codes_show_tile">Show the tile without the sequence</string>
+    <string name="codes_show_tile_detail">The button sequence is still the way in, but it needs this handheld to report its d-pad in a way the app recognises. If it will not, this puts the tile on the home screen anyway.</string>
 </resources>

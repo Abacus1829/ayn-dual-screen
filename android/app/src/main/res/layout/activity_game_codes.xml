@@ -71,6 +71,75 @@
                 android:text="@string/nav_back" />
         </LinearLayout>
 
+        <!--
+            What the app thinks is running, and how to disagree with it.
+
+            The detection line is not decoration: a cheat list is only meaningful once you know which
+            game it belongs to, and the previous screen showed a list without ever saying. The picker
+            beside it appears only when there is more than one saved connection to choose between.
+        -->
+        <LinearLayout
+            android:id="@+id/detectedCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space"
+            android:orientation="vertical"
+            android:padding="12dp"
+            android:tag="accentEdge">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <View
+                    android:id="@+id/detectedDot"
+                    android:layout_width="9dp"
+                    android:layout_height="9dp"
+                    android:layout_marginEnd="9dp" />
+
+                <TextView
+                    android:id="@+id/detectedText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:lineSpacingExtra="2dp"
+                    android:textColor="@color/text"
+                    android:textSize="@dimen/text_detail" />
+
+                <Button
+                    android:id="@+id/rescanButton"
+                    style="@style/Action"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/codes_rescan" />
+            </LinearLayout>
+
+            <Spinner
+                android:id="@+id/gamePicker"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:minHeight="@dimen/touch_min"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- Only worth the space once the list is long enough to scroll past what you wanted. -->
+        <EditText
+            android:id="@+id/searchField"
+            style="@style/Field"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_small"
+            android:autofillHints="none"
+            android:fontFamily="sans-serif"
+            android:hint="@string/codes_search"
+            android:importantForAutofill="no"
+            android:inputType="text"
+            android:maxLines="1"
+            android:visibility="gone" />
+
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="0dp"
