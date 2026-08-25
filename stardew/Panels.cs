@@ -111,7 +111,7 @@ namespace AynDualScreen
         /// it hasn't been found yet, or the Joja route was taken — so the screen can say which it is
         /// instead of showing an empty board.
         /// </remarks>
-        public static CommunityDto BuildCommunity()
+        public static CommunityDto BuildCommunity(Func<Item, string> iconFor)
         {
             var dto = new CommunityDto { Rooms = new List<CommunityRoomDto>() };
 
@@ -131,7 +131,7 @@ namespace AynDualScreen
             dto.Available = true;
 
             // bundle data is keyed "Room/Index"; the value's first field is the bundle's name
-            var byRoom = new Dictionary<string, List<(int Index, string Name)>>();
+            var byRoom = new Dictionary<string, List<(int Index, string Name, string Data)>>();
             try
             {
                 foreach (KeyValuePair<string, string> pair in Game1.netWorldState.Value.BundleData)
@@ -143,9 +143,9 @@ namespace AynDualScreen
                     string room = key[0];
                     string name = pair.Value.Split('/').FirstOrDefault() ?? $"Bundle {index}";
 
-                    if (!byRoom.TryGetValue(room, out List<(int, string)> list))
-                        byRoom[room] = list = new List<(int, string)>();
-                    list.Add((index, name));
+                    if (!byRoom.TryGetValue(room, out List<(int, string, string)> list))
+                        byRoom[room] = list = new List<(int, string, string)>();
+                    list.Add((index, name, pair.Value));
                 }
             }
             catch (Exception)
@@ -155,12 +155,12 @@ namespace AynDualScreen
 
             foreach (string room in RoomOrder)
             {
-                if (!byRoom.TryGetValue(room, out List<(int Index, string Name)> bundles))
+                if (!byRoom.TryGetValue(room, out List<(int Index, string Name, string Data)> bundles))
                     continue;
 
-                var entry = new CommunityRoomDto { Name = room, Total = bundles.Count, Remaining = new List<string>() };
+                var entry = new CommunityRoomDto { Name = room, Total = bundles.Count, Bundles = new List<BundleDto>() };
 
-                foreach ((int index, string name) in bundles)
+                foreach ((int index, string name, string data) in bundles)
                 {
                     bool done;
                     try
@@ -174,8 +174,8 @@ namespace AynDualScreen
 
                     if (done)
                         entry.Done++;
-                    else
-                        entry.Remaining.Add(name);
+
+                    entry.Bundles.Add(BuildBundle(centre, index, name, data, done, iconFor));
                 }
 
                 entry.Complete = entry.Done >= entry.Total && entry.Total > 0;
@@ -186,6 +186,77 @@ namespace AynDualScreen
             }
 
             dto.Complete = dto.BundlesTotal > 0 && dto.BundlesDone >= dto.BundlesTotal;
+            return dto;
+        }
+
+        /// <summary>One bundle's ingredients, and which of them are still outstanding.</summary>
+        /// <remarks>
+        /// The board's own data is a slash-separated record whose third field is a flat list of
+        /// "id quantity quality" triples, and the centre keeps a parallel array of which slots have
+        /// been filled. Reading both is the only way to say "you still owe it a gold parsnip" rather
+        /// than "this bundle is not finished", which is what the page could say before.
+        /// </remarks>
+        private static BundleDto BuildBundle(CommunityCenter centre, int index, string name, string data, bool done, Func<Item, string> iconFor)
+        {
+            var dto = new BundleDto { Name = name, Complete = done, Missing = new List<BundleItemDto>() };
+
+            try
+            {
+                string[] fields = data.Split('/');
+                string[] parts = fields.Length > 2
+                    ? fields[2].Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                    : Array.Empty<string>();
+
+                bool[] filled = centre.bundles.TryGetValue(index, out bool[] slots) ? slots : null;
+
+                int ingredients = parts.Length / 3;
+
+                // "Any five of these nine" bundles put the real figure in the fifth field; when it is
+                // absent or nonsense, every ingredient is required.
+                dto.Need = fields.Length > 4 && int.TryParse(fields[4], out int required) && required > 0
+                    ? Math.Min(required, ingredients)
+                    : ingredients;
+
+                for (int slot = 0; slot < ingredients; slot++)
+                {
+                    bool have = filled != null && slot < filled.Length && filled[slot];
+                    if (have)
+                    {
+                        dto.Have++;
+                        continue;
+                    }
+
+                    if (done)
+                        continue;
+
+                    var missing = new BundleItemDto
+                    {
+                        Count = int.TryParse(parts[(slot * 3) + 1], out int count) ? count : 1,
+                        Quality = int.TryParse(parts[(slot * 3) + 2], out int quality) ? quality : 0
+                    };
+
+                    try
+                    {
+                        Item ingredient = ItemRegistry.Create(parts[slot * 3], allowNull: true);
+                        missing.Name = ingredient?.DisplayName ?? parts[slot * 3];
+                        missing.IconKey = ingredient != null ? iconFor(ingredient) : null;
+                    }
+                    catch (Exception)
+                    {
+                        missing.Name = parts[slot * 3];
+                    }
+
+                    dto.Missing.Add(missing);
+                }
+
+                if (done)
+                    dto.Have = dto.Need;
+            }
+            catch (Exception)
+            {
+                // A bundle that will not parse still shows its name and its done state.
+            }
+
             return dto;
         }
 

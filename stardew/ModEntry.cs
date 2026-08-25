@@ -19,6 +19,7 @@ using StardewValley.Menus;
 using StardewValley.Network;
 using StardewValley.Quests;
 using StardewValley.Objects;
+using StardewValley.Tools;
 using StardewValley.TerrainFeatures;
 using StardewValley.WorldMaps;
 using xTile.Layers;
@@ -97,6 +98,12 @@ namespace AynDualScreen
         /// </remarks>
         private volatile string VillagerJson = "[]";
         private volatile string CommunityJson = "{\"available\":false}";
+
+        /// <summary>The Farm page: machines, animals and fruit trees. Rebuilt on the slow timer.</summary>
+        private volatile string FarmJson = "{}";
+
+        /// <summary>The season calendar. Rebuilt on the slow timer; it only changes at day start.</summary>
+        private volatile string CalendarJson = "{}";
 
         private int TicksSincePanels;
 
@@ -428,6 +435,8 @@ namespace AynDualScreen
 
                 SelectedSlot = player.CurrentToolIndex,
                 HotbarSize = 12,
+                BackpackRows = Math.Max(1, Math.Min(3, player.MaxItems / 12)),
+                Shipping = this.BuildShipping(),
                 WeatherTomorrow = DescribeWeatherTomorrow(),
                 DailyLuck = player.DailyLuck,
                 Birthdays = Panels.BuildBirthdays(),
@@ -438,7 +447,8 @@ namespace AynDualScreen
                     Trash = this.Config.AllowTrash,
                     Drop = this.Config.AllowDrop,
                     Edit = this.Config.AllowInventoryEdit,
-                    Eat = this.Config.AllowEat
+                    Eat = this.Config.AllowEat,
+                    Use = this.Config.AllowUse
                 },
                 Inventory = inventory,
                 Entities = this.BuildEntities(location),
@@ -460,22 +470,39 @@ namespace AynDualScreen
         {
             this.VillagerJson = JsonConvert.SerializeObject(
                 Panels.BuildVillagers(Game1.player, this.Config.MaxVillagers), JsonSettings);
-            this.CommunityJson = JsonConvert.SerializeObject(Panels.BuildCommunity(), JsonSettings);
+            this.CommunityJson = JsonConvert.SerializeObject(
+                Panels.BuildCommunity(item => this.Config.EnableItemIcons ? this.EnsureIcon(item) : null),
+                JsonSettings);
+
+            // Both walk the world, so they belong on this timer rather than in the snapshot. The icon
+            // resolvers are passed in so those files never learn how this mod caches images.
+            this.FarmJson = JsonConvert.SerializeObject(
+                FarmPanel.Build(
+                    item => this.Config.EnableItemIcons ? this.EnsureIcon(item) : null,
+                    this.Config.MaxFarmEntries),
+                JsonSettings);
+
+            this.CalendarJson = JsonConvert.SerializeObject(
+                CalendarPanel.Build(npc => this.Config.EnableNpcIcons ? this.EnsureNpcIcon(npc) : null),
+                JsonSettings);
         }
 
         private static string DescribeWeather(GameLocation location)
         {
+            // Full words rather than keys. The client used to upper-case "sun" into "SUN", which is
+            // a label nobody writes; the page reads better saying Sunny, and a phrase belongs with the
+            // thing that knows the weather rather than in a lookup table on the other side.
             if (Game1.IsSnowingHere(location))
-                return "snow";
+                return "Snowing";
             if (Game1.IsLightningHere(location))
-                return "storm";
+                return "Stormy";
             if (Game1.IsGreenRainingHere(location))
-                return "greenrain";
+                return "Green Rain";
             if (Game1.IsRainingHere(location))
-                return "rain";
+                return "Raining";
             if (Game1.IsDebrisWeatherHere(location))
-                return "wind";
-            return "sun";
+                return "Windy";
+            return "Sunny";
         }
 
         /// <summary>Tomorrow's forecast for the valley.</summary>
@@ -489,17 +516,18 @@ namespace AynDualScreen
             try
             {
                 LocationWeather weather = Game1.netWorldState.Value.GetWeatherForLocation("Default");
+                // Worded to match DescribeWeather, so "tomorrow: Sunny" reads the same as today does.
                 return weather?.WeatherForTomorrow switch
                 {
-                    null => "sun",
-                    "Sun" => "sun",
-                    "Rain" => "rain",
-                    "Storm" => "storm",
-                    "Snow" => "snow",
-                    "Wind" => "wind",
-                    "Festival" => "festival",
-                    "GreenRain" => "greenrain",
-                    string other => other.ToLowerInvariant()
+                    null => "Sunny",
+                    "Sun" => "Sunny",
+                    "Rain" => "Raining",
+                    "Storm" => "Stormy",
+                    "Snow" => "Snowing",
+                    "Wind" => "Windy",
+                    "Festival" => "Festival",
+                    "GreenRain" => "Green Rain",
+                    string other => other
                 };
             }
             catch
@@ -520,10 +548,18 @@ namespace AynDualScreen
 
                 quests.Add(new QuestDto
                 {
+                    Id = quest.id.Value is string raw && int.TryParse(raw, out int parsed) ? parsed : -1,
                     Name = quest.GetName(),
                     Objective = quest.currentObjective,
                     DaysLeft = quest.daysLeft.Value > 0 ? quest.daysLeft.Value : -1,
-                    Complete = quest.completed.Value
+                    Complete = quest.completed.Value,
+                    RewardGold = Math.Max(0, quest.moneyReward.Value),
+                    Reward = quest.moneyReward.Value > 0 ? quest.moneyReward.Value + "g" : null,
+
+                    // The game decides this, not us: story quests cannot be dropped and Stardew hides
+                    // the button for them. Telling the client means it never draws a Cancel that would
+                    // silently do nothing.
+                    Cancellable = quest.canBeCancelled.Value
                 });
             }
 
@@ -543,12 +579,50 @@ namespace AynDualScreen
         }
 
         /// <summary>One slot of any container, empty or not. Shared by the backpack and the chest panel.</summary>
+        /// <summary>What is sitting in the shipping bin right now.</summary>
+        /// <remarks>
+        /// Reported as contents and their current worth, not as tonight's takings: the game applies
+        /// profit margins and perks at sale time, so a predicted total would be confidently wrong. The
+        /// item list is capped because a bin emptied at 1am can hold a great many parsnips.
+        /// </remarks>
+        private ShippingDto BuildShipping()
+        {
+            var dto = new ShippingDto { Items = new List<SlotDto>() };
+
+            try
+            {
+                Farm farm = Game1.getFarm();
+                IList<Item> bin = farm?.getShippingBin(Game1.player);
+                if (bin == null)
+                    return dto;
+
+                int index = 0;
+                foreach (Item item in bin)
+                {
+                    if (item == null)
+                        continue;
+
+                    dto.Count += item.Stack;
+                    dto.Value += (item is SObject priced ? priced.sellToStorePrice() : item.salePrice()) * item.Stack;
+
+                    if (dto.Items.Count < 24)
+                        dto.Items.Add(this.BuildSlot(index++, item));
+                }
+            }
+            catch (Exception)
+            {
+                // an unreadable bin is reported as an empty one rather than failing the snapshot
+            }
+
+            return dto;
+        }
+
         private SlotDto BuildSlot(int index, Item item)
         {
             if (item == null)
                 return new SlotDto { Index = index };
 
-            return new SlotDto
+            var slot = new SlotDto
             {
                 Index = index,
                 Name = item.DisplayName,
@@ -558,6 +632,50 @@ namespace AynDualScreen
                 IconKey = this.Config.EnableItemIcons ? this.EnsureIcon(item) : null,
                 Edible = item is SObject edible && edible.Edibility > -300
             };
+
+            /*
+             * The two readouts that answer a question you would otherwise walk back to check.
+             *
+             * A watering can's level is invisible in the game's own hotbar until you open the
+             * inventory, and running dry mid-row is the classic morning annoyance. A weapon's special
+             * cooldown is likewise only knowable by trying it. Both are reported as a value and a
+             * maximum so the client can draw a bar without knowing which cans or weapons exist.
+             */
+            if (item is WateringCan can)
+            {
+                slot.Water = can.WaterLeft;
+                slot.WaterMax = can.waterCanMax;
+            }
+            else if (item is MeleeWeapon weapon)
+            {
+                int max = MeleeWeapon.defenseCooldown;
+                int left = 0;
+
+                switch (weapon.type.Value)
+                {
+                    case MeleeWeapon.dagger:
+                        max = MeleeWeapon.daggerCooldown;
+                        left = MeleeWeapon.daggerCooldown - MeleeWeapon.daggerCooldownTime;
+                        break;
+                    case MeleeWeapon.club:
+                        max = MeleeWeapon.clubCooldown;
+                        left = MeleeWeapon.clubCooldown - MeleeWeapon.clubCooldownTime;
+                        break;
+                    default:
+                        left = MeleeWeapon.defenseCooldown - MeleeWeapon.defenseCooldownTime;
+                        break;
+                }
+
+                // Reported only while it is actually cooling down; a full bar on every weapon all day
+                // is decoration rather than information.
+                if (left > 0 && left < max)
+                {
+                    slot.Cooldown = left;
+                    slot.CooldownMax = max;
+                }
+            }
+
+            return slot;
         }
 
         /// <summary>The player's spot on the world map, caching that region's image on the way past.</summary>
@@ -1141,6 +1259,19 @@ namespace AynDualScreen
                         player.CurrentToolIndex = action.Index;
                     break;
 
+                /*
+                 * Rotate the backpack rows through the toolbar.
+                 *
+                 * This is the game's own Tab-key behaviour, not something invented here: shiftToolbar
+                 * physically rolls the inventory rows so a different twelve sit in the usable hotbar.
+                 * Calling it keeps the second screen and the game in agreement, and means a row deeper
+                 * in the bag can be reached without per-slot transfer buttons on a touch panel.
+                 */
+                case "shiftRow":
+                    if (items.Count > 12 && !Game1.eventUp)
+                        player.shiftToolbar(action.Index >= 0);
+                    break;
+
                 case "swap":
                     if (this.Config.AllowInventoryEdit && InRange(items, action.Index) && InRange(items, action.To) && action.Index != action.To)
                     {
@@ -1175,9 +1306,57 @@ namespace AynDualScreen
                     }
                     break;
 
+                /*
+                 * Hold a slot to use what is in it.
+                 *
+                 * Routed through the game's own use-button handler rather than through the tool
+                 * directly, so watering, chopping, placing a seed and eating all behave exactly as
+                 * they do on the controller -- including every guard the game puts in front of them.
+                 * Only the hotbar qualifies, for the same reason eating does: the game acts on the
+                 * held item, so a deeper slot would act on the wrong thing.
+                 */
+                case "use":
+                    if (this.Config.AllowUse
+                        && action.Index >= 0 && action.Index < 12 && InRange(items, action.Index)
+                        && items[action.Index] != null
+                        && !Game1.eventUp && Game1.activeClickableMenu == null
+                        && player.CanMove && !player.UsingTool && !player.isEating)
+                    {
+                        player.CurrentToolIndex = action.Index;
+
+                        if (this.Config.AllowEat && items[action.Index] is SObject snack && snack.Edibility > -300)
+                            player.eatObject(snack);
+                        else
+                            Game1.pressUseToolButton();
+                    }
+                    break;
+
                 case "sort":
                     if (this.Config.AllowInventoryEdit)
                         ItemGrabMenu.organizeItemsInList(player.Items);
+                    break;
+
+                /*
+                 * Drop a quest from the journal.
+                 *
+                 * Guarded twice: the client only draws the button for quests the game reports as
+                 * cancellable, and this checks again before acting. The first is a courtesy so nobody
+                 * is offered a button that cannot work; the second is the one that matters, because a
+                 * request can arrive from anything that can reach the port.
+                 */
+                case "cancelQuest":
+                    // Snapshotted before iterating, because the match removes from the same list.
+                    foreach (Quest quest in new List<Quest>(player.questLog))
+                    {
+                        if (quest == null || !quest.canBeCancelled.Value)
+                            continue;
+
+                        if (quest.id.Value is not string questId || !int.TryParse(questId, out int number) || number != action.Index)
+                            continue;
+
+                        player.questLog.Remove(quest);
+                        break;
+                    }
                     break;
 
                 case "chestTake":
@@ -1264,6 +1443,12 @@ namespace AynDualScreen
 
             if (path == "/community")
                 return HttpResponse.Json(this.CommunityJson);
+
+            if (path == "/farm")
+                return HttpResponse.Json(this.FarmJson);
+
+            if (path == "/calendar")
+                return HttpResponse.Json(this.CalendarJson);
 
             if (path.StartsWith("/asset/", StringComparison.Ordinal))
                 return this.ServeCachedPng(this.AssetCache, TrimPng(path.Substring("/asset/".Length)));

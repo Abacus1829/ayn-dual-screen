@@ -35,7 +35,9 @@ display, a phone, a tablet, or a second monitor — anything that can open a URL
 | `GET /icon/<key>.png` | An item sprite, cropped out of the game's own tilesheets at runtime. |
 | `GET /asset/<name>.png` | A UI sprite from the game's tilesheets: `menubox`, `slot`, `quality1`, `quality2`, `quality4`. |
 | `GET /sheet/<name>.png` | A whole tilesheet (`menu`, `cursors`) for checking crop coordinates. |
-| `POST /action` | A command from the touch screen: `select`, `swap`, `drop`, `trash`, `eat`, `sort`. |
+| `GET /farm` | Machines mid-cycle, animals and their produce, and fruit trees. Rebuilt on the slow timer, not per snapshot — it walks every location. |
+| `GET /calendar` | The season as 28 days: birthdays, festivals and Travelling Cart days. |
+| `POST /action` | A command from the touch screen: `select`, `swap`, `drop`, `trash`, `eat`, `use`, `sort`, `shiftRow`, `cancelQuest`, `chestTake`, `chestPut`. |
 
 ### Everything you see is a real game asset
 
@@ -84,53 +86,68 @@ classic way to corrupt a save, so keep new features on the same pattern.
 ### Controls
 
 - **Tap a slot** — selects it. Slots 1–12 also become your held item.
+- **Hold a slot** — uses what's in it. Food is eaten; everything else goes through the game's own
+  use-button handler, so a can waters, an axe chops and a seed gets planted exactly as they would on
+  the controller. Hotbar only, because the game acts on the *held* item.
 - **Drag a slot onto another** — swaps them, including into and out of the hotbar.
+- **L / R** — rotates your backpack rows through the hotbar. This is the game's own Tab-key shift, so
+  the screen and the game never disagree about which twelve slots are live.
 - **Eat / Drop / Trash / Sort** — act on the selected slot. Trash needs two taps to confirm.
 - **Fit / Follow** — toggles between the whole map and a zoomed view that tracks you.
 - **&minus; / +** — zoom the map from 1x to 5x. Past 1x it centres on you.
 - **Tap the map** — names whatever is there: the nearest villager, animal or monster, or the tile coordinates.
-- **The dot by the map title** — green while snapshots are arriving, amber if they stall, red if they stop.
+- **The dot on the hotbar row** — green while snapshots are arriving, amber if they stall, red if they stop.
 
-The left panel also shows **tomorrow's forecast** and the **day's luck** in the same bands the Fortune
-Teller uses, plus the **journal**: the four most urgent entries, with the ones due today picked out in
-red and completed ones struck through.
+Two readouts sit on the slots themselves, as bars rather than numbers, because at that size a number
+is three unreadable pixels wide:
+
+- a **blue bar** on the watering can, showing what's left in it;
+- a **red bar** on a weapon, draining while it's on cooldown.
 
 
-### The gear button
+### The pages
 
-The cog in the top-right corner opens a settings panel for **this screen**, saved in the browser's own
-storage rather than in the mod's config — so the Thor's panel, a phone and a desktop monitor can each
-be laid out differently against the same game.
+One page fills the screen at a time and the bar along the top chooses which. There is no fixed side
+panel: on a nearly-square handheld panel a two-column layout turns both columns into strips, and the
+narrower one could not fit its own tab labels.
+
+| Page | What's on it |
+| --- | --- |
+| **Today** | Weekday, date, time, weather with tomorrow's forecast, the day's luck, gold, what's already in the shipping bin, energy and health. Then the hotbar, every unlocked backpack row directly beneath it, the selected item, the action buttons and your skill levels. |
+| **Map** | The minimap, or the game's own world map with everyone placed on it. |
+| **Farm** | Three lists, each answering a question that otherwise costs a walk: machines mid-cycle and which are ready, animals and whether they've been petted, fed or still owe you produce, and fruit trees with what's hanging on them. Each list scrolls on its own, so ninety kegs can't bury four cows. |
+| **Journal** | Every quest, with its objective, its deadline, what it pays, and a two-tap Drop for the ones the game itself lets you drop. |
+| **Bundles** | The community centre board, down to the item: each unfinished bundle shows exactly which ingredients are still missing, at the quality it wants them. Says so plainly when there's no centre to track. |
+| **Calendar** | The season as the game's own four-by-seven grid, with birthdays (portraits and names), festivals and Travelling Cart days. |
+| **People** | Every villager: where they are right now, how many hearts, whose birthday it is, and a tick for the ones you've already spoken to today. Sorted by whoever is in the room with you, then birthdays, then closest friends. Filter by name or location. |
+| **Settings** | Everything below. It's a page rather than a panel over the top, because a settings sheet that covers the screen it configures makes you dismiss it to see every change. |
+
+Any page except Today and Settings can be turned off in **Settings → Pages** if you never use it.
+
+### Settings
+
+Settings are saved in the browser's own storage rather than in the mod's config — so the Thor's panel,
+a phone and a desktop monitor can each be laid out differently against the same game.
 
 | Control | What it does |
 | --- | --- |
-| Show | Hide any section you don't want: top bar, map, legend, tomorrow & luck, skills, journal, inventory, selected item, action buttons. Hiding one of the two main panels gives the other the full width. |
+| Pages | Which tabs appear in the bar. |
+| Show | Hide the bottom status bar, the map legend, skill levels, the selected item, or the action buttons. |
 | Accent | Eight preset highlight colours, used for the selected slot and focus rings. |
 | Size | Four UI scales, from small to huge — the whole page scales off the root font size. |
 | Updates per second | 5, 10, 15 or 20 polls a second. Lower it on a slow Wi-Fi link. |
+| Connection | Read-only: what this page is connected to, whether snapshots are arriving, and how fast it's asking. |
+| What the mod allows | Read-only: which of the touch actions `config.json` has left switched on. A greyed-out Trash button is a setting, not a bug, and this is where you can see that. |
 | Reset to defaults | Puts everything back. |
 
 Nothing here touches the game or the mod's own settings, and it needs no reload.
 
-### The left panel's tabs
-
-| Tab | What's on it |
-| --- | --- |
-| Map | The minimap, as before. |
-| Today | Tomorrow's forecast and the day's luck, plus today's birthdays, any festival, whether the Travelling Cart is in the forest, your skill levels and the journal. |
-| Village | Every villager: where they are right now, how many hearts, whose birthday it is, and a tick for the ones you've already spoken to today. Sorted by whoever is in the room with you, then birthdays, then closest friends. Filter by name or location. |
-| Bundles | The community centre board — every room, how many bundles are done, and which are still outstanding. Says so plainly when there's no centre to track, rather than showing an empty board. |
-
-### Settings
-
-Most of what you'd want to change lives in the gear menu on the screen itself, saved per device so
-the Thor and a phone can differ:
+#### Theme and behaviour
 
 | Option | Default | What it does |
 | --- | --- | --- |
 | **Theme** | Stardew | `Stardew` uses the game's own menu art and follows any recolour mod you have. `Plain` drops the frame for flat dark panels. |
 | **Follow the controller's selected item** | on | Moves the cursor and the description when you change the held item in-game, instead of only on tap. |
-| **Fade the settings button when idle** | on | The cog sits over the top bar; this fades it after 4 seconds and brings it back on the next touch. |
 | **Villager faces on the map** | on | Draws each villager's face instead of a coloured dot. |
 
 #### The world map
@@ -199,12 +216,15 @@ before the screen connects:
 | `AllowDrop` | `true` | Set `false` to stop the screen throwing items on the ground. |
 | `AllowInventoryEdit` | `true` | Set `false` to stop it rearranging or sorting the inventory. |
 | `AllowEat` | `true` | Set `false` to disable the Eat button. |
+| `AllowUse` | `true` | Set `false` to stop holding a slot from using what's in it. Separate from `AllowEat` because they are different risks: eating the wrong thing costs one item, swinging a pickaxe acts on the world. |
 | `EnableWorldMap` | `true` | Offer the game's world map. `false` also skips the per-character map lookups. |
 | `ShowChests` | `true` | Mirror an open chest onto the screen. |
 | `ShowMonsters` | `true` | Whether monsters get a dot on the minimap. |
 | `ShowNpcs` | `true` | Whether villagers get a dot. |
 | `ShowAnimals` | `true` | Whether farm animals get a dot. |
-| `MaxQuests` | `6` | How many journal entries to send. `0` hides the panel. |
+| `MaxQuests` | `20` | How many journal entries to send. `0` hides the page. |
+| `MaxFarmEntries` | `60` | The cap on each of the Farm page's three lists. |
+| `EnableNpcIcons` | `true` | Extract villager portraits, for the map and the calendar's birthdays. |
 | `MaxVillagers` | `40` | How many villagers the tracker sends. Nearest and birthdays come first. |
 
 Everything under `Allow*` exists because LAN access is on by default: they let the screen be made

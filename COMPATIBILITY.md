@@ -24,7 +24,7 @@ own rather than taking the connection with it.
 
 | Mod | Version | Needs | Endpoints | Game codes |
 | --- | --- | --- | --- | --- |
-| **Stardew Valley** | 0.4.1 | SMAPI 4.0.0+ | `/state` `/action` `/map` `/worldmap` `/villagers` `/community` `/codes` `/code` | **Yes** — off by default (`EnableGameCodes`) |
+| **Stardew Valley** | 0.5.0 | SMAPI 4.0.0+ | `/state` `/action` `/map` `/worldmap` `/villagers` `/community` `/farm` `/calendar` `/codes` `/code` | **Yes** — off by default (`EnableGameCodes`) |
 | **Terraria** | 0.3.1 | tModLoader, client-side | `/state` `/action` `/minimap` `/craftable` `/progress` `/talk` | No |
 | **Minecraft** | 0.7.0 | Forge 1.21.1 | `/state` `/action` `/map` `/tile` `/icon` `/head` `/recipes` `/effect` | No |
 | **Fallout: New Vegas** | 0.1.0 | xNVSE, launched via `nvse_loader.exe` | `/state` `/action` `/config` | No |

@@ -34,7 +34,11 @@ const SETTING_DEFAULTS = {
   followGame: true,
   fadeIdle: true,
   npcHeads: true,
-  mapMode: 'local'
+  mapMode: 'local',
+
+  // Which tabs appear in the bar. An object rather than one flat key per page, so a page added later
+  // inherits "shown" without anyone having to migrate a settings blob that is already on a device.
+  pages: {}
 };
 
 /** Behaviour switches. Separate from SECTIONS, which only show and hide parts of the layout. */
@@ -48,22 +52,57 @@ const THEMES = { stardew: 'Stardew', plain: 'Plain' };
 
 const MAP_MODES = { local: 'Tile map', world: 'In-game map' };
 
-/** Which section each toggle hides, and what to call it in the panel. */
+/**
+ * Which part of a page each toggle hides, and what to call it in the panel.
+ *
+ * Shorter than it was, because most of the old entries hid a whole panel -- and a panel is a tab
+ * now, which the Pages list turns off properly instead of leaving an empty frame behind it.
+ */
 const SECTIONS = [
-  ['hud', 'Top bar'],
-  ['map', 'Map panel'],
+  ['hud', 'Bottom status bar'],
   ['legend', 'Map legend'],
-  ['forecast', 'Tomorrow & luck'],
   ['skills', 'Skill levels'],
-  ['quests', 'Journal'],
-  ['inv', 'Inventory panel'],
   ['detail', 'Selected item'],
   ['actions', 'Action buttons']
 ];
 
+/** The tabs that may be turned off. Today is home, and Settings is how you turn them back on. */
+const HIDEABLE_PAGES = [
+  ['map', 'Map'],
+  ['farm', 'Farm'],
+  ['journal', 'Journal'],
+  ['bundles', 'Bundles'],
+  ['calendar', 'Calendar'],
+  ['village', 'People']
+];
+
+const pageShown = (name) => !settings.pages || settings.pages[name] !== false;
+
 const ACCENTS = ['#c8a066', '#e0ae68', '#8fd14f', '#6ec1ff', '#ffd166', '#ff8fab', '#c58cff', '#f2e6d5'];
 
-const SCALES = { small: '12px', medium: '14px', large: '17px', huge: '20px' };
+/*
+ * The text scale, relative to the panel rather than fixed in pixels.
+ *
+ * These were '12px' / '14px' / '17px' / '20px', which is correct on a laptop and wrong on the
+ * handheld this exists for. The AYN Thor's lower panel is about 1240x1080 across 3.9 inches, so it
+ * reports roughly twice as many CSS pixels per inch as a phone does — and a CSS pixel is a unit of
+ * *addressing*, not of size. Fourteen of them there are physically half what fourteen of them are
+ * anywhere else, which is why the page came out looking like a screenshot of itself.
+ *
+ * vmin ties the type to the smaller side of the panel, so the same layout fills a 1240x1080 second
+ * screen, a phone, and a browser window without any of them being a special case. The clamps stop
+ * it collapsing on a very short window or ballooning on a television.
+ *
+ * Checked against both references: at 1023x678 (a desktop browser) medium comes out at 13.9px,
+ * which is the 14px this used to hard-code — so nothing changes on the screens where it already
+ * looked right. At 1240x1080 it comes out at 22px, which is the fix.
+ */
+const SCALES = {
+  small:  'clamp(11px, 1.70vmin, 22px)',
+  medium: 'clamp(13px, 2.05vmin, 26px)',
+  large:  'clamp(15px, 2.45vmin, 32px)',
+  huge:   'clamp(18px, 3.00vmin, 40px)',
+};
 
 /* ---------- the official wiki ---------- */
 
@@ -176,12 +215,30 @@ function markActive() {
   idleTimer = setTimeout(() => document.body.classList.add('idle'), 4000);
 }
 
+/**
+ * Hide the tabs that are turned off, and step off one that has just been turned off.
+ *
+ * Leaving a tab selected while its button disappears would strand the page on something with no way
+ * back to it, so the fallback is Today.
+ */
+function applyPages() {
+  for (const button of document.querySelectorAll('.navtab')) {
+    const name = button.dataset.tab;
+    const hideable = HIDEABLE_PAGES.some(([key]) => key === name);
+    button.classList.toggle('hidden', hideable && !pageShown(name));
+  }
+
+  if (HIDEABLE_PAGES.some(([key]) => key === activeTab) && !pageShown(activeTab))
+    setTab('today');
+}
+
 function applySettings() {
   for (const [key] of SECTIONS)
     document.body.classList.toggle(`no-${key}`, !settings[key]);
 
   document.body.classList.toggle('theme-plain', settings.theme === 'plain');
   document.body.classList.toggle('fade-idle', !!settings.fadeIdle);
+  applyPages();
   updateMapModeButton();
   markActive();
 
@@ -243,10 +300,33 @@ const dom = {
   healthBar: el('bar-health'),
   healthText: el('health-text'),
   zoomToggle: el('zoom-toggle'),
-  tabMap: el('tab-map'),
   tabToday: el('tab-today'),
+  tabMap: el('tab-map'),
+  tabFarm: el('tab-farm'),
+  tabJournal: el('tab-journal'),
   tabVillage: el('tab-village'),
   tabBundles: el('tab-bundles'),
+  tabCalendar: el('tab-calendar'),
+  tabSettingsPage: el('tab-settings'),
+  todayStrip: el('today-strip'),
+  backpackRows: el('backpack-rows'),
+  rowPrev: el('row-prev'),
+  rowNext: el('row-next'),
+  rowText: el('row-text'),
+  hotbarLabel: el('hotbar-label'),
+  farmSummary: el('farm-summary'),
+  farmMachines: el('farm-machines'),
+  farmAnimals: el('farm-animals'),
+  farmTrees: el('farm-trees'),
+  farmMachinesCount: el('farm-machines-count'),
+  farmAnimalsCount: el('farm-animals-count'),
+  farmTreesCount: el('farm-trees-count'),
+  calendarTitle: el('calendar-title'),
+  calendarNote: el('calendar-note'),
+  calendarWeekdays: el('calendar-weekdays'),
+  calendarGrid: el('calendar-grid'),
+  settingsPage: el('settings-page'),
+  settingsResetPage: el('settings-reset-page'),
   todayNotes: el('today-notes'),
   villageList: el('village-list'),
   villageCount: el('village-count'),
@@ -273,9 +353,9 @@ const dom = {
   wikiHome: el('wiki-home'),
   wikiItem: el('wiki-item'),
   gear: el('gear'),
-  settings: el('settings'),
-  settingsClose: el('settings-close'),
-  settingsReset: el('settings-reset'),
+  settingsPages: el('settings-pages'),
+  settingsConnection: el('settings-connection'),
+  settingsAllows: el('settings-allows'),
   settingsToggles: el('settings-toggles'),
   settingsAccents: el('settings-accents'),
   settingsScale: el('settings-scale'),
@@ -317,9 +397,11 @@ let lastSnapshot = 0;     // when a snapshot last arrived, for the connection do
 let lastTick = -1;        // the game's own tick, to notice a paused or hung game
 let projection = null;    // last map draw, so a tap can be mapped back to world tiles
 
-let activeTab = 'map';
+let activeTab = 'today';
 let villagerData = null;
 let communityData = null;
+let farmData = null;
+let calendarData = null;
 let villageFilterText = '';
 
 /* ---------- polling ---------- */
@@ -383,6 +465,19 @@ async function loadMap() {
  * is fetched.
  */
 async function pollSlow() {
+  await refreshSlow();
+  setTimeout(pollSlow, 1000);
+}
+
+/**
+ * Fetch whatever the visible tab needs, now.
+ *
+ * Split out of the polling loop so switching tabs can call it directly. These lists are fetched once
+ * a second, which is plenty while you are looking at one — but it used to mean that *arriving* at a
+ * tab showed an empty panel until the next tick came round. Up to a second of blank, every time,
+ * which reads as the tab being broken rather than as it being a moment behind.
+ */
+async function refreshSlow() {
   try {
     if (activeTab === 'village') {
       villagerData = await (await fetch('/villagers', { cache: 'no-store' })).json();
@@ -390,11 +485,16 @@ async function pollSlow() {
     } else if (activeTab === 'bundles') {
       communityData = await (await fetch('/community', { cache: 'no-store' })).json();
       renderBundles();
+    } else if (activeTab === 'farm') {
+      farmData = await (await fetch('/farm', { cache: 'no-store' })).json();
+      renderFarm();
+    } else if (activeTab === 'calendar') {
+      calendarData = await (await fetch('/calendar', { cache: 'no-store' })).json();
+      renderCalendar();
     }
   } catch (err) {
     /* the next tick will retry */
   }
-  setTimeout(pollSlow, 1000);
 }
 
 function showOffline(message) {
@@ -500,36 +600,104 @@ function renderForecast() {
 
 let questSignature = null;
 
+/**
+ * The journal: what each quest wants, how long is left, and what it pays.
+ *
+ * It used to be four one-line rows because it shared the screen with the map. As its own page it can
+ * carry the whole list and the parts that were cut -- the reward, which is half of why you would
+ * choose one errand over another, and a way to drop a quest that has become impossible.
+ */
 function renderQuests() {
   const quests = state.quests || [];
-  const signature = quests.map((q) => `${q.name}|${q.objective}|${q.daysLeft}|${q.complete}`).join(',');
+  const signature = quests.map((q) => `${q.id}|${q.name}|${q.objective}|${q.daysLeft}|${q.complete}`).join(',');
   if (signature === questSignature) return;
   questSignature = signature;
 
-  dom.questHead.style.display = quests.length ? '' : 'none';
-  dom.questCount.textContent = quests.length ? `${quests.length}` : '';
+  dom.questCount.textContent = quests.length ? `${quests.length} open` : '';
   dom.quests.textContent = '';
 
-  // only the first few fit; the journal in-game is there for the rest
-  for (const quest of quests.slice(0, 4)) {
-    const row = document.createElement('div');
-    row.className = 'quest' + (quest.complete ? ' done' : '');
-
-    const label = document.createElement('span');
-    label.textContent = quest.objective || quest.name;
-    label.title = quest.name;
-
-    const days = document.createElement('i');
-    if (quest.complete) {
-      days.textContent = 'done';
-    } else if (quest.daysLeft >= 0) {
-      days.textContent = quest.daysLeft === 1 ? 'today' : `${quest.daysLeft}d`;
-      if (quest.daysLeft <= 1) days.className = 'soon';
-    }
-
-    row.append(label, days);
-    dom.quests.appendChild(row);
+  if (!quests.length) {
+    const empty = document.createElement('div');
+    empty.className = 'farm-empty';
+    empty.textContent = 'Nothing in the journal.';
+    dom.quests.appendChild(empty);
+    return;
   }
+
+  for (const quest of quests) dom.quests.appendChild(questRow(quest));
+}
+
+function questRow(quest) {
+  const row = document.createElement('div');
+  row.className = 'quest' + (quest.complete ? ' done' : '');
+
+  const text = document.createElement('div');
+  text.className = 'quest-text';
+
+  const title = document.createElement('span');
+  title.textContent = quest.name;
+
+  const objective = document.createElement('small');
+  objective.textContent = quest.objective || '';
+
+  text.append(title, objective);
+
+  const reward = questReward(quest);
+  if (reward) {
+    const pay = document.createElement('em');
+    pay.className = 'quest-reward';
+    pay.textContent = reward;
+    text.appendChild(pay);
+  }
+
+  row.appendChild(text);
+
+  const side = document.createElement('div');
+  side.className = 'quest-side';
+
+  const days = document.createElement('i');
+  if (quest.complete) {
+    days.textContent = 'ready to hand in';
+    days.className = 'ready';
+  } else if (quest.daysLeft >= 0) {
+    days.textContent = quest.daysLeft === 1 ? 'due today' : `${quest.daysLeft} days left`;
+    if (quest.daysLeft <= 1) days.className = 'soon';
+  } else {
+    days.textContent = 'no deadline';
+  }
+  side.appendChild(days);
+
+  // Only offered where the game itself would offer it; a story quest has no cancel button in-game
+  // either, and a button that silently does nothing is worse than no button.
+  if (quest.cancellable && !quest.complete) {
+    const drop = document.createElement('button');
+    drop.className = 'chip tight';
+    drop.textContent = 'Drop';
+    drop.addEventListener('click', () => {
+      if (drop.classList.contains('armed')) {
+        send('cancelQuest', quest.id);
+        questSignature = null;
+        return;
+      }
+      drop.classList.add('armed');
+      drop.textContent = 'Sure?';
+      setTimeout(() => {
+        drop.classList.remove('armed');
+        drop.textContent = 'Drop';
+      }, 3000);
+    });
+    side.appendChild(drop);
+  }
+
+  row.appendChild(side);
+  return row;
+}
+
+function questReward(quest) {
+  const bits = [];
+  if (quest.rewardGold > 0) bits.push(`${quest.rewardGold.toLocaleString()}g`);
+  if (quest.reward) bits.push(quest.reward);
+  return bits.join(' \u00b7 ');
 }
 
 const SKILL_ORDER = [
@@ -589,21 +757,55 @@ function makeSlots(host, count, hotbar) {
     qual.className = 'qual';
     qual.style.display = 'none';
 
-    slot.append(img, stack, qual);
+    // One track serves both readouts: a can is never on cooldown and a sword never holds water,
+    // so a second element would be an empty div in every slot on screen.
+    const meter = document.createElement('u');
+    meter.className = 'meter';
+    meter.style.display = 'none';
+    const fill = document.createElement('b');
+    meter.appendChild(fill);
+
+    slot.append(img, stack, qual, meter);
     host.appendChild(slot);
-    made.push({ root: slot, img: img, stack: stack, qual: qual, signature: null });
+    made.push({ root: slot, img: img, stack: stack, qual: qual, meter: meter, fill: fill, signature: null });
   }
 
   return made;
 }
 
+/**
+ * The hotbar, then every unlocked backpack row directly beneath it.
+ *
+ * They were one long twelve-wide grid, which read as thirty-six equal slots when only the first twelve
+ * are the ones the game will actually let you swing. Splitting them puts the usable row where the eye
+ * lands and leaves the rest as what they are: storage you can see without pausing.
+ *
+ * `slots` stays index-aligned with the inventory across both hosts, so every handler keyed on
+ * `dataset.index` keeps working regardless of which grid a slot ended up in.
+ */
 function buildSlots(count) {
-  slots = makeSlots(dom.invGrid, count, true);
+  slots = makeSlots(dom.invGrid, Math.min(12, count), true);
+
+  dom.backpackRows.textContent = '';
+  for (let start = 12; start < count; start += 12) {
+    const row = document.createElement('div');
+    row.className = 'inv-row';
+
+    const made = makeSlots(row, Math.min(12, count - start), false);
+    made.forEach((slot, offset) => { slot.root.dataset.index = String(start + offset); });
+
+    dom.backpackRows.appendChild(row);
+    slots.push(...made);
+  }
+
+  dom.backpackRows.classList.toggle('hidden', count <= 12);
 }
 
 /** Repaint one slot from its item, skipping the DOM writes when nothing about it changed. */
 function paintSlot(slot, item) {
-  const signature = item && item.name ? `${item.iconKey}|${item.stack}|${item.quality}|${item.name}` : '';
+  const signature = item && item.name
+    ? `${item.iconKey}|${item.stack}|${item.quality}|${item.name}|${item.water}/${item.waterMax}|${item.cooldown}/${item.cooldownMax}`
+    : '';
   if (slot.signature === signature)
     return;
 
@@ -620,12 +822,39 @@ function paintSlot(slot, item) {
     slot.stack.textContent = item.stack > 1 ? item.stack : '';
     slot.qual.className = `qual q${item.quality}`;
     slot.qual.style.display = item.quality > 0 ? '' : 'none';
+    paintMeter(slot, item);
   } else {
     slot.img.removeAttribute('src');
     slot.img.style.display = 'none';
     slot.stack.textContent = '';
     slot.qual.style.display = 'none';
+    slot.meter.style.display = 'none';
   }
+}
+
+/**
+ * The strip along the bottom of a slot: how much water is left, or how long until you can swing again.
+ *
+ * Both are things you otherwise learn by trying and failing -- the can that runs dry two tiles from the
+ * end of a row, the dagger that will not come out. Neither is worth a number on a slot this size, so
+ * each is a bar and the exact figure goes in the detail line underneath.
+ */
+function paintMeter(slot, item) {
+  if (item.waterMax > 0) {
+    slot.meter.className = 'meter water';
+    slot.meter.style.display = '';
+    slot.fill.style.width = `${Math.max(0, Math.min(1, item.water / item.waterMax)) * 100}%`;
+    return;
+  }
+
+  if (item.cooldownMax > 0 && item.cooldown > 0) {
+    slot.meter.className = 'meter cool';
+    slot.meter.style.display = '';
+    slot.fill.style.width = `${Math.max(0, Math.min(1, item.cooldown / item.cooldownMax)) * 100}%`;
+    return;
+  }
+
+  slot.meter.style.display = 'none';
 }
 
 /* ---------- the open chest ---------- */
@@ -806,7 +1035,10 @@ function followGameSelection() {
 
 function renderInventory() {
   const items = state.inventory || [];
-  if (slots.length !== items.length) buildSlots(items.length);
+  if (slots.length !== items.length) {
+    buildSlots(items.length);
+    renderRowControl();
+  }
 
   for (let i = 0; i < items.length; i++) {
     paintSlot(slots[i], items[i]);
@@ -865,6 +1097,141 @@ function renderDetail(item) {
 }
 
 /* ---------- today ---------- */
+
+const WEEKDAYS = { Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday', Sun: 'Sunday' };
+
+/**
+ * The line of facts at the top of Today.
+ *
+ * These are the numbers the footer already carries, restated where the page can give them room --
+ * the footer is a glance strip six millimetres tall on the handheld, and reading a luck band off it
+ * is not realistic. Here each gets a label and the two bars get to be bars.
+ */
+function renderTodayStrip() {
+  const season = SEASON_LABEL[String(state.season).toLowerCase()] || state.season;
+  const weekday = WEEKDAYS[state.dayOfWeek] || state.dayOfWeek || '';
+  const energy = state.maxStamina > 0 ? state.stamina / state.maxStamina : 0;
+  const health = state.maxHealth > 0 ? state.health / state.maxHealth : 0;
+
+  const facts = [
+    ['Day', `${weekday}`, `${season} ${state.dayOfMonth}, Year ${state.year}`],
+    ['Time', formatClock(state.timeOfDay), timeLeftLabel(state.timeOfDay)],
+    ['Weather', WEATHER_LABEL[state.weather] || state.weather || '--', tomorrowLabel()],
+    ['Luck', luckWord(state.dailyLuck), 'today’s fortune'],
+    ['Gold', `${(state.money || 0).toLocaleString()}g`, 'in your wallet'],
+    ['Shipped', shippedCount(), shippedValue()],
+  ];
+
+  ensureStrip(facts.length + 2);
+
+  facts.forEach(([label, value, note], index) => {
+    const cell = dom.todayStrip.children[index];
+    cell.className = 'fact';
+    setText(cell.children[0], label);
+    setText(cell.children[1], value);
+    setText(cell.children[2], note);
+  });
+
+  paintBarFact(dom.todayStrip.children[facts.length], 'Energy',
+    `${Math.round(state.stamina)} / ${state.maxStamina}`, energy, 'energy');
+  paintBarFact(dom.todayStrip.children[facts.length + 1], 'Health',
+    `${state.health} / ${state.maxHealth}`, health, 'health');
+}
+
+/** Text writes are the expensive part at ten frames a second, so only write what changed. */
+function setText(node, text) {
+  const value = text == null ? '' : String(text);
+  if (node.textContent !== value) node.textContent = value;
+}
+
+function ensureStrip(count) {
+  while (dom.todayStrip.children.length < count) {
+    const cell = document.createElement('div');
+    cell.className = 'fact';
+    cell.append(document.createElement('span'), document.createElement('b'), document.createElement('i'));
+    dom.todayStrip.appendChild(cell);
+  }
+}
+
+function paintBarFact(cell, label, value, fraction, kind) {
+  cell.className = 'fact bar-fact';
+  setText(cell.children[0], label);
+  setText(cell.children[1], value);
+
+  let track = cell.querySelector('.mini');
+  if (!track) {
+    track = document.createElement('u');
+    track.className = 'mini';
+    track.appendChild(document.createElement('b'));
+    cell.children[2].replaceWith(track);
+  }
+
+  track.firstChild.className = kind;
+  track.firstChild.style.width = `${Math.max(0, Math.min(1, fraction)) * 100}%`;
+}
+
+function luckWord(luck) {
+  if (typeof luck !== 'number') return '--';
+  if (luck <= -0.07) return 'Very unlucky';
+  if (luck < 0) return 'Unlucky';
+  if (luck >= 0.07) return 'Very lucky';
+  if (luck > 0) return 'Lucky';
+  return 'Neutral';
+}
+
+function tomorrowLabel() {
+  if (!state.weatherTomorrow) return '';
+  return `tomorrow: ${WEATHER_LABEL[state.weatherTomorrow] || state.weatherTomorrow}`;
+}
+
+/*
+ * What is already in the bin.
+ *
+ * This is the half of the day's money that is not in the wallet yet, and it is the number that
+ * decides whether it is worth another trip back to the farmhouse before bed.
+ */
+function shippedCount() {
+  const bin = state.shipping;
+  if (!bin || !bin.count) return 'nothing';
+  return bin.count === 1 ? '1 item' : `${bin.count} items`;
+}
+
+function shippedValue() {
+  const bin = state.shipping;
+  if (!bin || !bin.count) return 'bin is empty';
+  return `worth ${(bin.value || 0).toLocaleString()}g`;
+}
+
+/**
+ * Which twelve are in the hotbar, and the buttons that change it.
+ *
+ * The count is tracked here rather than read from the save because the game has no notion of a
+ * "current row" -- shiftToolbar physically rolls the items round. Pressing Tab in-game therefore
+ * drifts this label, so it resets whenever the bag's size changes and never claims more than it knows.
+ */
+let rowOffset = 0;
+
+function renderRowControl() {
+  const rows = Math.max(1, Math.ceil((state && state.inventory ? state.inventory.length : 12) / 12));
+  rowOffset = ((rowOffset % rows) + rows) % rows;
+
+  const single = rows <= 1;
+  dom.rowPrev.disabled = single;
+  dom.rowNext.disabled = single;
+  setText(dom.rowText, single ? '' : `Row ${rowOffset + 1} of ${rows}`);
+  setText(dom.hotbarLabel, single ? 'Hotbar' : 'Hotbar — the row you can use');
+}
+
+function shiftRow(direction) {
+  if (!state || !state.inventory || state.inventory.length <= 12) return;
+
+  rowOffset += direction;
+  send('shiftRow', direction >= 0 ? 1 : -1);
+  renderRowControl();
+}
+
+dom.rowPrev.addEventListener('click', () => shiftRow(-1));
+dom.rowNext.addEventListener('click', () => shiftRow(1));
 
 /** The one-off facts about today that don't fit the forecast line. */
 function renderToday() {
@@ -969,36 +1336,341 @@ function renderBundles() {
     head.append(title, count);
     box.appendChild(head);
 
-    if (!room.complete && (room.remaining || []).length) {
-      const rest = document.createElement('small');
-      rest.textContent = room.remaining.join(', ');
-      box.appendChild(rest);
+    for (const bundle of room.bundles || []) {
+      if (bundle.complete) continue;
+      box.appendChild(bundleRow(bundle));
     }
 
     dom.bundleList.appendChild(box);
   }
 }
 
+/**
+ * One unfinished bundle: its name, how far along it is, and the items it is still short of.
+ *
+ * The names alone were never enough -- "Spring Crops" does not tell you whether you are one parsnip
+ * away or have not started. Showing the actual items with their icons makes this a shopping list you
+ * can read while standing in the field, which is the only reason to have it on a second screen.
+ */
+function bundleRow(bundle) {
+  const row = document.createElement('div');
+  row.className = 'bundle';
+
+  const head = document.createElement('div');
+  head.className = 'bundle-head';
+
+  const name = document.createElement('span');
+  name.textContent = bundle.name;
+
+  const progress = document.createElement('em');
+  progress.textContent = `${bundle.have} / ${bundle.need}`;
+
+  head.append(name, progress);
+  row.appendChild(head);
+
+  const items = document.createElement('div');
+  items.className = 'bundle-items';
+
+  for (const item of bundle.missing || []) {
+    const chip = document.createElement('span');
+    chip.className = 'bundle-item' + (item.quality > 0 ? ` q${item.quality}` : '');
+    chip.title = qualityWord(item.quality) ? `${qualityWord(item.quality)} ${item.name}` : item.name;
+
+    if (item.iconKey) {
+      const img = document.createElement('img');
+      img.src = `/icon/${item.iconKey}.png`;
+      img.alt = '';
+      chip.appendChild(img);
+    }
+
+    const label = document.createElement('i');
+    label.textContent = item.count > 1 ? `${item.name} x${item.count}` : item.name;
+    chip.appendChild(label);
+
+    items.appendChild(chip);
+  }
+
+  row.appendChild(items);
+  return row;
+}
+
+const QUALITY_WORDS = { 1: 'Silver', 2: 'Gold', 4: 'Iridium' };
+const qualityWord = (quality) => QUALITY_WORDS[quality] || '';
+
+/* ---------- the farm ---------- */
+
+/**
+ * Three lists, each answering a question that otherwise costs a walk across the farm.
+ *
+ * They are separate columns rather than one merged feed because they are read at different moments:
+ * the machines in the evening, the animals in the morning, the trees when you happen to think of it.
+ * Each scrolls on its own so a hundred kegs cannot bury the four cows.
+ */
+function renderFarm() {
+  if (!farmData) return;
+
+  const ready = farmData.machinesReady || 0;
+  const unpetted = farmData.animalsUnpetted || 0;
+  const fruit = farmData.fruitWaiting || 0;
+
+  const summary = [];
+  if (ready) summary.push(`${ready} ready`);
+  if (unpetted) summary.push(`${unpetted} unpetted`);
+  if (fruit) summary.push(`${fruit} fruit`);
+  dom.farmSummary.textContent = summary.length ? summary.join(' \u00b7 ') : 'nothing waiting';
+
+  const machines = farmData.machines || [];
+  const animals = farmData.animals || [];
+  const trees = farmData.trees || [];
+
+  dom.farmMachinesCount.textContent = machines.length ? String(machines.length) : '';
+  dom.farmAnimalsCount.textContent = animals.length ? String(animals.length) : '';
+  dom.farmTreesCount.textContent = trees.length ? String(trees.length) : '';
+
+  fillList(dom.farmMachines, machines, machineRow, 'No machines running.');
+  fillList(dom.farmAnimals, animals, animalRow, 'No animals yet.');
+  fillList(dom.farmTrees, trees, treeRow, 'No fruit trees planted.');
+}
+
+function fillList(host, rows, build, empty) {
+  host.textContent = '';
+
+  if (!rows.length) {
+    const note = document.createElement('div');
+    note.className = 'farm-empty';
+    note.textContent = empty;
+    host.appendChild(note);
+    return;
+  }
+
+  for (const row of rows) host.appendChild(build(row));
+}
+
+/** One row: icon, two lines of text, and a state word on the right. */
+function farmRow(iconKey, title, subtitle, tagText, tagClass) {
+  const row = document.createElement('div');
+  row.className = 'farm-row' + (tagClass ? ` ${tagClass}` : '');
+
+  // No placeholder art when there is nothing to show. A column of grey squares reads as a broken
+  // page rather than as "this cow has already been milked", so the space is simply left empty.
+  if (iconKey) {
+    const img = document.createElement('img');
+    img.src = `/icon/${iconKey}.png`;
+    img.alt = '';
+    row.appendChild(img);
+  } else {
+    row.classList.add('no-icon');
+  }
+
+  const text = document.createElement('div');
+  const name = document.createElement('span');
+  name.textContent = title;
+  const note = document.createElement('small');
+  note.textContent = subtitle;
+  text.append(name, note);
+  row.appendChild(text);
+
+  if (tagText) {
+    const tag = document.createElement('em');
+    tag.textContent = tagText;
+    row.appendChild(tag);
+  }
+
+  return row;
+}
+
+function machineRow(machine) {
+  const where = machine.location ? machine.location : '';
+  const what = machine.produce ? machine.produce : 'working';
+
+  let tag = '';
+  let cls = '';
+  if (machine.ready) { tag = 'ready'; cls = 'ready'; }
+  else if (machine.minutesLeft > 0) tag = gameMinutes(machine.minutesLeft);
+
+  return farmRow(machine.iconKey, machine.name, [what, where].filter(Boolean).join(' \u00b7 '), tag, cls);
+}
+
+function animalRow(animal) {
+  const bits = [animal.type, animal.building].filter(Boolean);
+  const wants = [];
+  if (!animal.pet) wants.push('needs petting');
+  if (!animal.fed) wants.push('not fed');
+
+  return farmRow(
+    animal.iconKey,
+    animal.name,
+    bits.join(' \u00b7 '),
+    animal.produce ? animal.produce : wants.join(' · '),
+    animal.produce ? 'ready' : (wants.length ? 'wants' : '')
+  );
+}
+
+function treeRow(tree) {
+  const growing = tree.daysToMature > 0;
+  const subtitle = growing
+    ? `${tree.location} \u00b7 ${tree.daysToMature} day${tree.daysToMature === 1 ? '' : 's'} to mature`
+    : tree.location;
+
+  return farmRow(
+    tree.iconKey,
+    tree.name,
+    subtitle,
+    tree.fruit > 0 ? String(tree.fruit) : (growing ? 'growing' : ''),
+    tree.fruit > 0 ? 'ready' : ''
+  );
+}
+
+/** Machine timers arrive in game minutes, which run ten to the real second. */
+function gameMinutes(minutes) {
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+    return rest ? `${hours}h ${rest}m` : `${hours}h`;
+  }
+  return `${minutes}m`;
+}
+
+/* ---------- the calendar ---------- */
+
+const WEEKDAY_LETTERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+/**
+ * The season, as the four-by-seven grid the game itself uses.
+ *
+ * Drawn as a whole month rather than as a list of upcoming events, because the question this answers
+ * is usually "how long have I got" -- and counting squares is how anyone answers that.
+ */
+function renderCalendar() {
+  if (!calendarData) return;
+
+  const season = SEASON_LABEL[String(calendarData.season).toLowerCase()] || calendarData.season;
+  dom.calendarTitle.textContent = `${season}, Year ${calendarData.year}`;
+
+  const days = calendarData.days || [];
+  const upcoming = days.filter((day) => !day.past && (day.festival || (day.birthdays || []).length));
+  dom.calendarNote.textContent = upcoming.length ? `${upcoming.length} still to come` : '';
+
+  if (!dom.calendarWeekdays.children.length) {
+    for (const label of WEEKDAY_LETTERS) {
+      const head = document.createElement('span');
+      head.textContent = label;
+      dom.calendarWeekdays.appendChild(head);
+    }
+  }
+
+  dom.calendarGrid.textContent = '';
+  for (const day of days) dom.calendarGrid.appendChild(calendarCell(day));
+}
+
+function calendarCell(day) {
+  const cell = document.createElement('div');
+  cell.className = 'cal-day';
+  if (day.today) cell.classList.add('today');
+  if (day.past) cell.classList.add('past');
+  if (day.festival) cell.classList.add('festival');
+
+  const number = document.createElement('b');
+  number.textContent = day.day;
+  cell.appendChild(number);
+
+  const names = day.birthdays || [];
+  for (let i = 0; i < names.length; i++) {
+    const badge = document.createElement('span');
+    badge.className = 'cal-birthday';
+
+    // Loaded straight rather than through npcFace, which only hands back an image once it has
+    // already decoded -- fine for a canvas that redraws ten times a second, useless for a grid drawn
+    // once when the tab opens. A portrait that fails to resolve removes itself.
+    const key = (day.portraits || [])[i];
+    if (key) {
+      const img = document.createElement('img');
+      img.src = `/npc/${key}.png`;
+      img.alt = '';
+      img.addEventListener('error', () => img.remove());
+      badge.appendChild(img);
+    }
+
+    const name = document.createElement('i');
+    name.textContent = names[i];
+    badge.appendChild(name);
+    cell.appendChild(badge);
+  }
+
+  if (day.festival) {
+    const tag = document.createElement('small');
+    tag.className = 'cal-festival';
+    tag.textContent = day.festival;
+    cell.appendChild(tag);
+  }
+
+  if (day.cart) {
+    const cart = document.createElement('small');
+    cart.className = 'cal-cart';
+    cart.textContent = 'Cart';
+    cell.appendChild(cart);
+  }
+
+  return cell;
+}
+
 /* ---------- tabs ---------- */
 
+/**
+ * Show one panel and hide the rest.
+ *
+ * Every tab now owns the whole screen rather than sharing it with a fixed neighbour, so this is the
+ * only thing deciding what is visible. The panels are listed in one place because adding a seventh
+ * should be one line here and one button in the markup, not a hunt through four toggles.
+ */
+const TABS = {
+  today: () => dom.tabToday,
+  map: () => dom.tabMap,
+  farm: () => dom.tabFarm,
+  journal: () => dom.tabJournal,
+  bundles: () => dom.tabBundles,
+  calendar: () => dom.tabCalendar,
+  village: () => dom.tabVillage,
+  settings: () => dom.tabSettingsPage,
+};
+
 function setTab(tab) {
+  if (!TABS[tab]) tab = 'today';
   activeTab = tab;
 
-  for (const button of document.querySelectorAll('.tab'))
+  for (const button of document.querySelectorAll('.navtab'))
     button.classList.toggle('on', button.dataset.tab === tab);
 
-  dom.tabMap.classList.toggle('hidden', tab !== 'map');
-  dom.tabToday.classList.toggle('hidden', tab !== 'today');
-  dom.tabVillage.classList.toggle('hidden', tab !== 'village');
-  dom.tabBundles.classList.toggle('hidden', tab !== 'bundles');
+  for (const [name, node] of Object.entries(TABS))
+    node().classList.toggle('hidden', name !== tab);
 
-  // the zoom and fit controls only mean anything on the map
+  // The zoom and fit controls live in the map's own header now, so they go with it. Kept as an
+  // explicit hide because the world-map button is shared with the settings screen's map section.
   for (const id of ['zoom-in', 'zoom-out', 'zoom-text', 'zoom-toggle']) {
     const node = document.getElementById(id);
     if (node) node.style.display = tab === 'map' ? '' : 'none';
   }
 
+  // Reopen where you left off. A second screen is glanced at, put down and picked up again, and
+  // being returned to the backpack every time you look away is a small tax on every glance.
+  try { localStorage.setItem('ayn.tab', tab); } catch (error) { /* private mode; not worth failing over */ }
+
   if (tab === 'map' && state) renderMap();
+  if (tab === 'settings') buildSettingsPanel();
+
+  // The villager and bundle lists live behind their own slower endpoints. Ask straight away rather
+  // than letting the tab sit empty until the next poll.
+  if (tab === 'village' || tab === 'bundles' || tab === 'farm' || tab === 'calendar') refreshSlow();
+}
+
+/** The tab this device was last on, or Today. */
+function rememberedTab() {
+  try {
+    const saved = localStorage.getItem('ayn.tab');
+    return TABS[saved] ? saved : 'today';
+  } catch (error) {
+    return 'today';
+  }
 }
 
 /* ---------- minimap ---------- */
@@ -1136,6 +1808,7 @@ function render() {
   renderHud();
   renderForecast();
   renderToday();
+  renderTodayStrip();
   renderQuests();
   renderSkills();
   renderInventory();
@@ -1191,23 +1864,67 @@ function clearDragHighlight() {
   dragOverSlot = null;
 }
 
-dom.invGrid.addEventListener('pointerdown', (event) => {
+/*
+ * Tap to pick a slot, hold to use what is in it.
+ *
+ * Bound to both grids rather than to one, because the hotbar and the backpack rows are separate hosts
+ * now and a drag that starts in one and ends in the other still has to mean "swap these two". Pointer
+ * capture stays on whichever host the gesture began in; the drop target is resolved by hit-testing, so
+ * crossing between them costs nothing.
+ */
+const HOLD_MS = 420;
+
+let holdTimer = null;
+let holdFired = false;
+
+function cancelHold() {
+  if (holdTimer !== null) clearTimeout(holdTimer);
+  holdTimer = null;
+  slots[dragFrom]?.root.classList.remove('holding');
+}
+
+/** What a hold does depends on what is being held: food is eaten, everything else is swung. */
+function holdSlot(index) {
+  const item = state && state.inventory ? state.inventory[index] : null;
+  if (!item || !item.name || index >= 12) return;
+
+  const can = (state && state.can) || {};
+  const edible = item.edible && can.eat !== false;
+
+  if (edible) send('eat', index);
+  else if (can.use !== false) send('use', index);
+}
+
+function onSlotDown(host, event) {
   const slot = event.target.closest('.slot');
   if (!slot) return;
 
   dragFrom = Number(slot.dataset.index);
   dragActive = false;
+  holdFired = false;
   pointerStart = { x: event.clientX, y: event.clientY };
-  dom.invGrid.setPointerCapture(event.pointerId);
-});
+  host.setPointerCapture(event.pointerId);
 
-dom.invGrid.addEventListener('pointermove', (event) => {
+  const index = dragFrom;
+  slot.classList.add('holding');
+  holdTimer = setTimeout(() => {
+    holdTimer = null;
+    if (dragActive || dragFrom !== index) return;
+    holdFired = true;
+    cursor = index;
+    holdSlot(index);
+    if (state) renderInventory();
+  }, HOLD_MS);
+}
+
+function onSlotMove(event) {
   if (dragFrom < 0 || !pointerStart) return;
 
   if (!dragActive) {
     const moved = Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y);
     if (moved < 10) return;
     dragActive = true;
+    cancelHold();
     slots[dragFrom]?.root.classList.add('dragging');
   }
 
@@ -1219,19 +1936,22 @@ dom.invGrid.addEventListener('pointermove', (event) => {
       dragOverSlot = over;
     }
   }
-});
+}
 
-dom.invGrid.addEventListener('pointerup', (event) => {
+function onSlotUp(event) {
   if (dragFrom < 0) return;
 
   const from = dragFrom;
   const wasDrag = dragActive;
+  const wasHeld = holdFired;
   const target = slotFromPoint(event.clientX, event.clientY);
 
+  cancelHold();
   slots[from]?.root.classList.remove('dragging');
   clearDragHighlight();
   dragFrom = -1;
   dragActive = false;
+  holdFired = false;
   pointerStart = null;
 
   if (wasDrag) {
@@ -1242,20 +1962,32 @@ dom.invGrid.addEventListener('pointerup', (event) => {
     return;
   }
 
+  // A hold already acted; letting go of it must not also count as a tap.
+  if (wasHeld) return;
+
   // a plain tap moves the cursor, and equips the item if it's reachable from the hotbar
   cursor = from;
   disarmTrash();
   if (from < 12) send('select', from);
   if (state) renderInventory();
-});
+}
 
-dom.invGrid.addEventListener('pointercancel', () => {
+function onSlotCancel() {
+  cancelHold();
   slots[dragFrom]?.root.classList.remove('dragging');
   clearDragHighlight();
   dragFrom = -1;
   dragActive = false;
+  holdFired = false;
   pointerStart = null;
-});
+}
+
+for (const host of [dom.invGrid, dom.backpackRows]) {
+  host.addEventListener('pointerdown', (event) => onSlotDown(host, event));
+  host.addEventListener('pointermove', onSlotMove);
+  host.addEventListener('pointerup', onSlotUp);
+  host.addEventListener('pointercancel', onSlotCancel);
+}
 
 function disarmTrash() {
   trashArmed = false;
@@ -1438,6 +2170,82 @@ function buildSettingsPanel() {
 
   buildSegmented(dom.settingsScale, Object.keys(SCALES), 'scale', (v) => v);
   buildSegmented(dom.settingsRate, [5, 10, 15, 20], 'rate', (v) => `${v}/s`);
+
+  buildPageToggles();
+  buildConnectionFacts();
+}
+
+/** The Pages list: one checkbox per tab that is allowed to be hidden. */
+function buildPageToggles() {
+  dom.settingsPages.textContent = '';
+
+  for (const [key, label] of HIDEABLE_PAGES) {
+    const row = document.createElement('label');
+
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = pageShown(key);
+    box.addEventListener('change', () => {
+      if (!settings.pages) settings.pages = {};
+      settings.pages[key] = box.checked;
+      saveSettings();
+      applySettings();
+    });
+
+    const text = document.createElement('span');
+    text.textContent = label;
+
+    row.append(box, text);
+    dom.settingsPages.appendChild(row);
+  }
+}
+
+/**
+ * Where this page is connected and what the mod on the other end is willing to do.
+ *
+ * Worth stating plainly, because both are invisible failure modes: a second device pointed at a
+ * stale address looks identical to a mod that is not running, and a greyed-out Trash button looks
+ * like a bug rather than like a line in config.json.
+ */
+function buildConnectionFacts() {
+  const link = lastSnapshot ? Math.round((Date.now() - lastSnapshot) / 1000) : -1;
+  const linkText = !lastSnapshot
+    ? 'never connected'
+    : link <= 2 ? 'connected' : `last heard ${link}s ago`;
+
+  fillFacts(dom.settingsConnection, [
+    ['Address', location.host || 'this device'],
+    ['Status', linkText],
+    ['Asking for', `${Math.round(1000 / POLL_MS)} snapshots a second`],
+    ['Game', state ? (state.locationName || state.locationId || 'in a save') : 'not reporting'],
+  ]);
+
+  const can = (state && state.can) || {};
+  const yesNo = (value) => (value === false ? 'no' : 'yes');
+
+  fillFacts(dom.settingsAllows, [
+    ['Rearranging the bag', yesNo(can.edit)],
+    ['Dropping items', yesNo(can.drop)],
+    ['Trashing items', yesNo(can.trash)],
+    ['Eating', yesNo(can.eat)],
+    ['Holding a slot to use it', yesNo(can.use)],
+  ]);
+}
+
+function fillFacts(host, rows) {
+  host.textContent = '';
+  for (const [label, value] of rows) {
+    const row = document.createElement('div');
+
+    const name = document.createElement('span');
+    name.textContent = label;
+
+    const text = document.createElement('b');
+    text.textContent = value;
+
+    row.append(name, text);
+    host.appendChild(row);
+  }
 }
 
 /** A row of mutually exclusive buttons bound to one setting. */
@@ -1458,12 +2266,10 @@ function buildSegmented(host, values, key, label) {
   }
 }
 
-dom.gear.addEventListener('click', () => {
-  buildSettingsPanel();
-  dom.settings.classList.remove('hidden');
-});
+// The gear is a shortcut to the tab now rather than a way of covering the screen with a modal.
+dom.gear.addEventListener('click', () => setTab('settings'));
 
-for (const button of document.querySelectorAll('.tab'))
+for (const button of document.querySelectorAll('.navtab'))
   button.addEventListener('click', () => setTab(button.dataset.tab));
 
 dom.villageFilter.addEventListener('input', () => {
@@ -1483,14 +2289,8 @@ dom.wikiItem.addEventListener('click', () => {
   openWiki(wikiNameFor(item));
 });
 
-dom.settingsClose.addEventListener('click', () => dom.settings.classList.add('hidden'));
-
-dom.settings.addEventListener('click', (event) => {
-  if (event.target === dom.settings) dom.settings.classList.add('hidden'); // tap the backdrop to close
-});
-
-dom.settingsReset.addEventListener('click', () => {
-  settings = Object.assign({}, SETTING_DEFAULTS);
+dom.settingsResetPage.addEventListener('click', () => {
+  settings = Object.assign({}, SETTING_DEFAULTS, { pages: {} });
   saveSettings();
   applySettings();
   buildSettingsPanel();
@@ -1504,7 +2304,8 @@ document.addEventListener('keydown', markActive, true);
 loadSettings();
 applySettings();
 setZoom(0);
-setTab('map');
+// Opens where this device was left, rather than always on the map. See rememberedTab().
+setTab(rememberedTab());
 renderLink();
 poll();
 pollSlow();

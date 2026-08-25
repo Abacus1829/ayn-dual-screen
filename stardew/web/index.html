@@ -22,137 +22,52 @@
     </svg>
   </button>
 
-  <div id="settings" class="overlay hidden">
-    <div class="settings-box">
-      <div class="settings-head">
-        <span>Customise this screen</span>
-        <button id="settings-close" class="chip">Done</button>
-      </div>
+  <!--
+    The tab bar.
 
-      <p class="settings-note">Saved on this device only, so the Thor and a phone can each be set up differently.</p>
+    This page used to be two fixed panels side by side: the map on the left, always, and the
+    inventory on the right, always. On a wide monitor that is a reasonable use of the space. On the
+    handheld it is the whole problem — the left column becomes a thin strip too narrow for the map
+    it holds, and the tabs inside it cannot fit their own labels.
 
-      <div class="settings-section">Theme</div>
-      <div id="settings-theme" class="segmented"></div>
-      <p class="settings-note">Stardew uses the game's own menu art, and follows any recolour mod you have installed. Plain is the flat dark look.</p>
+    So nothing is permanent now. One thing is on screen at a time, it has the entire panel, and this
+    row is how you choose. Ordered by how often it is reached for rather than alphabetically.
+  -->
+  <nav id="tabbar" class="framed">
+    <button class="navtab on" data-tab="today"><i>☀</i><span>Today</span></button>
+    <button class="navtab" data-tab="map"><i>◈</i><span>Map</span></button>
+    <button class="navtab" data-tab="farm"><i>▤</i><span>Farm</span></button>
+    <button class="navtab" data-tab="journal"><i>✎</i><span>Journal</span></button>
+    <button class="navtab" data-tab="bundles"><i>▩</i><span>Bundles</span></button>
+    <button class="navtab" data-tab="calendar"><i>▦</i><span>Calendar</span></button>
+    <button class="navtab" data-tab="village"><i>♥</i><span>People</span></button>
+    <button class="navtab" data-tab="settings"><i>⚙</i><span>Settings</span></button>
+  </nav>
 
-      <div class="settings-section">Map</div>
-      <div id="settings-map" class="segmented"></div>
-      <p class="settings-note">Tile map draws the room you're standing in, with crops, machines and paths. In-game map is the map from your journal, with everyone placed on it. Also on the button above the map.</p>
+  <main id="stage">
 
-      <div class="settings-section">Behaviour</div>
-      <div id="settings-behaviour" class="settings-grid"></div>
+    <!--
+      ===== today =====
 
-      <div class="settings-section">Show</div>
-      <div id="settings-toggles" class="settings-grid"></div>
+      Everything you would otherwise pause the game to look at. The backpack sits directly under the
+      hotbar because they are the same twelve columns, and L/R rotates whichever unlocked row is
+      active rather than offering tiny per-slot transfer controls.
+    -->
+    <section id="tab-today" class="tab-body framed">
+      <div id="today-strip"></div>
 
-      <div class="settings-section">Accent</div>
-      <div id="settings-accents" class="swatches"></div>
-
-      <div class="settings-section">Size</div>
-      <div id="settings-scale" class="segmented"></div>
-
-      <div class="settings-section">Updates per second</div>
-      <div id="settings-rate" class="segmented"></div>
-
-      <div class="settings-section">Wiki</div>
-      <div class="settings-links">
-        <button id="wiki-home" class="linkish">Open the official Stardew Valley Wiki</button>
-        <button id="wiki-item" class="linkish">Look up the selected item</button>
-        <p class="settings-note">Opens in this window. The app's &#8942; menu brings you back; in a plain browser, use Back.</p>
-      </div>
-
-      <div class="settings-foot">
-        <button id="settings-reset" class="chip">Reset to defaults</button>
-      </div>
-    </div>
-  </div>
-
-  <header id="hud" class="framed">
-    <div class="hud-block" id="hud-date">
-      <span class="hud-main" id="date-text">&mdash;</span>
-      <span class="hud-sub" id="year-text"></span>
-    </div>
-    <div class="hud-block" id="hud-clock">
-      <span class="hud-main" id="clock-text">--:--</span>
-      <span class="hud-sub" id="weather-text"></span>
-    </div>
-    <div class="hud-block" id="hud-money">
-      <span class="hud-main" id="money-text">0g</span>
-      <span class="hud-sub" id="location-text"></span>
-    </div>
-    <div class="hud-block bars">
-      <div class="bar" title="Energy"><div class="bar-fill energy" id="bar-energy"></div><span id="energy-text"></span></div>
-      <div class="bar" title="Health"><div class="bar-fill health" id="bar-health"></div><span id="health-text"></span></div>
-    </div>
-  </header>
-
-  <main>
-    <section id="map-panel" class="framed">
-      <div class="panel-head">
-        <span class="tabs">
-          <button class="tab on" data-tab="map">Map</button>
-          <button class="tab" data-tab="today">Today</button>
-          <button class="tab" data-tab="village">Village</button>
-          <button class="tab" data-tab="bundles">Bundles</button>
-        </span>
+      <div class="row-head">
+        <span id="hotbar-label">Hotbar</span>
         <span class="head-tools">
           <i id="link-dot" class="dot" title="Connection"></i>
-          <button id="zoom-out" class="chip tight">&minus;</button>
-          <span id="zoom-text">1x</span>
-          <button id="zoom-in" class="chip tight">+</button>
-          <button id="zoom-toggle" class="chip">Fit</button>
-          <button id="map-mode" class="chip" title="Switch between the tile map and the game's world map">World</button>
+          <button id="row-prev" class="chip tight" title="Previous backpack row">L</button>
+          <span id="row-text">Row 1</span>
+          <button id="row-next" class="chip tight" title="Next backpack row">R</button>
         </span>
       </div>
-      <div id="tab-map" class="tab-body">
-        <div id="map-wrap">
-          <canvas id="map-canvas"></canvas>
-          <div id="map-tip" class="hidden"></div>
-        </div>
-        <div id="legend">
-          <span><i class="sw" style="background:#6ec1ff"></i>You</span>
-          <span><i class="sw" style="background:#ffd166"></i>NPC</span>
-          <span><i class="sw" style="background:#ff5d5d"></i>Monster</span>
-          <span><i class="sw" style="background:#c58cff"></i>Exit</span>
-        </div>
-      </div>
-
-      <div id="tab-today" class="tab-body hidden">
-        <div id="forecast"></div>
-        <div id="today-notes"></div>
-        <div class="sub-head"><span>Skills</span></div>
-        <div id="skills"></div>
-        <div class="sub-head" id="quest-head">
-          <span>Journal</span>
-          <span id="quest-count"></span>
-        </div>
-        <div id="quests"></div>
-      </div>
-
-      <div id="tab-village" class="tab-body hidden">
-        <div class="sub-head">
-          <span>Villagers</span>
-          <span id="village-count"></span>
-        </div>
-        <input id="village-filter" type="search" placeholder="Filter…" autocomplete="off">
-        <div id="village-list"></div>
-      </div>
-
-      <div id="tab-bundles" class="tab-body hidden">
-        <div class="sub-head">
-          <span>Community Centre</span>
-          <span id="bundle-progress"></span>
-        </div>
-        <div id="bundle-list"></div>
-      </div>
-    </section>
-
-    <section id="inv-panel" class="framed">
-      <div class="panel-head">
-        <span id="inv-title">Inventory</span>
-        <span id="inv-hint">tap to select &middot; drag to move</span>
-      </div>
       <div id="inv-grid"></div>
+
+      <div id="backpack-rows"></div>
 
       <div id="chest" class="hidden">
         <div class="sub-head">
@@ -178,8 +93,178 @@
         <button class="act" data-act="sort">Sort</button>
         <button class="act" id="act-store" data-act="chestPut" disabled>Store</button>
       </div>
+
+      <div class="sub-head"><span>Skills</span></div>
+      <div id="skills"></div>
+      <div id="today-notes"></div>
+      <span id="forecast" class="hidden"></span>
+      <span id="inv-title" class="hidden">Backpack</span>
+      <span id="inv-hint" class="hidden"></span>
     </section>
+
+    <!-- ===== map ===== -->
+    <section id="tab-map" class="tab-body framed hidden">
+      <div class="panel-head">
+        <span id="map-title">Map</span>
+        <span class="head-tools">
+          <button id="zoom-out" class="chip tight">&minus;</button>
+          <span id="zoom-text">1x</span>
+          <button id="zoom-in" class="chip tight">+</button>
+          <button id="zoom-toggle" class="chip">Fit</button>
+          <button id="map-mode" class="chip" title="Switch between the tile map and the game's world map">World</button>
+        </span>
+      </div>
+
+      <div id="map-wrap">
+        <canvas id="map-canvas"></canvas>
+        <div id="map-tip" class="hidden"></div>
+      </div>
+
+      <div id="legend">
+        <span><i class="sw" style="background:#6ec1ff"></i>You</span>
+        <span><i class="sw" style="background:#ffd166"></i>NPC</span>
+        <span><i class="sw" style="background:#ff5d5d"></i>Monster</span>
+        <span><i class="sw" style="background:#c58cff"></i>Exit</span>
+      </div>
+    </section>
+
+    <!-- ===== journal ===== -->
+    <section id="tab-journal" class="tab-body framed hidden">
+      <div class="panel-head">
+        <span id="quest-head">Journal</span>
+        <span id="quest-count" class="head-tools"></span>
+      </div>
+      <div id="quests"></div>
+    </section>
+
+    <!-- ===== relationships ===== -->
+    <section id="tab-village" class="tab-body framed hidden">
+      <div class="panel-head">
+        <span>Relationships</span>
+        <span id="village-count" class="head-tools"></span>
+      </div>
+      <input id="village-filter" type="search" placeholder="Filter&hellip;" autocomplete="off">
+      <div id="village-list"></div>
+    </section>
+
+
+    <!-- ===== community centre ===== -->
+    <section id="tab-bundles" class="tab-body framed hidden">
+      <div class="panel-head">
+        <span>Community Centre</span>
+        <span id="bundle-progress" class="head-tools"></span>
+      </div>
+      <div id="bundle-list"></div>
+    </section>
+
+
+    <!-- ===== farm ===== -->
+    <section id="tab-farm" class="tab-body framed hidden">
+      <div class="panel-head">
+        <span>Farm</span>
+        <span id="farm-summary" class="head-tools"></span>
+      </div>
+      <div id="farm-columns">
+        <div class="farm-col">
+          <div class="sub-head"><span>Machines</span><span id="farm-machines-count"></span></div>
+          <div id="farm-machines" class="farm-list"></div>
+        </div>
+        <div class="farm-col">
+          <div class="sub-head"><span>Animals</span><span id="farm-animals-count"></span></div>
+          <div id="farm-animals" class="farm-list"></div>
+        </div>
+        <div class="farm-col">
+          <div class="sub-head"><span>Fruit trees</span><span id="farm-trees-count"></span></div>
+          <div id="farm-trees" class="farm-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== calendar ===== -->
+    <section id="tab-calendar" class="tab-body framed hidden">
+      <div class="panel-head">
+        <span id="calendar-title">Calendar</span>
+        <span id="calendar-note" class="head-tools"></span>
+      </div>
+      <div id="calendar-weekdays"></div>
+      <div id="calendar-grid"></div>
+    </section>
+
+    <!-- ===== settings =====
+         The gear overlay's contents, as a page. It was a modal covering the screen it configures,
+         which meant you could not see a change land without dismissing it first. -->
+    <section id="tab-settings" class="tab-body framed hidden">
+      <div class="panel-head">
+        <span>Settings</span>
+        <span class="head-tools"><button id="settings-reset-page" class="chip">Reset</button></span>
+      </div>
+      <div id="settings-page">
+      <p class="settings-note">Saved on this device only, so the Thor and a phone can each be set up differently.</p>
+
+      <div class="settings-section">Pages</div>
+      <div id="settings-pages" class="settings-grid"></div>
+      <p class="settings-note">Turns a tab off in the bar above. Today and Settings always stay.</p>
+
+      <div class="settings-section">Theme</div>
+      <div id="settings-theme" class="segmented"></div>
+      <p class="settings-note">Stardew uses the game's own menu art, and follows any recolour mod you have installed. Plain is the flat dark look.</p>
+
+      <div class="settings-section">Map</div>
+      <div id="settings-map" class="segmented"></div>
+      <p class="settings-note">Tile map draws the room you're standing in, with crops, machines and paths. In-game map is the map from your journal, with everyone placed on it. Also on the button above the map.</p>
+
+      <div class="settings-section">Behaviour</div>
+      <div id="settings-behaviour" class="settings-grid"></div>
+
+      <div class="settings-section">Show</div>
+      <div id="settings-toggles" class="settings-grid"></div>
+
+      <div class="settings-section">Accent</div>
+      <div id="settings-accents" class="swatches"></div>
+
+      <div class="settings-section">Size</div>
+      <div id="settings-scale" class="segmented"></div>
+
+      <div class="settings-section">Updates per second</div>
+      <div id="settings-rate" class="segmented"></div>
+
+      <div class="settings-section">Connection</div>
+      <div id="settings-connection" class="settings-facts"></div>
+
+      <div class="settings-section">What the mod allows</div>
+      <div id="settings-allows" class="settings-facts"></div>
+      <p class="settings-note">Set in the mod's own config.json on the PC, not here. Restart the game after editing it.</p>
+
+      <div class="settings-section">Wiki</div>
+      <div class="settings-links">
+        <button id="wiki-home" class="linkish">Open the official Stardew Valley Wiki</button>
+        <button id="wiki-item" class="linkish">Look up the selected item</button>
+        <p class="settings-note">Opens in this window. The app's &#8942; menu brings you back; in a plain browser, use Back.</p>
+      </div>
+      </div>
+    </section>
+
   </main>
+
+  <footer id="hud" class="framed">
+    <div class="hud-block" id="hud-date">
+      <span class="hud-main" id="date-text">&mdash;</span>
+      <span class="hud-sub" id="year-text"></span>
+    </div>
+    <div class="hud-block" id="hud-clock">
+      <span class="hud-main" id="clock-text">--:--</span>
+      <span class="hud-sub" id="weather-text"></span>
+    </div>
+    <div class="hud-block" id="hud-money">
+      <span class="hud-main" id="money-text">0g</span>
+      <span class="hud-sub" id="location-text"></span>
+    </div>
+    <div class="hud-block bars">
+      <div class="bar" title="Energy"><div class="bar-fill energy" id="bar-energy"></div><span id="energy-text"></span></div>
+      <div class="bar" title="Health"><div class="bar-fill health" id="bar-health"></div><span id="health-text"></span></div>
+    </div>
+  </footer>
+
 
   <script src="app.js"></script>
 </body>

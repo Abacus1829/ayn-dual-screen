@@ -174,6 +174,34 @@ Then check it from the other end: open the app on a device running the *previous
 find the release. If it does not appear, the manifest or the title is wrong, and the six other
 downloads on this page will not tell you.
 
+### Zipping a mod: entry names must use forward slashes
+
+`Compress-Archive` and `[IO.Compression.ZipFile]::CreateFromDirectory` under Windows PowerShell 5.1
+write **backslashes** into the zip's entry names — `AynDualScreen\web\app.js` rather than
+`AynDualScreen/web/app.js`. The zip specification says forward slashes, and the difference is
+invisible on Windows because every Windows unzip tool accepts both.
+
+It is not invisible anywhere else. SMAPI on Linux, macOS and Android reads such an entry as a single
+file whose *name* contains a backslash, so the mod extracts as three files sitting loose in `Mods/`
+with no `web` folder at all — and the mod then loads, serves a 404 for its own page, and looks like
+a mod bug rather than a packaging one.
+
+Add the entries by hand, naming each one explicitly:
+
+```powershell
+Add-Type -AssemblyName System.IO.Compression
+$zip = [System.IO.Compression.ZipFile]::Open($out, 'Create')
+[System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+    $zip, (Resolve-Path 'stardew\web\app.js'), 'AynDualScreen/web/app.js', 'Optimal')
+$zip.Dispose()
+```
+
+Check what you built before uploading it — the names are right there:
+
+```powershell
+$z = [System.IO.Compression.ZipFile]::OpenRead($path); $z.Entries.FullName; $z.Dispose()
+```
+
 ### Signing, and why it is worth fixing
 
 The app refuses to install an update signed with a different key than the copy already running —

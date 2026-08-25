@@ -44,6 +44,17 @@ namespace AynDualScreen
         public int SelectedSlot { get; set; }
         public int HotbarSize { get; set; }
 
+        /// <summary>How many 12-slot rows the backpack has been upgraded to: 1, 2 or 3.</summary>
+        /// <remarks>
+        /// The Today page shows every unlocked row and rotates them through the hotbar with L/R, so it
+        /// needs to know how many are real. Derived from the player's item capacity rather than from a
+        /// purchase flag, because that is what actually governs the slots.
+        /// </remarks>
+        public int BackpackRows { get; set; } = 1;
+
+        /// <summary>What is in the shipping bin right now.</summary>
+        public ShippingDto Shipping { get; set; }
+
         /// <summary>Tomorrow's forecast, so the evening's planning can happen on the second screen.</summary>
         public string WeatherTomorrow { get; set; }
 
@@ -81,6 +92,8 @@ namespace AynDualScreen
         public bool Drop { get; set; }
         public bool Edit { get; set; }
         public bool Eat { get; set; }
+
+        public bool Use { get; set; }
     }
 
     /// <summary>One villager: where they are and how you're getting on.</summary>
@@ -120,8 +133,39 @@ namespace AynDualScreen
         public int Done { get; set; }
         public int Total { get; set; }
 
-        /// <summary>The bundles in this room that are still outstanding.</summary>
-        public List<string> Remaining { get; set; }
+        /// <summary>Every bundle in this room, finished ones included, in the board's own order.</summary>
+        public List<BundleDto> Bundles { get; set; }
+    }
+
+    /// <summary>One bundle, and what it is still short of.</summary>
+    internal sealed class BundleDto
+    {
+        public string Name { get; set; }
+        public bool Complete { get; set; }
+
+        /// <summary>Slots already filled, and how many the bundle wants.</summary>
+        /// <remarks>
+        /// Not always the same as the ingredient count: several bundles are "any five of these nine",
+        /// and reporting nine would make a finishable bundle look impossible.
+        /// </remarks>
+        public int Have { get; set; }
+
+        public int Need { get; set; }
+
+        /// <summary>The ingredients whose slots are still empty.</summary>
+        public List<BundleItemDto> Missing { get; set; }
+    }
+
+    /// <summary>One ingredient a bundle is still waiting for.</summary>
+    internal sealed class BundleItemDto
+    {
+        public string Name { get; set; }
+        public int Count { get; set; }
+
+        /// <summary>0 normal, 1 silver, 2 gold, 4 iridium — the bundle's own requirement.</summary>
+        public int Quality { get; set; }
+
+        public string IconKey { get; set; }
     }
 
     /// <summary>An entry from the journal, reduced to what fits on a bottom screen.</summary>
@@ -133,6 +177,24 @@ namespace AynDualScreen
         /// <summary>Days left before it expires, or -1 when it never does.</summary>
         public int DaysLeft { get; set; }
         public bool Complete { get; set; }
+
+        /// <summary>Gold on completion, or 0 when the reward is not money.</summary>
+        public int RewardGold { get; set; }
+
+        /// <summary>The reward in words, when there is one worth naming.</summary>
+        public string Reward { get; set; }
+
+        /// <summary>
+        /// Whether Stardew itself permits cancelling this one.
+        /// </summary>
+        /// <remarks>
+        /// Story quests are not cancellable and the game hides the button for them. The client is told
+        /// rather than guessing, because a Cancel that silently does nothing is worse than no Cancel.
+        /// </remarks>
+        public bool Cancellable { get; set; }
+
+        /// <summary>The quest's id, which is what a cancel has to name.</summary>
+        public int Id { get; set; } = -1;
     }
 
     /// <summary>One inventory slot. <see cref="Name"/> is null for an empty slot.</summary>
@@ -145,6 +207,15 @@ namespace AynDualScreen
         public string Category { get; set; }
         public string IconKey { get; set; }
         public bool Edible { get; set; }
+
+        /// <summary>Water left in a watering can, and its capacity. Both -1 for anything else.</summary>
+        /// <remarks>Sent as a pair so the client can draw a bar without knowing which cans hold what.</remarks>
+        public int Water { get; set; } = -1;
+        public int WaterMax { get; set; } = -1;
+
+        /// <summary>A weapon's special-action cooldown: milliseconds remaining, and the full length.</summary>
+        public int Cooldown { get; set; } = -1;
+        public int CooldownMax { get; set; } = -1;
     }
 
     /// <summary>Something to draw on the minimap that moves.</summary>
@@ -245,5 +316,107 @@ namespace AynDualScreen
         public string Type { get; set; }
         public int Index { get; set; } = -1;
         public int To { get; set; } = -1;
+    }
+/// <summary>What has gone into the shipping bin today.</summary>
+    /// <remarks>
+    /// Value is what the bin is currently worth, which is not the same as tonight's income: the game
+    /// applies profit margins and the Gatherer-style perks at sale time. It is reported as "what is in
+    /// the box" rather than as a prediction, because a number that turns out wrong at 2am is worse
+    /// than no number.
+    /// </remarks>
+    internal sealed class ShippingDto
+    {
+        public int Count { get; set; }
+        public int Value { get; set; }
+        public List<SlotDto> Items { get; set; }
+    }
+
+    /// <summary>One machine on the farm, and whether it has anything waiting.</summary>
+    internal sealed class MachineDto
+    {
+        public string Name { get; set; }
+        public string Location { get; set; }
+
+        /// <summary>What it is making, or null when it is idle.</summary>
+        public string Produce { get; set; }
+        public string IconKey { get; set; }
+
+        /// <summary>True when the item can be collected now.</summary>
+        public bool Ready { get; set; }
+
+        /// <summary>Minutes of game time left, or -1 when idle or unknown.</summary>
+        public int MinutesLeft { get; set; } = -1;
+    }
+
+    /// <summary>A farm animal, and what it is offering today.</summary>
+    internal sealed class AnimalDto
+    {
+        public string Name { get; set; }
+        public string Type { get; set; }
+        public string Building { get; set; }
+
+        /// <summary>Null when there is nothing to collect. No placeholder is sent — see the client.</summary>
+        public string Produce { get; set; }
+        public string IconKey { get; set; }
+
+        public int Friendship { get; set; }
+        public bool Pet { get; set; }
+        public bool Fed { get; set; }
+    }
+
+    /// <summary>A fruit tree, wherever it is planted.</summary>
+    internal sealed class FruitTreeDto
+    {
+        public string Name { get; set; }
+        public string Location { get; set; }
+        public string IconKey { get; set; }
+
+        /// <summary>How many fruit are waiting on it.</summary>
+        public int Fruit { get; set; }
+
+        /// <summary>Days until it bears, or 0 once it is mature.</summary>
+        public int DaysToMature { get; set; }
+    }
+
+    /// <summary>Everything the Farm page shows, in one fetch.</summary>
+    internal sealed class FarmDto
+    {
+        public List<MachineDto> Machines { get; set; }
+        public List<AnimalDto> Animals { get; set; }
+        public List<FruitTreeDto> Trees { get; set; }
+
+        /// <summary>The counts the page puts in its summary strip, so the client counts nothing itself.</summary>
+        public int MachinesReady { get; set; }
+        public int AnimalsUnpetted { get; set; }
+        public int ProduceWaiting { get; set; }
+        public int FruitWaiting { get; set; }
+    }
+
+    /// <summary>One square of the season calendar.</summary>
+    internal sealed class CalendarDayDto
+    {
+        public int Day { get; set; }
+
+        /// <summary>Villagers with a birthday on this day, in the order the calendar shows them.</summary>
+        public List<string> Birthdays { get; set; }
+
+        /// <summary>Icon keys for those villagers, so the page can draw portraits rather than initials.</summary>
+        public List<string> Portraits { get; set; }
+
+        public string Festival { get; set; }
+        public bool Cart { get; set; }
+        public bool Today { get; set; }
+        public bool Past { get; set; }
+    }
+
+    /// <summary>A season, as the in-game calendar lays it out: four weeks of seven days.</summary>
+    internal sealed class CalendarDto
+    {
+        public string Season { get; set; }
+        public int Year { get; set; }
+        public int Today { get; set; }
+
+        /// <summary>Always 28 entries. The grid is fixed, so the client never has to work out a shape.</summary>
+        public List<CalendarDayDto> Days { get; set; }
     }
 }

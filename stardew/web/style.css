@@ -37,7 +37,13 @@
  * the root entirely, and the small labels were written in px besides, so turning Size up moved almost
  * nothing on screen.
  */
-html { font-size: 14px; }
+/*
+ * Matches the medium entry in SCALES (app.js), which overwrites this the moment settings load.
+ *
+ * It is here so the first paint is already the right size. With a fixed 14px here the page rendered
+ * tiny, then jumped when the script ran — on a slow panel that flash is the first thing you see.
+ */
+html { font-size: clamp(13px, 2.05vmin, 26px); }
 
 html, body {
   height: 100%;
@@ -180,12 +186,97 @@ body.theme-plain .slot { background-image: none; background-color: var(--panel-2
 
 /* ---------- layout ---------- */
 
-main {
+/*
+ * One panel at a time, filling everything the tab bar and the status strip leave.
+ *
+ * This was a two-column grid with the map fixed on the left and the inventory fixed on the right.
+ * That layout has no answer for a panel narrower than about 1.4:1 — both halves become strips, and
+ * on the handheld's 1240x1080 screen the map column could not fit its own tab labels. Choosing what
+ * is on screen beats splitting the screen between two things you did not choose.
+ */
+#stage {
   flex: 1 1 auto;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
-  gap: var(--gap);
+  display: flex;
   min-height: 0;
+}
+
+#stage > .tab-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#stage > .tab-body.hidden { display: none; }
+
+/* ---------- the tab bar ---------- */
+
+#tabbar {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 4px;
+  align-items: stretch;
+  padding: 4px;
+  /* Scrolls rather than shrinks. Six labels fit on the handheld; a seventh, or a larger text size,
+     should push the row sideways instead of squeezing every label until none of them is readable. */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+#tabbar::-webkit-scrollbar { display: none; }
+
+.navtab {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  padding: 7px 12px;
+  color: var(--ink-dim);
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  /* Comfortably thumb-sized on the panel this is for, without a media query. */
+  min-height: 2.4rem;
+}
+
+.navtab i {
+  font-style: normal;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.navtab.on {
+  color: var(--ink);
+  border-color: var(--edge-hot);
+  background: rgba(0, 0, 0, .10);
+}
+
+.navtab:active { background: rgba(0, 0, 0, .18); }
+
+/*
+ * A panel that is nearly square, which is what this is actually for.
+ *
+ * The two-column split was chosen against a wide window, where 1:1.5 leaves both halves roomy. The
+ * AYN Thor's lower screen is about 1240x1080 — barely wider than it is tall — and at that shape the
+ * same split leaves the inventory too narrow for twelve columns of slots while the map, which is
+ * happy in any rectangle, keeps width it does not need.
+ *
+ * So the map gives some back. It is still a genuine two-column layout; stacking them would halve
+ * the height of both, and the height is the part a square panel is short of.
+ */
+@media (max-aspect-ratio: 4 / 3) {
+  /* The nine-sliced frame is a fixed 20px all round. On a small panel that is a lot of the width
+     to spend on decoration, and four of them meet down the middle. */
+  body { gap: 6px; padding: 6px; }
+
 }
 
 section {
@@ -201,6 +292,15 @@ section {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  /*
+     Wraps, so a row that does not fit becomes two rows instead of a truncation.
+
+     The map panel's header carries the four tabs, the zoom controls and the Fit/World chips. That
+     fits comfortably on a wide window and does not fit at all on a narrow one, where the tabs were
+     handed 122 of the 345 pixels they need and "Bundles" arrived as "BUN". Wrapping costs a row
+     only on the screens that could not show the row anyway.
+  */
+  flex-wrap: wrap;
   gap: 8px;
   font-size: 0.93rem;
   color: var(--ink-dim);
@@ -226,7 +326,28 @@ section {
 
 /* ---------- left-panel tabs ---------- */
 
-.tabs { display: flex; gap: 3px; }
+/*
+ * The tab strip has to survive a narrow panel.
+ *
+ * On the handheld's lower screen the four labels did not fit and the last one was cut in half —
+ * "BUN" — which reads as a rendering fault rather than as a tab you can scroll to. It scrolls now,
+ * and the labels give up their letter-spacing and padding before they give up their text.
+ */
+.tabs {
+  display: flex;
+  gap: 3px;
+  /*
+     Takes its natural width and wraps to its own line when the header cannot spare it — see
+     .panel-head. Scrolling is the last resort under that, for a panel so narrow that even a full
+     row is not enough: a tab you can swipe to still beats one clipped in half.
+  */
+  flex: 0 1 auto;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tabs::-webkit-scrollbar { display: none; }
 
 .tab {
   background: none;
@@ -239,6 +360,9 @@ section {
   letter-spacing: .04em;
   color: var(--ink-dim);
   cursor: pointer;
+  /* Never squashed to unreadability by a neighbour, and never wrapped mid-word. */
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .tab.on { color: var(--ink); border-color: var(--edge-hot); background: rgba(0, 0, 0, .08); }
@@ -473,6 +597,7 @@ section {
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
+  /* Twelve across is the game's own row width, and full width it finally has room for it. */
   grid-template-columns: repeat(12, minmax(0, 1fr));
   grid-auto-rows: min-content;
   align-content: start;
@@ -743,18 +868,10 @@ body.fade-idle.idle #gear:hover { opacity: 1; }
 /* Driven by the settings panel. Each toggle just adds a class to <body>, which keeps the panel's
    wiring trivial and means nothing has to be re-rendered when something is hidden. */
 body.no-hud #hud,
-body.no-map #map-panel,
 body.no-legend #legend,
-body.no-forecast #forecast,
 body.no-skills #skills,
-body.no-quests #quests,
-body.no-quests #quest-head,
 body.no-detail #detail,
-body.no-actions #actions,
-body.no-inv #inv-panel { display: none !important; }
-
-/* with one panel hidden the other should take the whole width */
-body.no-map main, body.no-inv main { grid-template-columns: minmax(0, 1fr); }
+body.no-actions #actions { display: none !important; }
 
 /* ---------- offline overlay ---------- */
 
@@ -773,11 +890,489 @@ body.no-map main, body.no-inv main { grid-template-columns: minmax(0, 1fr); }
 .overlay-box h1 { font-size: 1.3rem; margin: 0 0 6px; }
 .overlay-box p { margin: 0; color: var(--text-dim); font-size: 1rem; }
 
+/* ============================================================================
+   The pages
+   ============================================================================
+
+   Everything below belongs to the seven-page layout: Today, Farm, Calendar, the
+   journal and bundle pages as they are now, and Settings as a page rather than
+   as a sheet thrown over the top of whatever it is configuring.
+*/
+
+/* ---------- Today ---------- */
+
+/*
+ * Today scrolls, and nothing else on it does.
+ *
+ * It carries more than any other page — the status line, the hotbar, up to two more backpack rows,
+ * the detail line, the actions and the skills — and on a short window that is more than fits. One
+ * scroll on the page beats five nested scroll regions each too short to be worth dragging.
+ */
+#tab-today {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+#today-strip {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: 5px;
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  padding: 4px 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+}
+
+.fact > span {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-dim);
+}
+
+.fact > b {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fact > i {
+  font-style: normal;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* the two facts that are really gauges */
+.mini {
+  display: block;
+  height: 5px;
+  margin-top: 3px;
+  border-radius: 999px;
+  background: #1a1512;
+  overflow: hidden;
+}
+
+.mini b {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width .18s linear;
+}
+
+.mini b.energy { background: linear-gradient(90deg, #6aa84f, #9ccc65); }
+.mini b.health { background: linear-gradient(90deg, #c0392b, #e74c3c); }
+
+/* the hotbar's own header, with the row control on the right */
+.row-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.79rem;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.head-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+#row-text {
+  min-width: 5.5rem;
+  text-align: center;
+  color: var(--ink);
+  font-size: 0.79rem;
+}
+
+.chip:disabled { opacity: .35; cursor: default; }
+
+/*
+ * The hotbar sizes itself; the rows below it do the same.
+ *
+ * `flex: 1 1 auto` was right when this grid was the whole inventory and had a panel to fill. Now it
+ * is twelve slots with the backpack underneath, and stretching it would leave the first row twice
+ * the height of the two beneath it.
+ */
+#inv-grid { flex: 0 0 auto; }
+
+#backpack-rows {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+#backpack-rows.hidden { display: none; }
+
+.inv-row {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 3px;
+}
+
+/* held down long enough to count as a hold, before it fires */
+.slot.holding { box-shadow: inset 0 0 0 2px var(--edge-hot); }
+
+/*
+ * The strip along the bottom of a slot: water left, or cooldown remaining.
+ *
+ * Deliberately not a number. At this size a number is three unreadable pixels wide, and the question
+ * either bar answers is not "how many" but "enough to finish this row?" — which a length answers
+ * faster than a figure does.
+ */
+.slot .meter {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 1px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .55);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.slot .meter b {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.meter.water b { background: #4aa3e0; }
+.meter.cool b { background: var(--danger); }
+
+/* ---------- Farm ---------- */
+
+#farm-columns {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  /*
+     Three columns where there is room, and however many fit where there is not. Each is its own
+     scroll region so a farm with ninety kegs on it cannot push the four animals off the bottom.
+  */
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 8px;
+}
+
+.farm-col {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.farm-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-right: 2px;
+}
+
+.farm-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 7px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+  border-left: 3px solid var(--edge);
+  border-radius: 4px;
+  font-size: 0.86rem;
+}
+
+.farm-row.ready { border-left-color: #7ad45f; }
+.farm-row.wants { border-left-color: var(--gold); }
+
+.farm-row img {
+  flex: 0 0 auto;
+  width: 1.6rem;
+  height: 1.6rem;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+/* An animal with nothing to give gets no icon at all, so the text takes the space instead of
+   sitting beside an empty square that reads as a missing image. */
+.farm-row > div {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.farm-row span {
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.farm-row small {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.farm-row em {
+  flex: 0 0 auto;
+  font-style: normal;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.farm-row.ready em { color: #7ad45f; font-weight: 600; }
+.farm-row.wants em { color: var(--gold); }
+
+.farm-empty {
+  padding: 8px 7px;
+  font-size: 0.86rem;
+  color: var(--text-dim);
+}
+
+/* ---------- Calendar ---------- */
+
+#calendar-weekdays {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--ink-dim);
+  text-align: center;
+}
+
+#calendar-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.cal-day {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 3px 4px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+}
+
+.cal-day > b {
+  font-size: 0.79rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  line-height: 1;
+}
+
+.cal-day.past { opacity: .45; }
+.cal-day.today { border-color: var(--edge-hot); box-shadow: inset 0 0 0 1px var(--edge-hot); }
+.cal-day.today > b { color: var(--edge-hot); }
+.cal-day.festival { background: #2f2519; }
+
+.cal-birthday {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cal-birthday img {
+  flex: 0 0 auto;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 3px;
+  object-fit: cover;
+  object-position: top center;
+  image-rendering: pixelated;
+}
+
+.cal-birthday i {
+  font-style: normal;
+  font-size: 0.72rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-festival,
+.cal-cart {
+  font-size: 0.72rem;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-festival { color: var(--gold); font-weight: 600; }
+.cal-cart { color: #8fd14f; }
+
+/* ---------- Journal ---------- */
+
+/* As its own page it holds the whole list and scrolls, rather than showing the first four. */
+#quests {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  gap: 4px;
+}
+
+.quest {
+  align-items: flex-start;
+  padding: 6px 8px;
+}
+
+.quest-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.quest-text span { font-weight: 600; }
+.quest-text small { font-size: 0.79rem; color: var(--text-dim); white-space: normal; }
+.quest-reward { font-style: normal; font-size: 0.75rem; color: var(--ink-gold); }
+
+.quest-side {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.quest i.ready { color: #7ad45f; font-weight: 600; }
+.chip.armed { background: var(--danger); border-color: var(--danger); color: #fff; }
+
+/* ---------- Bundles ---------- */
+
+#bundle-list { gap: 6px; }
+
+.bundle {
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid var(--edge);
+}
+
+.bundle-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.86rem;
+  color: var(--text);
+}
+
+.bundle-head em { font-style: normal; color: var(--text-dim); }
+
+.bundle-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+/* The shopping list. Each chip is one thing the bundle is still short of, at the quality it wants. */
+.bundle-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px 2px 3px;
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.bundle-item img {
+  width: 1.2rem;
+  height: 1.2rem;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.bundle-item i { font-style: normal; }
+.bundle-item.q1 { border-color: #9aa7b1; }
+.bundle-item.q2 { border-color: var(--gold); }
+.bundle-item.q4 { border-color: #a06ce0; }
+
+/* ---------- Settings, as a page ---------- */
+
+#settings-page {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+}
+
+/* Read-only rows: where this page is connected, and what the mod will let it do. */
+.settings-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.settings-facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 3px 7px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  font-size: 0.79rem;
+}
+
+.settings-facts span { color: var(--text-dim); }
+.settings-facts b { color: var(--text); font-weight: 600; }
+
+/* a tab turned off in Settings */
+.navtab.hidden { display: none; }
+
 /* ---------- narrow / portrait screens ---------- */
 
-@media (max-aspect-ratio: 1/1) {
-  main { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1.2fr); }
-}
+/* The old portrait rule stacked the two fixed columns. There is one panel at a time now, so there
+   is nothing left to stack. */
 
 /* the menu frame is chunky pixel art; give it less room when the screen is small */
 @media (max-width: 800px), (max-height: 460px) {
@@ -787,6 +1382,9 @@ body.no-map main, body.no-inv main { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 520px) {
-  #inv-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  /* Six across rather than twelve. The backpack rows fold with the hotbar so the columns stay in
+     line with each other -- a hotbar of six over a backpack of twelve reads as two unrelated grids. */
+  #inv-grid, .inv-row { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .hud-block.bars { display: none; }
+  #today-strip { grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr)); }
 }
