@@ -7,6 +7,49 @@ time — so they say what the commits show and no more.
 
 ---
 
+## 0.23.0 — 2026-08-25
+
+Two corrections, both found by running the probe on a Thor and reading what came
+back rather than by reasoning about it here.
+
+### The temperature was a power regulator
+
+The Thor reports **fifty-eight** thermal zones. The dashboard was showing the
+hottest of them, which on a healthy idle console is `pm8550b_lite_tz` at 50.5°C —
+a PMIC, which runs hot by design and tells somebody holding a handheld nothing at
+all. It put an alarming figure on screen for a device sitting at 36°C.
+
+The zones that answer the question a dashboard is actually asking are the CPU
+ones. On the same dump they read 34–40°C, and their maximum is 40.0°C — which is
+exactly what AYN's own dashboard displays. So the choice is explicit now: the
+hottest CPU zone, then the hottest GPU zone, then the battery, and nothing else.
+Regulators, modems, cameras and the USB port are excluded by not being asked.
+
+This is the kind of thing that cannot be got right from a desk. Every one of those
+fifty-eight zones is a plausible temperature; only the device knows which of them
+is *the* temperature.
+
+### The CPU had no name
+
+`/proc/cpuinfo` reported "not available" on a console whose SoC the framework
+knows perfectly well — modern arm64 builds no longer write a `Hardware` or
+`model name` line. [Build.SOC_MODEL] was added in Android 12 for exactly this, so
+it is asked first, with the file kept as a fallback for older builds.
+
+### Confirmed from the same report
+
+Two readings match AYN's dashboard exactly, which is the check worth having on
+anything computed rather than read:
+
+- the peak core reads 3187 MHz, or **3.19 GHz** — the figure on AYN's CPU ring;
+- −384 mA at 3828 mV works out to **−1.47 W**, the same shape as AYN's −1.59 W.
+
+And the cause of the silent interface was confirmed rather than guessed: the
+console sits in silent mode, and the sound engine used to refuse to play unless
+the ringer was normal. That gate went in 0.22.0.
+
+---
+
 ## 0.22.0 — 2026-08-25
 
 Everything here came back from the Thor. 0.21.0 was the first build anybody had
