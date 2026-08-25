@@ -7,6 +7,105 @@ time — so they say what the commits show and no more.
 
 ---
 
+## 0.21.0 — 2026-08-25
+
+### The intro is the loading screen now
+
+It used to race the update check: both started at launch and whichever finished second decided when
+the prompt appeared, which usually meant the update dialog landed on top of a home screen somebody
+had already started using.
+
+The animation holds instead. `Beads` gained one idea — it can stay in free play rather than moving
+on to seat and eject — so while the check runs the frame keeps rocking, the beads keep knocking, and
+no branding appears at all. When the check settles the beads seat, the lockup arrives and the sound
+plays. Because it is the *same* run of the *same* simulation, a check that returns instantly costs
+nothing and looks like nothing.
+
+Two things stop it becoming a trap. Every terminal state releases the hold, failures included: an
+update that could not be checked is a reason to carry on with a message, never a reason to keep
+somebody watching a logo. And the hold releases unconditionally after eight seconds regardless,
+because network paths fail in ways that never call back at all — a captive portal that accepts the
+connection and answers nothing, a DNS lookup into a black hole.
+
+### The intro sound was broken, and it was a data race
+
+Every cue plays on its own short-lived thread, and the intro fires eight of them inside a second:
+six bead knocks, a tap, and the figure. All eight called `getOrPut` on a plain `HashMap`, which is a
+race on the table's own array — a HashMap resized by two threads at once comes back corrupted or does
+not come back. The `runCatching` around the call then swallowed the wreckage, so the symptom was not
+a crash but silence, with nothing written down anywhere.
+
+It is a `ConcurrentHashMap` now. Failures are logged under `AynSound` instead of discarded,
+`AudioTrack`'s return value is checked rather than assumed, and each of the three switches that can
+silence the engine says which one it was.
+
+The figure was also gated on the full intro, so after the first launch of a version there was no
+sound at all — which is what "the intro sound doesn't work" looks like from outside on every launch
+but one.
+
+### And the sound is the beads you can see
+
+It was a four-note rising arpeggio: pleasant, and belonging to some other app. It sounded like a
+notification and had nothing to do with six beads visibly knocking down two rods while it played.
+
+Glass and struck bars are *inharmonic*. Their partials sit at roughly 1 : 2.76 : 5.40 : 8.93 — the
+ratios of a free-free bar — and that irrational spacing is exactly what the ear hears as a struck
+object rather than as a note. Five strikes on the same pentatonic scale everything else uses, with
+gaps that shrink from 150ms to 80ms because objects coming to rest arrive closer and closer together,
+over a low bloom that stops five short strikes sounding thin on a handheld speaker.
+
+### A lockup instead of a word
+
+**ABACUS**, then **DUAL SCREEN INTERFACE**, then *Made by Abacus* — each arriving after the one above
+has settled rather than all at once.
+
+The timing throughout is slower and more deliberate. The wordmark used to appear 350ms before the
+mark had finished arriving and fade 280ms later, which is three things competing for the same half
+second. Text now eases at both ends rather than decelerating only, which removes a visible flicker at
+low alpha.
+
+### The Home button can open Abacus
+
+Android has one sanctioned route: declare an activity that handles `CATEGORY_HOME` and have the user
+choose it as the default home app. There is no permission that grants it and no API that takes it —
+an app that could seize the Home button unasked would be malware.
+
+So `HomeActivity` declares the filter, which on its own changes nothing, and Settings offers whichever
+route the device has: the `RoleManager` dialog on Android 10+, which is one tap, falling back to the
+system's home-app list.
+
+Giving it back needed more thought than taking it, because there is no API to drop the role. The
+restore row opens the same system screen, names the AYN dashboard *before* it opens so nobody arrives
+at a list of launchers wondering which one they came for, and is shown whenever this app holds the
+button rather than nested under the switch that set it. Somebody who wants their dashboard back has
+often decided they dislike this one, and making them hunt for the exit through it is a poor way to
+treat them.
+
+If the Thor's Home button is wired straight to AYN's package instead of dispatching a standard
+intent, nothing an ordinary app can do will intercept it. That case is detected and the screen says
+so, rather than showing a switch that quietly does nothing.
+
+### Finding out what the console will say about itself
+
+`DeviceStats` is a capability probe rather than a list of readings, and hangs off the developer
+screen's existing report so it can be copied off the device.
+
+Reachable: RAM, battery level, current, voltage and temperature, CPU model and core count, GPU
+strings, display refresh rate and supported modes. Sometimes reachable, depending on the build: CPU
+frequency per core and component temperatures, both via sysfs. Not reachable by an app like this on
+any device, and stated rather than approximated: system-wide CPU load, a running game's frame rate,
+fan speed and control, and setting a system-wide refresh mode.
+
+A dashboard that renders a plausible number where it could not get a true one is worse than one with
+a gap in it, because a wrong temperature is read as a temperature.
+
+### Note
+
+None of this has been verified on a physical Thor — no device has been reachable from the sessions
+that wrote it. It builds, lints and passes its tests on a desk, and that is the whole claim.
+
+---
+
 ## 0.20.0 — 2026-08-24
 
 The two things 0.19.0 deferred.
