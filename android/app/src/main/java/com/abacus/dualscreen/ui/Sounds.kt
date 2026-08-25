@@ -6,6 +6,8 @@ import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import android.provider.Settings
+import android.util.Log
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.PI
 import kotlin.math.exp
 import kotlin.math.pow
@@ -70,10 +72,21 @@ object Sounds {
         INTRO,
     }
 
+    private const val TAG = "AynSound"
+
     private const val RATE = 44_100
 
-    /** Generated buffers, kept because they are small and generating one costs a few milliseconds. */
-    private val cache = HashMap<Cue, ShortArray>()
+    /**
+     * Generated buffers, kept because they are small and generating one costs a few milliseconds.
+     *
+     * **Concurrent, and that is the whole point.** Every cue plays on its own short-lived thread, and
+     * the intro fires eight of them inside a second — six bead knocks, a tap and the figure itself.
+     * Eight threads calling `getOrPut` on a plain HashMap is a data race on the table's own array,
+     * and a HashMap that is resized by two threads at once can come back corrupted or not come back
+     * at all. Every failure was then swallowed by the `runCatching` around the call, so the symptom
+     * was not a crash but an intro that was simply silent.
+     */
+    private val cache = ConcurrentHashMap<Cue, ShortArray>()
 
     @Volatile
     private var enabled = false
@@ -95,13 +108,40 @@ object Sounds {
      * dropped sound is always better than a dropped frame.
      */
     fun play(context: Context, cue: Cue, volume: Float = 1f) {
-        if (!enabled || !allowed(context)) return
+        if (!enabled) {
+            Log.d(TAG, "silent: the app's own sound switch is off")
+            return
+        }
+        if (!allowed(context)) return
 
         Thread {
             runCatching {
-                val samples = cache.getOrPut(cue) { render(cue) }
-                emit(samples, volume)
+                emit(cache.getOrPut(cue) { render(cue) }, volume)
+            }.onFailure {
+                // Logged rather than swallowed. Silence with no explanation is why this took a
+                // report to find in the first place: nothing was ever written down when it failed.
+                Log.w(TAG, "could not play $cue", it)
             }
+        }.apply {
+            priority = Thread.MIN_PRIORITY
+            isDaemon = true
+        }.start()
+    }
+
+    /**
+     * Render the cues the intro needs before the intro needs them.
+     *
+     * The figure is about forty thousand samples of arithmetic. Generating it on the frame the mark
+     * lands puts that work between the animation and the sound it is supposed to be synchronised
+     * with, which is audible as a late chord. Called when the boot view starts, so by the time
+     * anything asks for these they are already sitting in the cache.
+     */
+    fun warmUp() {
+        Thread {
+            runCatching {
+                for (cue in listOf(Cue.INTRO, Cue.BEAD, Cue.TAP, Cue.CONFIRM))
+                    cache.getOrPut(cue) { render(cue) }
+            }.onFailure { Log.w(TAG, "warm-up failed", it) }
         }.apply {
             priority = Thread.MIN_PRIORITY
             isDaemon = true
@@ -113,10 +153,49 @@ object Sounds {
         val touchSounds = runCatching {
             Settings.System.getInt(context.contentResolver, Settings.System.SOUND_EFFECTS_ENABLED, 1)
         }.getOrDefault(1)
-        if (touchSounds == 0) return false
+        if (touchSounds == 0) {
+            Log.d(TAG, "silent: system touch sounds are off")
+            return false
+        }
 
-        val audio = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return false
-        return audio.ringerMode == AudioManager.RINGER_MODE_NORMAL
+        val audio = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        if (audio == null) {
+            Log.w(TAG, "silent: no AudioManager")
+            return false
+        }
+
+        if (audio.ringerMode != AudioManager.RINGER_MODE_NORMAL) {
+            Log.d(TAG, "silent: ringer is ${audio.ringerMode} (0 silent, 1 vibrate, 2 normal)")
+            return false
+        }
+
+        return true
+    }
+
+    /**
+     * Why nothing is playing, in words, for the developer screen.
+     *
+     * Three switches can silence this and two of them are Android's rather than the app's, which
+     * means "I turned sounds on and hear nothing" is usually correct *and* not a bug. Being able to
+     * read the reason off the device beats guessing at it from a desk.
+     */
+    fun diagnose(context: Context): String {
+        if (!enabled) return "Off — interface sounds are switched off in this app's settings."
+
+        val touchSounds = runCatching {
+            Settings.System.getInt(context.contentResolver, Settings.System.SOUND_EFFECTS_ENABLED, 1)
+        }.getOrDefault(1)
+        if (touchSounds == 0)
+            return "Silenced by Android — “Touch sounds” is off in system Sound settings."
+
+        val audio = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+            ?: return "Silenced — Android would not hand over the audio service."
+
+        return when (audio.ringerMode) {
+            AudioManager.RINGER_MODE_SILENT -> "Silenced by Android — the device is on silent."
+            AudioManager.RINGER_MODE_VIBRATE -> "Silenced by Android — the device is on vibrate."
+            else -> "Playing. ${cache.size} of ${Cue.entries.size} cues rendered so far."
+        }
     }
 
     // ── playback ────────────────────────────────────────────────────────────
@@ -142,7 +221,15 @@ object Sounds {
             .setTransferMode(AudioTrack.MODE_STATIC)
             .build()
 
-        track.write(samples, 0, samples.size)
+        val written = track.write(samples, 0, samples.size)
+        if (written < samples.size) {
+            // A static track that did not take the whole buffer will play a fragment or nothing at
+            // all, and it returns a negative error code rather than throwing.
+            Log.w(TAG, "AudioTrack took $written of ${samples.size} samples")
+            runCatching { track.release() }
+            return
+        }
+
         track.setVolume(volume.coerceIn(0f, 1f))
         track.play()
 
@@ -327,22 +414,93 @@ object Sounds {
      * whole animation: the last half second of the intro is deliberately near-silent, which is what
      * makes the home screen appearing feel like the end of something.
      */
+/**
+     * One small glass bead, struck.
+     *
+     * The difference between glass and the sine-plus-octave used everywhere else is *inharmonicity*.
+     * A struck bar or a glass bead does not resonate at whole-number multiples of its fundamental —
+     * the partials sit at roughly 1 : 2.76 : 5.40 : 8.93, the ratios of a free-free bar, and that
+     * irrational spacing is exactly what the ear hears as "struck object" rather than as "note".
+     * Feed a sine the same envelope and it sounds like a doorbell.
+     *
+     * The upper partials also decay faster than the fundamental, which is the other half of it: a
+     * strike is bright for a few milliseconds and then rings dark. Holding them all for the same
+     * length gives a chime, which is a bigger and more expensive object than the one we want.
+     */
+    private fun bead(hz: Double, ms: Int, gain: Double, attack: Double = 1.6): ShortArray {
+        val count = (RATE * ms / 1000.0).toInt()
+        val out = ShortArray(count)
+
+        // Free-free bar ratios. The fourth is faint and only widens the strike.
+        val partials = doubleArrayOf(1.0, 2.756, 5.404, 8.933)
+        val levels = doubleArrayOf(1.0, 0.46, 0.22, 0.09)
+        val decays = doubleArrayOf(6.5, 11.0, 17.0, 24.0)
+
+        for (i in 0 until count) {
+            val t = i.toDouble() / RATE
+            val seconds = ms / 1000.0
+
+            // Never zero: a waveform that starts at full amplitude clicks, and on a bead that click
+            // would be the loudest part of it.
+            val rise = 1 - exp(-t * 1000.0 / attack)
+
+            var value = 0.0
+            for (partial in partials.indices) {
+                val ratio = partials[partial]
+                if (hz * ratio > RATE / 2.2) continue
+                value += levels[partial] *
+                    exp(-decays[partial] * t / seconds) *
+                    sin(2 * PI * hz * ratio * t)
+            }
+
+            out[i] = clamp((soften(value * rise * gain) * Short.MAX_VALUE).toInt())
+        }
+
+        return out
+    }
+
+    /**
+     * The intro: a handful of beads settling against each other.
+     *
+     * This used to be a four-note rising arpeggio, which was pleasant and belonged to a different
+     * app — it sounded like a notification, and it had nothing to do with the six beads visibly
+     * knocking down two rods on screen while it played.
+     *
+     * So it is those beads. Five strikes, tuned to the pentatonic scale everything else here uses so
+     * it stays consonant, laid out with **shrinking gaps** — 150, 120, 95, 80ms — because objects
+     * coming to rest arrive closer and closer together. A tiny detune on each keeps them from
+     * sounding like the same bead struck five times.
+     *
+     * Underneath, one low bloom with a very slow attack. It is barely audible on its own and it is
+     * what stops five short strikes from sounding thin on a handheld speaker.
+     */
     private fun intro(): ShortArray {
-        val figure = sequence(
-            Step(C5, 130, 0.20),
-            Step(E5, 130, 0.21),
-            Step(G5, 130, 0.22),
-            Step(C6, 420, 0.26),
+        val strikes = listOf(
+            Triple(C5 * 1.000, 0, 0.34),
+            Triple(E5 * 0.998, 150, 0.30),
+            Triple(G5 * 1.003, 270, 0.32),
+            Triple(A5 * 0.997, 365, 0.28),
+            Triple(C6 * 1.001, 445, 0.38),
         )
 
-        // A quiet fifth underneath, entering late and fading with the figure.
         val pad = mix(
-            note(C4, 900, gain = 0.10, attack = 220.0, curve = 3.0),
-            note(G4, 900, gain = 0.07, attack = 260.0, curve = 3.0),
+            note(C4, 1_150, gain = 0.085, attack = 300.0, curve = 2.6),
+            note(G4, 1_150, gain = 0.055, attack = 340.0, curve = 2.6),
         )
 
-        val out = ShortArray(maxOf(figure.size, pad.size))
-        for (i in figure.indices) out[i] = clamp(out[i] + figure[i])
+        val out = ShortArray(maxOf(pad.size, RATE * 1_250 / 1_000))
+
+        for ((hz, atMs, gain) in strikes) {
+            // The last one rings longest; it is the one the branding lands on.
+            val length = if (atMs >= 445) 620 else 300
+            val samples = bead(hz, length, gain)
+            val offset = RATE * atMs / 1_000
+            for (i in samples.indices) {
+                val at = offset + i
+                if (at < out.size) out[at] = clamp(out[at] + samples[i])
+            }
+        }
+
         for (i in pad.indices) out[i] = clamp(out[i] + pad[i])
         return out
     }

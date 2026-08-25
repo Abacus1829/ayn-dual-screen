@@ -90,7 +90,11 @@ class HomeActivity : AppCompatActivity() {
     private var showable = false
 
     /** Re-checked whenever the update state moves, in case the check outlives the animation. */
-    private val updateListener: (com.abacus.dualscreen.update.UpdateManager.State) -> Unit = {
+    private val updateListener: (com.abacus.dualscreen.update.UpdateManager.State) -> Unit = { state ->
+        // The intro is held on this check while it is still on screen, so it hears about the state
+        // before anything else does.
+        onUpdateState(state)
+
         // The chip appears the moment the check finishes, without waiting for a return to this
         // screen -- which on a startup check is usually while somebody is still looking at it.
         if (showable) buildChips()
@@ -111,12 +115,69 @@ class HomeActivity : AppCompatActivity() {
      * may not be there at all.
      */
     private fun startUp(fresh: Boolean) {
+        val playing = fresh && com.abacus.dualscreen.boot.Boot.due(settings)
+
+        /*
+         * The intro holds while the check runs, rather than running alongside it.
+         *
+         * The old arrangement started both and let whichever finished second decide when the prompt
+         * appeared, which meant the update dialog usually landed on top of a home screen somebody
+         * had already started using. Holding the intro instead gives the check somewhere to happen
+         * where waiting is the expected thing — and because the hold is the *same* animation still
+         * running in free play, a check that returns instantly costs nothing and looks like nothing.
+         *
+         * Two things stop this becoming a trap: the hold releases on the first settled state from
+         * the manager, and [Boot] releases it unconditionally after eight seconds regardless.
+         */
+        if (playing) {
+            com.abacus.dualscreen.boot.Boot.play(
+                this, binding.bootView, settings, holdForStartup = true
+            ) { onBooted() }
+
+            com.abacus.dualscreen.boot.Boot.status(
+                binding.bootView, getString(R.string.boot_status_updates)
+            )
+        }
+
         updates.checkOnStartup()
 
-        if (fresh && com.abacus.dualscreen.boot.Boot.due(settings)) {
-            com.abacus.dualscreen.boot.Boot.play(this, binding.bootView, settings) { onBooted() }
-        } else {
-            onBooted()
+        if (!playing) onBooted()
+    }
+
+    /**
+     * Move the intro along as the update check reports in, and let it go once nothing is pending.
+     *
+     * Every terminal state releases, including the failures. An update that could not be checked,
+     * could not be downloaded or could not be installed is a reason to carry on into the app with a
+     * message, never a reason to keep somebody looking at a loading screen — which is what any
+     * arrangement that only releases on success eventually does.
+     */
+    private fun onUpdateState(state: com.abacus.dualscreen.update.UpdateManager.State) {
+        val view = binding.bootView
+        if (!view.waiting) return
+
+        val boot = com.abacus.dualscreen.boot.Boot
+        when (state) {
+            is com.abacus.dualscreen.update.UpdateManager.State.Checking ->
+                boot.status(view, getString(R.string.boot_status_updates))
+
+            is com.abacus.dualscreen.update.UpdateManager.State.Downloading ->
+                boot.status(view, getString(R.string.boot_status_downloading))
+
+            is com.abacus.dualscreen.update.UpdateManager.State.Verifying ->
+                boot.status(view, getString(R.string.boot_status_installing))
+
+            // Settled, one way or another. An available update is settled too: the prompt belongs
+            // after the intro, on a screen somebody can read, not underneath a spinning logo.
+            is com.abacus.dualscreen.update.UpdateManager.State.Idle,
+            is com.abacus.dualscreen.update.UpdateManager.State.UpToDate,
+            is com.abacus.dualscreen.update.UpdateManager.State.Available,
+            is com.abacus.dualscreen.update.UpdateManager.State.Ready -> boot.release(view)
+
+            is com.abacus.dualscreen.update.UpdateManager.State.Failed -> {
+                boot.status(view, getString(R.string.boot_status_offline))
+                boot.release(view)
+            }
         }
     }
 

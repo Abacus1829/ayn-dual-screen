@@ -76,12 +76,49 @@ internal class Beads {
     /** Scheduled hand-offs as the stack compresses: {at, from, to}. */
     private val hops = mutableListOf<FloatArray>()
 
+    /**
+     * Stay in free play rather than moving on to seat and eject.
+     *
+     * This is the loading state, and it is the *same* simulation rather than a second animation: the
+     * frame has already spun in and is rocking, the beads are still sliding and knocking into each
+     * other, and nothing about the mark is different — it simply has not been told to resolve yet.
+     *
+     * Set it false and the run continues from wherever it had got to, so what the eye sees is the
+     * rocking settling into the finished mark. There is no cut and no restart.
+     */
+    var holding: Boolean = false
+        set(value) {
+            if (field == value) return
+            field = value
+            // Released: the seat and eject phases are timed from this moment, not from launch.
+            if (!value) releasedAt = timeMs
+        }
+
+    private var releasedAt = -1f
+
+    /**
+     * The clock the phases are read from, which is not always the clock the physics runs on.
+     *
+     * While holding, this stops just short of the end of free play, so no amount of waiting for the
+     * network can push the beads into seating. Once released it resumes, offset so that the moment
+     * of release *is* the start of the seat.
+     */
+    private val phaseMs: Float
+        get() = when {
+            holding -> minOf(timeMs, PLAY_MS - 1f)
+            releasedAt >= 0f -> PLAY_MS + (timeMs - releasedAt)
+            else -> timeMs
+        }
+
     val phase: Phase
         get() = when {
-            timeMs < PLAY_MS -> Phase.PLAY
-            timeMs < PLAY_MS + SEAT_MS -> Phase.SEAT
+            phaseMs < PLAY_MS -> Phase.PLAY
+            phaseMs < PLAY_MS + SEAT_MS -> Phase.SEAT
             else -> Phase.EJECT
         }
+
+    /** How far through the resolve we are, for whoever is drawing. 0 while holding. */
+    val resolveMs: Float get() = (phaseMs - PLAY_MS).coerceAtLeast(0f)
 
     /** The angle the frame is at, and the angle its gravity is resolved along. One number, both jobs. */
     fun angleRadians(): Float = angleAt(timeMs)
@@ -138,7 +175,7 @@ internal class Beads {
     // ── the model ───────────────────────────────────────────────────────────
 
     private fun step() {
-        val seating = timeMs >= PLAY_MS
+        val seating = phaseMs >= PLAY_MS
         if (seating && targets == null) beginSeating()
 
         while (hops.isNotEmpty() && timeMs >= hops[0][0]) {
@@ -265,7 +302,19 @@ internal class Beads {
             // Landed, and rocking itself still: a decaying wobble, like something set down on a
             // table. This is the part that sweeps the beads into the stops.
             val s = (ms - SPIN_MS) / 1000f
-            -ROCK_AMPLITUDE * sin(2f * PI.toFloat() * ROCK_HZ * s) * exp(-ROCK_DECAY * s)
+
+            /*
+             * While holding, the wobble decays to a floor instead of to nothing.
+             *
+             * A rock that dies out completely would leave the loading state as a still picture with
+             * six motionless beads, which is the frozen frame this whole approach exists to avoid.
+             * Holding a little energy in it keeps the beads drifting and occasionally knocking, so
+             * the screen stays alive without anything new being drawn.
+             */
+            val decay = exp(-ROCK_DECAY * s)
+            val energy = if (holding) maxOf(decay, HOLD_ROCK_FLOOR) else decay
+
+            -ROCK_AMPLITUDE * sin(2f * PI.toFloat() * ROCK_HZ * s) * energy
         }
 
     private fun ease(t: Float): Float {
@@ -291,6 +340,9 @@ internal class Beads {
         const val SEAT_MS = 260f
         const val EJECT_MS = 420f
         const val TOTAL_MS = PLAY_MS + SEAT_MS + EJECT_MS
+
+        /** How much of the rock survives while the intro is waiting on startup work. */
+        private const val HOLD_ROCK_FLOOR = 0.34f
 
         private const val SPIN_MS = 1_200f
         private const val TURNS = 1.5f

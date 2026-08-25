@@ -47,7 +47,13 @@ object Boot {
      * turned off entirely — because it is what lets the screen behind carry on, and a path that
      * skips it is a screen that never appears.
      */
-    fun play(activity: Activity, view: AbacusBootView, settings: Settings, onDone: () -> Unit) {
+    fun play(
+        activity: Activity,
+        view: AbacusBootView,
+        settings: Settings,
+        holdForStartup: Boolean = false,
+        onDone: () -> Unit,
+    ) {
         playedThisRun = true
 
         /*
@@ -61,14 +67,36 @@ object Boot {
         Sounds.setEnabled(settings.sounds)
         Feedback.setHapticsEnabled(settings.haptics)
 
+        /*
+         * Render the cues now, not on the frame they are wanted.
+         *
+         * The intro figure is about a second of arithmetic. Generating it when the mark lands puts
+         * that work between the animation and the sound it is meant to be synchronised with, and the
+         * result is a chord that arrives a beat late on a slow device. Two seconds of animation is
+         * plenty of time to have it ready.
+         */
+        Sounds.warmUp()
+
         val version = versionOf(activity)
         val full = settings.introShownFor != version
         settings.introShownFor = version
 
         view.accent = Appearance.accentOf(settings)
         view.wordmark = activity.getString(R.string.boot_wordmark)
+        view.subtitle = activity.getString(R.string.boot_subtitle)
+        view.byline = activity.getString(R.string.boot_byline)
         view.status = activity.getString(R.string.boot_status)
         view.full = full
+
+        /*
+         * Start held, if the caller has startup work to finish.
+         *
+         * The intro then loops in free play — frame rocking, beads still knocking — with no branding
+         * on screen, and resolves into the lockup only once [release] is called. That is the whole
+         * loading screen: no second view, no spinner, and nothing that has to be dismissed.
+         */
+        view.waiting = holdForStartup
+        if (holdForStartup) scheduleTimeout(view)
 
         /*
          * Sound and haptics, driven by the animation rather than scheduled alongside it.
@@ -86,7 +114,16 @@ object Boot {
 
         view.onLanded = {
             Feedback.success(view)
-            if (full) Sounds.play(activity, Sounds.Cue.INTRO, volume = 0.9f)
+
+            /*
+             * Played on every intro, not only the long one.
+             *
+             * It used to be gated on `full`, which meant that after the first launch of a version
+             * the sound was simply gone — and "the intro sound does not work" is exactly what that
+             * looks like from the outside, on every launch but one. The figure is short enough to
+             * sit under the short version too.
+             */
+            Sounds.play(activity, Sounds.Cue.INTRO, volume = 0.9f)
         }
 
         view.setOnClickListener {
@@ -97,6 +134,46 @@ object Boot {
 
         view.play(onDone)
     }
+
+    /**
+     * Startup work is finished — let the mark resolve.
+     *
+     * Safe to call more than once and safe to call after the intro has already gone, which matters
+     * because the thing that calls it is a network request and those arrive whenever they arrive.
+     */
+    fun release(view: AbacusBootView) {
+        timeout?.let { handler.removeCallbacks(it) }
+        timeout = null
+        view.waiting = false
+    }
+
+    /**
+     * Tell the loading state what is currently happening.
+     *
+     * Ignored once the intro has resolved: changing the line under a lockup that is already fading
+     * out would be a caption for something nobody is still waiting on.
+     */
+    fun status(view: AbacusBootView, text: String) {
+        if (view.waiting) view.status = text
+    }
+
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var timeout: Runnable? = null
+
+    /**
+     * The escape hatch, and the reason this cannot trap anybody.
+     *
+     * Every path that releases the hold is a network path, and network paths fail in ways that never
+     * call back at all — a captive portal that accepts the connection and answers nothing, a DNS
+     * lookup into a black hole. Without this the app would rock beads forever and look like it had
+     * hung. Eight seconds is longer than a working check takes and shorter than anybody's patience.
+     */
+    private fun scheduleTimeout(view: AbacusBootView) {
+        timeout?.let { handler.removeCallbacks(it) }
+        timeout = Runnable { view.waiting = false }.also { handler.postDelayed(it, HOLD_LIMIT_MS) }
+    }
+
+    private const val HOLD_LIMIT_MS = 8_000L
 
     /**
      * What counts as "this version" for the purpose of showing the full intro.

@@ -60,12 +60,33 @@ class AbacusBootView @JvmOverloads constructor(
     defStyle: Int = 0,
 ) : View(context, attrs, defStyle) {
 
-    /** The timeline, in milliseconds. The physics owns the first part; these frame it. */
-    private val arriveMs = 900f
-    private val wordStartMs = 1_250L
-    private val holdMs = (Beads.TOTAL_MS + 220f).toLong()
-    private val fadeMs = 280L
-    private val wordMs = 500L
+    /*
+     * The timeline, in milliseconds.
+     *
+     * The physics owns the first part; these frame it. Everything after the mark resolves is timed
+     * from the *release* rather than from launch, because the release can now be anywhere — the
+     * intro holds in free play until startup work is done, and that might be forty milliseconds or
+     * four seconds depending on the network.
+     *
+     * These numbers are deliberately slower than they were. The old sequence put the wordmark up
+     * 350ms before the mark had finished arriving and faded 280ms later, which reads as hurried:
+     * three things competing for the same half-second. Letting each one finish before the next
+     * begins costs about a second in total and is most of the difference between an animation that
+     * feels considered and one that feels like it is getting out of the way.
+     */
+    private val arriveMs = 1_050f
+
+    /** Each branding line, timed from the moment the mark is released to resolve. */
+    private val line1AtMs = 360f
+    private val line2AtMs = 620f
+    private val line3AtMs = 880f
+    private val lineFadeMs = 540f
+
+    /** How long the finished lockup is held before it goes. */
+    private val dwellMs = 640f
+
+    private val brandEndMs = line3AtMs + lineFadeMs + dwellMs
+    private val fadeMs = 420L
 
     /** The simulation. Rebuilt on each play, so a second run is identical to the first. */
     private var beads = Beads()
@@ -108,7 +129,21 @@ class AbacusBootView @JvmOverloads constructor(
     private val ink = 0xFF0A0A0C.toInt()
     private val red = 0xFFF0121A.toInt()
 
+    /**
+     * The lockup, in three parts.
+     *
+     * One word was a logo with a name under it. Three lines is an identity: what it is called, what
+     * it is, and who made it — in that order, and each arriving after the one above has settled
+     * rather than all at once. The last two are optional; leaving either blank simply drops that
+     * line and closes the gap, so this is still one animation rather than one with variants.
+     */
     var wordmark: String = ""
+
+    /** What the thing actually is. */
+    var subtitle: String = ""
+
+    /** The credit. Quietest of the three, and the last to arrive. */
+    var byline: String = ""
 
     /** Shown under the wordmark once the animation has outstayed its own length. */
     var status: String? = null
@@ -117,12 +152,22 @@ class AbacusBootView @JvmOverloads constructor(
             if (running) postInvalidateOnAnimation()
         }
 
-    /** While true the animation holds at its end rather than fading out. */
+    /**
+     * While true the animation stays in free play instead of resolving into the mark.
+     *
+     * This is the loading state, and it is the same run of the same simulation — the frame has spun
+     * in, it is rocking, the beads are still knocking about, and none of the branding has appeared
+     * yet. Set it false and the beads seat, the lockup arrives and the sound plays.
+     *
+     * Setting it true after the mark has already resolved does nothing: the run is past that point
+     * and rewinding it would be a cut.
+     */
     var waiting: Boolean = false
         set(value) {
-            val was = field
+            if (field == value) return
             field = value
-            if (was && !value && running) postInvalidateOnAnimation()
+            beads.holding = value
+            if (running) postInvalidateOnAnimation()
         }
 
     private var startedAt = 0L
@@ -161,6 +206,11 @@ class AbacusBootView @JvmOverloads constructor(
         visibility = VISIBLE
         running = true
         beads = Beads()
+        // Carried onto the fresh simulation, so an intro that starts already waiting holds from its
+        // first frame rather than resolving once and then being told to wait.
+        beads.holding = waiting
+        seated.clear()
+        landed = false
         startedAt = System.currentTimeMillis()
         fadeStartedAt = 0L
         postInvalidateOnAnimation()
@@ -169,6 +219,8 @@ class AbacusBootView @JvmOverloads constructor(
     /** End it now — a tap, or something that needs the screen. */
     fun skip() {
         if (!running) return
+        // Releasing first matters: a tap during the loading state has to let the physics out of the
+        // hold, or the fade would take away a mark that never finished assembling.
         waiting = false
         // Jump to the fade rather than vanishing: a hard cut reads as a crash.
         if (fadeStartedAt == 0L) fadeStartedAt = System.currentTimeMillis()
@@ -191,8 +243,8 @@ class AbacusBootView @JvmOverloads constructor(
         val elapsed = beads.timeMs.toLong()
         announce(elapsed)
 
-        // Past its natural end, and nothing is holding it: start the fade.
-        if (fadeStartedAt == 0L && elapsed >= holdMs && !waiting)
+        // The lockup has been up long enough, and nothing is holding it: start the fade.
+        if (fadeStartedAt == 0L && !waiting && beads.resolveMs >= brandEndMs * rate)
             fadeStartedAt = System.currentTimeMillis()
 
         if (fadeStartedAt > 0L) {
@@ -323,28 +375,91 @@ class AbacusBootView @JvmOverloads constructor(
         }
     }
 
+    /**
+     * The lockup, or the loading line — never both.
+     *
+     * While the intro is waiting there is no branding at all: the mark rocks, a status line and
+     * three dots sit under it, and that is the whole loading state. The name only appears once the
+     * app is actually ready, which is what makes its arrival mean something rather than being a
+     * caption that happened to be on screen while a download finished.
+     */
     private fun drawWord(canvas: Canvas, elapsed: Long) {
-        val appear = ((elapsed - wordStartMs).toFloat() / wordMs).coerceIn(0f, 1f)
-        if (appear <= 0f) return
-
         val cx = width / 2f
         val baseline = height / 2f + min(width, height) * 0.29f + height * 0.10f
 
-        textPaint.color = withAlpha(0xFFEDF0F8.toInt(), (255 * ease(appear)).toInt())
-        textPaint.textSize = min(width, height) * 0.062f
-        textPaint.letterSpacing = 0.14f
-        // Rises the last few pixels into place as it fades in.
-        canvas.drawText(wordmark, cx, baseline + (1f - ease(appear)) * 14f, textPaint)
-
-        val note = status
-        if (waiting && !note.isNullOrBlank()) {
-            textPaint.textSize = min(width, height) * 0.036f
-            textPaint.letterSpacing = 0.02f
-            textPaint.color = withAlpha(0xFF8E97B4.toInt(), 220)
-            canvas.drawText(note, cx, baseline + textPaint.textSize * 2.2f, textPaint)
+        if (waiting) {
+            drawWaiting(canvas, cx, baseline)
+            return
         }
 
-        if (waiting) drawDots(canvas, cx, baseline + min(width, height) * 0.11f)
+        val since = beads.resolveMs / rate
+        val unit = min(width, height)
+
+        // ABACUS — the name, and the only line at full weight.
+        drawLine(
+            canvas, wordmark, cx, baseline,
+            at = line1AtMs, since = since,
+            size = unit * 0.066f, spacing = 0.16f, colour = 0xFFEDF0F8.toInt(), rise = 16f,
+        )
+
+        // DUAL SCREEN INTERFACE — what it is. Wider tracking and much smaller, so it reads as a
+        // descriptor under the name rather than as a second name.
+        drawLine(
+            canvas, subtitle, cx, baseline + unit * 0.052f,
+            at = line2AtMs, since = since,
+            size = unit * 0.030f, spacing = 0.30f, colour = 0xFFA8B2CC.toInt(), rise = 10f,
+        )
+
+        // Made by Abacus — the credit, quietest, last, and set apart from the pair above it.
+        drawLine(
+            canvas, byline, cx, baseline + unit * 0.108f,
+            at = line3AtMs, since = since,
+            size = unit * 0.026f, spacing = 0.04f, colour = 0xFF6F7A96.toInt(), rise = 8f,
+        )
+    }
+
+    /**
+     * One line of the lockup, fading and rising into place.
+     *
+     * The rise is small and the fade is slow, which is the opposite of how these are usually built.
+     * A line that travels a long way draws attention to the motion; a line that barely moves draws
+     * attention to itself, and the motion is only there to stop it appearing from nowhere.
+     */
+    private fun drawLine(
+        canvas: Canvas,
+        text: String,
+        cx: Float,
+        y: Float,
+        at: Float,
+        since: Float,
+        size: Float,
+        spacing: Float,
+        colour: Int,
+        rise: Float,
+    ) {
+        if (text.isBlank()) return
+
+        val appear = ((since - at) / lineFadeMs).coerceIn(0f, 1f)
+        if (appear <= 0f) return
+
+        val eased = soften(appear)
+        textPaint.color = withAlpha(colour, (255 * eased).toInt())
+        textPaint.textSize = size
+        textPaint.letterSpacing = spacing
+        canvas.drawText(text, cx, y + (1f - eased) * rise, textPaint)
+    }
+
+    /** The loading state: what is happening, and three dots saying it still is. */
+    private fun drawWaiting(canvas: Canvas, cx: Float, baseline: Float) {
+        val note = status
+        if (!note.isNullOrBlank()) {
+            textPaint.textSize = min(width, height) * 0.032f
+            textPaint.letterSpacing = 0.06f
+            textPaint.color = withAlpha(0xFF8E97B4.toInt(), 210)
+            canvas.drawText(note, cx, baseline, textPaint)
+        }
+
+        drawDots(canvas, cx, baseline + min(width, height) * 0.055f)
     }
 
     /** Three dots breathing in sequence: the whole loading indicator, and no extra view for it. */
@@ -367,6 +482,17 @@ class AbacusBootView @JvmOverloads constructor(
     private fun ease(t: Float): Float {
         val clamped = t.coerceIn(0f, 1f)
         return 1f - (1f - clamped).pow(3)
+    }
+
+    /**
+     * Smoothstep: eased at both ends.
+     *
+     * [ease] decelerates only, which is right for something arriving under its own momentum and
+     * wrong for text, where the abrupt start of the fade is visible as a flicker at low alpha.
+     */
+    private fun soften(t: Float): Float {
+        val clamped = t.coerceIn(0f, 1f)
+        return clamped * clamped * (3f - 2f * clamped)
     }
 
     /** A small overshoot, so things arrive with weight instead of stopping dead. */
