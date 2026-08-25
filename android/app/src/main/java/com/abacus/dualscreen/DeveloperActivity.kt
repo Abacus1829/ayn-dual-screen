@@ -11,6 +11,8 @@ import android.provider.Settings as AndroidSettings
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import com.abacus.dualscreen.databinding.ActivityDeveloperBinding
+import com.abacus.dualscreen.ui.Sounds
+import com.abacus.dualscreen.companion.DeviceStats
 import com.abacus.dualscreen.ui.Feedback
 import com.abacus.dualscreen.ui.Nav
 
@@ -161,6 +163,13 @@ class DeveloperActivity : AppCompatActivity() {
      * screens, and "how many displays does the system say you have, and how big are they" is the
      * first question every display bug turns into.
      */
+    /** This activity's display, for the readings that are a property of the panel itself. */
+    private val panelDisplay: android.view.Display?
+        get() = runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) display
+            else @Suppress("DEPRECATION") windowManager.defaultDisplay
+        }.getOrNull()
+
     private fun deviceReport(): String = buildString {
         val info = runCatching { packageManager.getPackageInfo(packageName, 0) }.getOrNull()
         val code = when {
@@ -185,6 +194,21 @@ class DeveloperActivity : AppCompatActivity() {
                 .append(metrics.widthPixels).append('x').append(metrics.heightPixels)
                 .append("  ").append(metrics.densityDpi).append("dpi\n")
         }
+
+        /*
+         * What the hardware will actually tell us, and what it will not.
+         *
+         * Attached to the report that already has a Copy button rather than given a screen of its
+         * own, because its whole purpose is to be read off the console and sent back. Half of what
+         * a hardware dashboard wants to show sits behind sysfs paths that some builds expose and
+         * others refuse, and there is no finding out which this device is from a desk.
+         */
+        append("\n── hardware readings ──\n")
+        append(DeviceStats.describe(this@DeveloperActivity, panelDisplay))
+
+        append("\n\n── interface sound ──\n")
+        append(Sounds.diagnose(this@DeveloperActivity))
+        append('\n')
     }
 
     private fun copy(text: String) {
