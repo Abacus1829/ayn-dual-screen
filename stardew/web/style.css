@@ -976,6 +976,16 @@ body.no-actions #actions { display: none !important; }
 .mini b.energy { background: linear-gradient(90deg, #6aa84f, #9ccc65); }
 .mini b.health { background: linear-gradient(90deg, #c0392b, #e74c3c); }
 
+/*
+ * Skills sit on the floor of the panel, not directly under the backpack.
+ *
+ * Today's content is shorter than a 1240x1080 panel is tall, and stacked from the top it left a
+ * quarter of the screen empty below the last row. Anchoring the bottom group turns that into one
+ * deliberate gap between what you are carrying and what you are good at, which is a real division
+ * rather than an accident of how much content there happened to be.
+ */
+#skills-head { margin-top: auto; }
+
 /* the hotbar's own header, with the row control on the right */
 .row-head {
   flex: 0 0 auto;
