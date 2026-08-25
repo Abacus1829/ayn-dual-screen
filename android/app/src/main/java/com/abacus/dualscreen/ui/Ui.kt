@@ -47,6 +47,26 @@ object Ui {
     }
 
     /**
+     * A line of plain text between rows: a state, a caveat, a consequence.
+     *
+     * Deliberately not a card and deliberately not tappable. Some rows need a sentence of context
+     * that is neither a setting nor a link — what the Home button currently opens, why a control is
+     * missing on this device — and the alternatives are both bad: a disabled-looking card invites a
+     * tap that does nothing, and a toast is gone before it has been read.
+     *
+     * Indented to the same edge as a section header so it reads as belonging to the group above it.
+     */
+    fun note(activity: Activity, settings: Settings, text: String): View = TextView(activity).apply {
+        this.text = text
+        setTextColor(activity.getColor(R.color.text_dim))
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+        setLineSpacing(dp(activity, 2).toFloat(), 1f)
+        setPadding(dp(activity, 4), dp(activity, 2), dp(activity, 4), dp(activity, 10))
+        // Repainted with everything else rather than carrying its own colour.
+        tag = "plain"
+    }
+
+    /**
      * A card: the container everything else sits in.
      *
      * [accented] outlines it in the user's accent instead of the neutral edge, for the one card on a

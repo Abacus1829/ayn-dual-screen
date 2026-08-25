@@ -61,6 +61,19 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.DualScreen">
 
+        <!--
+            The home screen, and optionally *the* home screen.
+
+            CATEGORY_HOME is what lets this app appear in Android's Home-app chooser, which is the
+            only supported way to answer the Home button. Declaring it changes nothing on its own:
+            the user still has to pick this app in system settings, and until they do the filter is
+            inert. There is no permission involved and none is requested — an app that could take the
+            Home button without being asked would be malware.
+
+            launchMode is deliberately left at the default. A home activity that is singleInstance
+            cannot be reliably moved onto a secondary display, and being usable on the Thor's second
+            screen is the entire point of this app.
+        -->
         <activity
             android:name=".HomeActivity"
             android:exported="true"
@@ -69,6 +82,11 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
 

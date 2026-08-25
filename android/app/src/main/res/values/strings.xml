@@ -641,6 +641,18 @@
     <string name="codes_hidden">Hidden. Enter the sequence again to bring it back.</string>
 
     <!-- ===== boot animation ===== -->
+    <string name="settings_home_button">Home button</string>
+    <string name="opt_home_set">Open Abacus with the Home button</string>
+    <string name="opt_home_set_detail">Makes this app the console\'s home screen. Android will ask you to confirm.</string>
+    <string name="opt_home_restore">Restore the AYN dashboard</string>
+    <string name="opt_home_restore_detail">Opens Android\'s home app list. Choose the AYN dashboard there to hand the button back.</string>
+    <string name="home_current">Home button currently opens %1$s</string>
+    <string name="home_current_unset">No home app has been chosen yet</string>
+    <string name="home_is_abacus">Abacus is the home app</string>
+    <string name="home_unsupported">This console does not route its Home button through Android, so no app can change what it opens.</string>
+    <string name="home_no_screen">This build of Android has no home-app screen to open.</string>
+    <string name="home_restore_hint">Pick the AYN dashboard in the list that opens.</string>
+
     <string name="boot_wordmark">ABACUS</string>
     <string name="boot_subtitle">DUAL SCREEN INTERFACE</string>
     <string name="boot_byline">Made by Abacus</string>

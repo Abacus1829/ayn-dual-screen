@@ -13,6 +13,7 @@ import com.abacus.dualscreen.connect.Awake
 import com.abacus.dualscreen.connect.DisplayChoice
 import com.abacus.dualscreen.connect.Orientation
 import com.abacus.dualscreen.databinding.ActivitySettingsBinding
+import com.abacus.dualscreen.setup.HomeRole
 import com.abacus.dualscreen.ui.Feedback
 import com.abacus.dualscreen.ui.Motion
 import com.abacus.dualscreen.ui.Nav
@@ -92,6 +93,9 @@ class SettingsActivity : AppCompatActivity() {
                 startActivity(Intent(this, ProfilesActivity::class.java))
             }
         )
+
+        // ── the console's home button ───────────────────────────────────────
+        addHomeButtonSection(list)
 
         // ── what happens on the second screen ───────────────────────────────
         list.add(Ui.section(this, R.string.settings_session))
@@ -229,6 +233,81 @@ class SettingsActivity : AppCompatActivity() {
 
         Motion.enterChildren(list)
     }
+
+    /**
+     * Point the console's Home button at this app, and give it back again.
+     *
+     * Both directions end at a screen Android owns, because becoming the home app is a choice only
+     * the user can make — there is no permission for it and no API that takes it. What this section
+     * can do is state where things currently stand, offer the shortest route to the chooser, and
+     * make the way back at least as easy as the way in.
+     *
+     * The restore row is shown **whenever this app holds the role**, not tucked behind the switch
+     * that set it. Somebody who wants their dashboard back is often somebody who has decided they do
+     * not like this one, and making them hunt for the exit through the thing they are trying to
+     * leave is a poor way to treat them.
+     */
+    private fun addHomeButtonSection(list: LinearLayout) {
+        // Nothing on this device answers Home through the framework, so nothing here would work.
+        // Said plainly rather than shown as a switch that quietly does nothing.
+        if (!HomeRole.dispatchesHomeIntent(this)) {
+            list.add(Ui.section(this, R.string.settings_home_button))
+            list.add(Ui.note(this, settings, getString(R.string.home_unsupported)))
+            return
+        }
+
+        list.add(Ui.section(this, R.string.settings_home_button))
+
+        val mine = HomeRole.isDefault(this)
+        val current = HomeRole.currentHomeLabel(this)
+
+        list.add(
+            Ui.note(
+                this, settings,
+                when {
+                    mine -> getString(R.string.home_is_abacus)
+                    current != null -> getString(R.string.home_current, current)
+                    else -> getString(R.string.home_current_unset)
+                }
+            )
+        )
+
+        if (!mine) {
+            list.add(
+                Ui.link(this, settings, R.string.opt_home_set, glyph = "⌂") {
+                    val intent = HomeRole.request(this)
+                    if (intent == null) {
+                        Feedback.error(binding.root)
+                        toast(R.string.home_no_screen)
+                    } else {
+                        startActivity(intent)
+                    }
+                }
+            )
+        }
+
+        // Offered whenever this app holds the button, and only then — an app that is not the home
+        // app has nothing to restore, and a row that opens a system screen for no reason is clutter.
+        if (mine) {
+            list.add(
+                Ui.link(this, settings, R.string.opt_home_restore, glyph = "↺") {
+                    val intent = HomeRole.restore(this)
+                    if (intent == null) {
+                        Feedback.error(binding.root)
+                        toast(R.string.home_no_screen)
+                    } else {
+                        // Said before the screen opens, because the system list names every launcher
+                        // installed and does not know which one somebody arrived wanting.
+                        toast(R.string.home_restore_hint)
+                        startActivity(intent)
+                    }
+                }
+            )
+        }
+    }
+
+    private fun toast(message: Int) =
+        android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_LONG).show()
 
     private fun LinearLayout.add(view: View) = addView(view)
 
