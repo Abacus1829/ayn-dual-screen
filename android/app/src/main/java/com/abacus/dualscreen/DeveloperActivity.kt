@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.abacus.dualscreen.databinding.ActivityDeveloperBinding
 import com.abacus.dualscreen.ui.Sounds
 import com.abacus.dualscreen.companion.DeviceStats
+import com.abacus.dualscreen.setup.HomeRole
 import com.abacus.dualscreen.ui.Feedback
 import com.abacus.dualscreen.ui.Nav
 
@@ -208,6 +209,9 @@ class DeveloperActivity : AppCompatActivity() {
 
         append("\n\n── interface sound ──\n")
         append(Sounds.diagnose(this@DeveloperActivity))
+
+        append("\n\n── home button ──\n")
+        append(HomeRole.diagnose(this@DeveloperActivity))
         append('\n')
     }
 

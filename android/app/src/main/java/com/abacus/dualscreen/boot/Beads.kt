@@ -104,10 +104,25 @@ internal class Beads {
      * of release *is* the start of the seat.
      */
     private val phaseMs: Float
-        get() = when {
-            holding -> minOf(timeMs, PLAY_MS - 1f)
-            releasedAt >= 0f -> PLAY_MS + (timeMs - releasedAt)
-            else -> timeMs
+        get() {
+            if (holding) return minOf(timeMs, PLAY_MS - 1f)
+
+            /*
+             * Released before free play would have ended anyway.
+             *
+             * This is the common case and it was wrong: the release simply moved the clock to the end
+             * of free play, so an update check that answered in 200ms — which is what a working wifi
+             * connection does — skipped the entire 1500ms the beads spend actually sliding and
+             * knocking, and the intro cut straight to seating. Short, and with motionless beads.
+             *
+             * Nothing was held back in that case, so nothing needs compensating for: the run
+             * continues on its own clock and plays exactly as it did before there was a hold at all.
+             */
+            val released = releasedAt
+            if (released < 0f || released <= PLAY_MS) return timeMs
+
+            // Genuinely held past the natural end, so the resolve is timed from the release.
+            return PLAY_MS + (timeMs - released)
         }
 
     val phase: Phase

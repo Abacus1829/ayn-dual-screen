@@ -653,6 +653,20 @@
     <string name="home_no_screen">This build of Android has no home-app screen to open.</string>
     <string name="home_restore_hint">Pick the AYN dashboard in the list that opens.</string>
 
+    <string name="dash_temp">Temp</string>
+    <string name="dash_memory">Memory</string>
+    <string name="dash_power">Power</string>
+    <string name="dash_processor">Processor</string>
+    <string name="dash_thermal">Thermal</string>
+    <string name="dash_display">Display</string>
+    <string name="dash_of_total">of %1$d MB</string>
+    <string name="dash_cores">%1$d cores</string>
+    <string name="dash_charging">charging</string>
+    <string name="dash_charging_at">charging %1$d mA</string>
+    <string name="dash_drawing">drawing %1$d mA</string>
+    <string name="dash_headroom">%1$d%% to throttle</string>
+    <string name="dash_modes">modes %1$s Hz</string>
+    <string name="dash_single_mode">one refresh mode</string>
     <string name="boot_wordmark">ABACUS</string>
     <string name="boot_subtitle">DUAL SCREEN INTERFACE</string>
     <string name="boot_byline">Made by Abacus</string>

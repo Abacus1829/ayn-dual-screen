@@ -112,7 +112,7 @@ object Sounds {
             Log.d(TAG, "silent: the app's own sound switch is off")
             return
         }
-        if (!allowed(context)) return
+        if (!allowed(context, cue)) return
 
         Thread {
             runCatching {
@@ -149,23 +149,45 @@ object Sounds {
     }
 
     /** The system's own opinions about interface noise, both of which outrank the app's. */
-    private fun allowed(context: Context): Boolean {
-        val touchSounds = runCatching {
-            Settings.System.getInt(context.contentResolver, Settings.System.SOUND_EFFECTS_ENABLED, 1)
-        }.getOrDefault(1)
-        if (touchSounds == 0) {
-            Log.d(TAG, "silent: system touch sounds are off")
-            return false
-        }
-
+    /**
+     * Whether a cue should be heard.
+     *
+     * Two rules now, where there were three, and the two that went are the two that were wrong on
+     * this hardware.
+     *
+     * **The ringer no longer decides.** `RINGER_MODE_NORMAL` is about incoming calls, and a handheld
+     * with no telephony can sit in vibrate or silent permanently without that meaning anything about
+     * whether interface audio is wanted. Gating on it silenced the whole app on a device that had
+     * never expressed an opinion. What actually matters is whether the stream this plays on is
+     * turned up, so that is what is checked.
+     *
+     * **The system's touch-sounds switch no longer silences [Cue.INTRO].** It still silences the
+     * small per-press cues, which is what it is for and what somebody who turned it off was asking
+     * for. But the introduction is a thing this app's own switch opted into deliberately, and on a
+     * device where touch sounds ship off by default, honouring it there meant the branded moment was
+     * silent for everybody.
+     */
+    private fun allowed(context: Context, cue: Cue): Boolean {
         val audio = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
         if (audio == null) {
             Log.w(TAG, "silent: no AudioManager")
             return false
         }
 
-        if (audio.ringerMode != AudioManager.RINGER_MODE_NORMAL) {
-            Log.d(TAG, "silent: ringer is ${audio.ringerMode} (0 silent, 1 vibrate, 2 normal)")
+        val volume = runCatching { audio.getStreamVolume(AudioManager.STREAM_MUSIC) }.getOrDefault(1)
+        if (volume <= 0) {
+            Log.d(TAG, "silent: media volume is at zero")
+            return false
+        }
+
+        if (cue == Cue.INTRO) return true
+
+        val touchSounds = runCatching {
+            Settings.System.getInt(context.contentResolver, Settings.System.SOUND_EFFECTS_ENABLED, 1)
+        }.getOrDefault(1)
+
+        if (touchSounds == 0) {
+            Log.d(TAG, "silent: system touch sounds are off")
             return false
         }
 
@@ -180,23 +202,44 @@ object Sounds {
      * read the reason off the device beats guessing at it from a desk.
      */
     fun diagnose(context: Context): String {
-        if (!enabled) return "Off — interface sounds are switched off in this app's settings."
+        val lines = mutableListOf<String>()
+
+        lines += "app switch: " + if (enabled) "on" else "OFF — interface sounds are off in this app's settings"
+
+        val audio = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        if (audio == null) {
+            lines += "audio service: unavailable"
+            return lines.joinToString("\n")
+        }
+
+        val music = runCatching { audio.getStreamVolume(AudioManager.STREAM_MUSIC) }.getOrNull()
+        val musicMax = runCatching { audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC) }.getOrNull()
+        val system = runCatching { audio.getStreamVolume(AudioManager.STREAM_SYSTEM) }.getOrNull()
+        val systemMax = runCatching { audio.getStreamMaxVolume(AudioManager.STREAM_SYSTEM) }.getOrNull()
+
+        lines += "media volume: $music of $musicMax" + if (music == 0) "  ← everything is silent at zero" else ""
+        lines += "system volume: $system of $systemMax  (no longer used; sounds play on media)"
 
         val touchSounds = runCatching {
             Settings.System.getInt(context.contentResolver, Settings.System.SOUND_EFFECTS_ENABLED, 1)
         }.getOrDefault(1)
-        if (touchSounds == 0)
-            return "Silenced by Android — “Touch sounds” is off in system Sound settings."
+        lines += "touch sounds: " + if (touchSounds == 0)
+            "off — silences the small press cues, but not the intro"
+        else "on"
 
-        val audio = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
-            ?: return "Silenced — Android would not hand over the audio service."
+        lines += "ringer mode: ${audio.ringerMode} (0 silent, 1 vibrate, 2 normal) — no longer used"
+        lines += "rendered: ${cache.size} of ${Cue.entries.size} cues"
+        lines += "output: ${outputs(audio)}"
 
-        return when (audio.ringerMode) {
-            AudioManager.RINGER_MODE_SILENT -> "Silenced by Android — the device is on silent."
-            AudioManager.RINGER_MODE_VIBRATE -> "Silenced by Android — the device is on vibrate."
-            else -> "Playing. ${cache.size} of ${Cue.entries.size} cues rendered so far."
-        }
+        return lines.joinToString("\n")
     }
+
+    /** Where audio is actually going, which is the other half of "I hear nothing". */
+    private fun outputs(audio: AudioManager): String = runCatching {
+        audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+            .joinToString { "${it.productName} (type ${it.type})" }
+            .ifBlank { "no output devices reported" }
+    }.getOrDefault("could not be read")
 
     // ── playback ────────────────────────────────────────────────────────────
 
@@ -204,9 +247,19 @@ object Sounds {
         val track = AudioTrack.Builder()
             .setAudioAttributes(
                 AudioAttributes.Builder()
-                    // Sonification, not media: it ducks under music rather than pausing it, and it
-                    // follows the system volume somebody actually reaches for.
-                    .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                    /*
+                     * Media, not sonification — and the reason is the device this runs on.
+                     *
+                     * USAGE_ASSISTANCE_SONIFICATION routes to STREAM_SYSTEM. On a phone that is
+                     * reasonable; on a gaming handheld it is close to useless, because the system
+                     * stream is very often sitting at zero while media volume is up. The volume keys
+                     * on the Thor move media. So every sound this app made was being sent to a
+                     * channel nobody had turned up, and it was inaudible with nothing wrong.
+                     *
+                     * CONTENT_TYPE_SONIFICATION is kept, so it is still identified as interface
+                     * audio and still ducks under whatever else is playing rather than pausing it.
+                     */
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                     .build()
             )

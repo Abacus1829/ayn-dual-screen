@@ -64,6 +64,20 @@ object DeviceStats {
         /** Current MHz per core, or null where cpufreq would not be read. */
         val cpuMhz: List<Int?>,
 
+        /** Current GPU clock in MHz, where the driver exposes one. */
+        val gpuMhz: Int?,
+
+        /** Peak GPU clock, so a gauge has a scale to draw against. */
+        val gpuMaxMhz: Int?,
+
+        /**
+         * Instantaneous power at the battery, in watts. Negative while discharging.
+         *
+         * Computed rather than read: volts times amps, from two figures the battery service already
+         * reports. Which is exactly what the number on the AYN dashboard is.
+         */
+        val watts: Float?,
+
         /** 0..1, where 1 means thermal throttling is imminent. Android 11+. */
         val thermalHeadroom: Float?,
         /** Named zones in °C, where sysfs allowed it. Often empty. */
@@ -108,6 +122,9 @@ object DeviceStats {
             cpuCores = Runtime.getRuntime().availableProcessors(),
             cpuModel = cpuModel,
             cpuMhz = cpuFrequencies(),
+            gpuMhz = gpuClock(GPU_CURRENT),
+            gpuMaxMhz = gpuClock(GPU_MAX),
+            watts = watts(manager, battery?.getIntExtra(BatteryManager.EXTRA_VOLTAGE, -1) ?: -1),
 
             thermalHeadroom = thermalHeadroom(context),
             temperatures = temperatures(),
@@ -148,6 +165,63 @@ object DeviceStats {
                     .toInt() / 1_000
             }.getOrNull()
         }
+
+    // ── the GPU ─────────────────────────────────────────────────────────────
+
+    /*
+     * Adreno exposes its clock through the kgsl driver, and on most builds it is world-readable.
+     *
+     * There is no public Android API for a GPU clock at all — the AYN dashboard is reading the same
+     * files. Several paths are tried because the node moved between kernel versions, and a device
+     * that exposes none of them simply has no GPU gauge rather than a gauge showing zero.
+     */
+    private val GPU_CURRENT = listOf(
+        "/sys/class/kgsl/kgsl-3d0/gpuclk",
+        "/sys/class/kgsl/kgsl-3d0/devfreq/cur_freq",
+        "/sys/devices/platform/soc/3d00000.qcom,kgsl-3d0/kgsl/kgsl-3d0/gpuclk",
+    )
+
+    private val GPU_MAX = listOf(
+        "/sys/class/kgsl/kgsl-3d0/max_gpuclk",
+        "/sys/class/kgsl/kgsl-3d0/devfreq/max_freq",
+    )
+
+    private fun gpuClock(paths: List<String>): Int? {
+        for (path in paths) {
+            val hz = runCatching { File(path).readText().trim().toLong() }.getOrNull() ?: continue
+            if (hz <= 0) continue
+            // Hertz on every kernel that publishes these, so down to megahertz.
+            return (hz / 1_000_000L).toInt().takeIf { it in 1..5_000 }
+        }
+        return null
+    }
+
+    // ── power ───────────────────────────────────────────────────────────────
+
+    /**
+     * Watts at the battery: volts times amps.
+     *
+     * The sign is kept. Negative means the pack is being drained, positive means it is being filled,
+     * which is the convention the AYN dashboard shows and the one that makes "-1.59 W" readable at a
+     * glance as "this is costing you something".
+     */
+    private fun watts(manager: BatteryManager?, milliVolts: Int): Float? {
+        if (manager == null || milliVolts <= 0) return null
+
+        val microAmps = runCatching {
+            manager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW)
+        }.getOrNull() ?: return null
+
+        if (microAmps == Int.MIN_VALUE || microAmps == 0) return null
+
+        val amps = microAmps / 1_000_000f
+        val volts = milliVolts / 1_000f
+        val power = amps * volts
+
+        // Some devices report current in milliamps rather than microamps, which comes out as a
+        // hundreds-of-watts reading on a handheld. Scaled back rather than shown as nonsense.
+        return if (kotlin.math.abs(power) > 100f) power / 1_000f else power
+    }
 
     // ── heat ────────────────────────────────────────────────────────────────
 
@@ -250,6 +324,8 @@ object DeviceStats {
         line("Battery voltage", reading.batteryMilliVolts?.let { "$it mV" })
         line("Battery temperature", reading.batteryCelsius?.let { "%.1f °C".format(it) })
 
+        line("GPU clock", reading.gpuMhz?.let { "$it MHz${reading.gpuMaxMhz?.let { max -> " of $max MHz" } ?: ""}" })
+        line("Power", reading.watts?.let { "%.2f W".format(it) })
         line("Thermal headroom", reading.thermalHeadroom?.let { "%.2f (1.0 = throttling)".format(it) })
         line(
             "Thermal zones",

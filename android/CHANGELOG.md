@@ -7,6 +7,83 @@ time — so they say what the commits show and no more.
 
 ---
 
+## 0.22.0 — 2026-08-25
+
+Everything here came back from the Thor. 0.21.0 was the first build anybody had
+actually run, and three of its four headline changes were wrong on hardware.
+
+### The intro was far too short and the beads did not move
+
+A regression, introduced by the loading-state work in 0.21.0 and missed because
+every test written for it held the intro for *longer* than the animation.
+
+The common case is the opposite. An update check on a working connection answers
+in about two hundred milliseconds, and releasing the hold moved the phase clock
+straight to the end of free play — so the fifteen hundred milliseconds the beads
+spend sliding and knocking into each other was skipped outright, and the intro
+cut to seating almost immediately. Short, with motionless beads, which is exactly
+what came back.
+
+Releasing before free play would have ended anyway now does nothing at all: the
+run continues on its own clock and plays exactly as it did before there was a
+hold. Two tests cover it, one of which asserts that a fast hold is
+indistinguishable from never holding, frame by frame, for the whole run.
+
+### The sounds were going to a channel nobody had turned up
+
+`USAGE_ASSISTANCE_SONIFICATION` routes to `STREAM_SYSTEM`. On a phone that is
+reasonable. On a gaming handheld the system stream is very often sitting at zero
+while media volume is up — the volume keys on the Thor move media — so every
+sound the app made was being sent somewhere inaudible with nothing actually
+wrong. It plays on media now.
+
+Two gates also went, and both were wrong on this hardware. **The ringer no longer
+decides anything**: `RINGER_MODE_NORMAL` is about incoming calls, and a handheld
+with no telephony can sit in vibrate permanently without that meaning it wants
+silence. What matters is whether the stream is turned up, so that is what is
+checked. And **the system's touch-sounds switch no longer silences the intro** —
+it still silences the small per-press cues, which is what it is for, but on a
+device where touch sounds ship off by default, honouring it there meant the
+branded moment was silent for everybody.
+
+### The dashboard
+
+Built to the shape of the one AYN ships, from a photograph of it: translucent
+rounded cards on a dark ground, and the four ring gauges that are most of what
+makes that screen recognisable.
+
+`RingGauge` is a real one rather than a progress bar bent into a circle. Three
+details do the work — a full-circle track under a partial arc, a dot travelling
+at the arc's leading edge, and a distinct hue per ring so the four are told apart
+without reading the labels. Nothing snaps: a new reading sweeps the arc and counts
+the number over the same interval on the same curve, easing out with no overshoot,
+because a gauge that overshoots reports a value that never happened.
+
+The readings behind them are real: CPU clock from cpufreq, GPU clock from the
+kgsl nodes, power in watts computed as volts times amps from the battery service,
+memory from the activity manager, temperature from the thermal zones. Where a
+ceiling is needed for the arc and the kernel will not give one, the highest value
+actually observed is used, which is correct within seconds of the device doing
+anything.
+
+Four things on the reference are **left out rather than mocked up**, because they
+belong to the vendor's own driver: current FPS, fan speed and control, the eight
+quick toggles, and choosing a refresh mode. A number labelled FPS that was really
+this app's own frame rate would be a lie told in large type.
+
+### Home button diagnostics
+
+"I cannot select it" has at least five distinct causes that look identical from
+the outside. `HomeRole.diagnose` now lists every package the system will offer as
+a home app, says plainly whether this one is among them, reports what
+`RoleManager` thinks and whether either system screen exists — and it goes in the
+report that already has a Copy button.
+
+If this app is not in that candidate list, the manifest is the problem. If it is
+in the list and the chooser still will not take it, the console is.
+
+---
+
 ## 0.21.0 — 2026-08-25
 
 ### The intro is the loading screen now

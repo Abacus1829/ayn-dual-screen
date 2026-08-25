@@ -130,6 +130,64 @@ object HomeRole {
      */
     fun restore(context: Context): Intent? = homeSettings(context)
 
+    /**
+     * Why "set Abacus as home" did not work, in words.
+     *
+     * There are at least five separate reasons it can fail and they are indistinguishable from the
+     * outside — the role is unavailable, the chooser will not open, this app is not among the
+     * candidates the system will offer, the vendor has pinned its own launcher, or the button never
+     * goes through Android at all. Guessing between them from a desk is not possible, so the device
+     * is asked instead and the answer goes in the report that already has a Copy button.
+     */
+    fun diagnose(context: Context): String {
+        val lines = mutableListOf<String>()
+
+        val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+        val candidates = runCatching {
+            context.packageManager.queryIntentActivities(home, 0)
+        }.getOrDefault(emptyList())
+
+        lines += "home candidates: ${candidates.size}"
+        for (candidate in candidates) {
+            val name = candidate.activityInfo?.packageName ?: "?"
+            val mine = if (name == context.packageName) "   ← this app" else ""
+            lines += "  $name$mine"
+        }
+
+        // The single most useful line: if this app is not in the list above, no chooser will ever
+        // offer it and the manifest is the problem rather than the device.
+        lines += "this app is a candidate: " +
+            if (candidates.any { it.activityInfo?.packageName == context.packageName }) "yes" else "NO"
+
+        lines += "currently answering home: ${homePackage(context) ?: "nothing chosen, or the system resolver"}"
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val roles = runCatching { context.getSystemService(RoleManager::class.java) }.getOrNull()
+            lines += "RoleManager: " + when {
+                roles == null -> "not available"
+                !roles.isRoleAvailable(RoleManager.ROLE_HOME) -> "ROLE_HOME unavailable on this build"
+                roles.isRoleHeld(RoleManager.ROLE_HOME) -> "ROLE_HOME held by this app"
+                else -> "ROLE_HOME available, not held"
+            }
+        } else {
+            lines += "RoleManager: API ${Build.VERSION.SDK_INT}, predates roles"
+        }
+
+        val settings = Intent(Settings.ACTION_HOME_SETTINGS)
+        lines += "home settings screen: " + resolves(context, settings)
+
+        val defaults = Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
+        lines += "default apps screen: " + resolves(context, defaults)
+
+        return lines.joinToString("\n")
+    }
+
+    private fun resolves(context: Context, intent: Intent): String = runCatching {
+        val info = context.packageManager.resolveActivity(intent, 0)
+        if (info == null) "not present on this build"
+        else "${info.activityInfo?.packageName}/${info.activityInfo?.name}"
+    }.getOrDefault("could not be read")
+
     /** The system's Home-app chooser, if this build of Android has one. */
     private fun homeSettings(context: Context): Intent? {
         val intent = Intent(Settings.ACTION_HOME_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

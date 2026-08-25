@@ -68,6 +68,64 @@ class BeadsHoldTest {
     }
 
     @Test
+    fun `a fast release still plays the whole of free play`() {
+        /*
+         * The case that shipped broken in 0.21.0, and the one this file did not cover.
+         *
+         * Every test here held for longer than the animation. The *common* case is the opposite: an
+         * update check on a working connection answers in a couple of hundred milliseconds, and the
+         * release lands long before free play would have ended on its own.
+         *
+         * The clock then jumped to the end of free play, so the 1500ms the beads spend sliding and
+         * knocking into each other was skipped outright. On the device that reads as an intro that is
+         * far too short with beads that never move — which is exactly what came back from the Thor.
+         */
+        val beads = Beads()
+        beads.holding = true
+
+        // A quick answer from the network.
+        beads.runTo(200f)
+        beads.holding = false
+
+        assertEquals(
+            "the seat began at 200ms, skipping the whole of free play",
+            Beads.Phase.PLAY,
+            beads.phase,
+        )
+
+        // Still in free play most of the way through, as an unheld run would be.
+        beads.runTo(Beads.PLAY_MS - 100f)
+        assertEquals("free play was cut short after a fast release", Beads.Phase.PLAY, beads.phase)
+
+        // And it resolves on the natural schedule rather than early.
+        beads.runTo(Beads.PLAY_MS + 60f)
+        assertEquals("the seat did not arrive on time", Beads.Phase.SEAT, beads.phase)
+    }
+
+    @Test
+    fun `a fast release is indistinguishable from never holding at all`() {
+        // Stronger than the test above: the whole point is that a hold nobody waited on leaves no
+        // trace in the animation. Same clock, same phase, at every point in the run.
+        val held = Beads().apply { holding = true }
+        val plain = Beads()
+
+        held.runTo(150f)
+        held.holding = false
+
+        var at = 150f
+        while (at < Beads.TOTAL_MS + 200f) {
+            at += 16f
+            held.advanceTo(at)
+            plain.advanceTo(at)
+            assertEquals(
+                "a fast hold changed the animation at ${at}ms",
+                plain.phase,
+                held.phase,
+            )
+        }
+    }
+
+    @Test
     fun `a run that never holds behaves exactly as it did before`() {
         // The hold is opt-in. Every launch that has no startup work to wait for — which is most of
         // them — must be the animation that shipped, not a new one with a disabled branch in it.
