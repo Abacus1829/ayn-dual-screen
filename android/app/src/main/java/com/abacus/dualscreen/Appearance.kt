@@ -162,6 +162,17 @@ object Appearance {
         val accent = accentOf(settings)
         val corner = settings.corners * activity.resources.displayMetrics.density
 
+        /*
+         * The sound engine's switch, refreshed here.
+         *
+         * An odd place for it at first glance, and the right one: this is the single function every
+         * screen already calls with the settings in hand, so the engine cannot be left holding a
+         * stale answer after somebody changes it. The alternative was an Application subclass whose
+         * only job would be to copy one boolean.
+         */
+        com.abacus.dualscreen.ui.Sounds.setEnabled(settings.sounds)
+        com.abacus.dualscreen.ui.Feedback.setHapticsEnabled(settings.haptics)
+
         paintBackground(activity, settings, background, accent)
 
         val typeface = Typeface.create(settings.fontFamily.ifBlank { "sans-serif" }, Typeface.NORMAL)

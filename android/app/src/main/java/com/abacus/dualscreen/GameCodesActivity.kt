@@ -228,6 +228,26 @@ class GameCodesActivity : AppCompatActivity() {
         if (loaded.isEmpty()) {
             binding.searchField.visibility = View.GONE
             say(getString(R.string.codes_none))
+
+            /*
+             * An empty list is a screen somebody is looking at while confused, which makes this the
+             * most important text on it rather than the least. It says which of the three reasons
+             * applies — the mod has the feature off, the mod is older than the feature, or nothing
+             * is running — because from the outside they are identical and only one is fixable here.
+             */
+            binding.codeList.addView(
+                com.abacus.dualscreen.ui.Ui.empty(
+                    this, settings,
+                    glyph = "◌",
+                    title = R.string.codes_empty_title,
+                    detail = R.string.codes_empty_detail,
+                    action = R.string.codes_rescan,
+                ) {
+                    manual = null
+                    load()
+                }
+            )
+            com.abacus.dualscreen.ui.Motion.enterChildren(binding.codeList)
             return
         }
 
@@ -269,6 +289,10 @@ class GameCodesActivity : AppCompatActivity() {
             binding.codeList.addView(header(category.label))
             group.forEach { binding.codeList.addView(row(it)) }
         }
+
+        // Not while searching: re-animating the list on every keystroke would make typing feel like
+        // wading, which is the opposite of what a search box is for.
+        if (query.isBlank()) com.abacus.dualscreen.ui.Motion.enterChildren(binding.codeList)
     }
 
     /** Name, description and the typed code all count — people remember any of the three. */
@@ -303,7 +327,10 @@ class GameCodesActivity : AppCompatActivity() {
 
             alpha = if (code.available) 1f else 0.5f
             isEnabled = code.available
-            if (code.available) setOnClickListener { run(code) }
+            if (code.available) {
+                setOnClickListener { run(code) }
+                com.abacus.dualscreen.ui.Motion.pressable(this, scale = 0.985f)
+            }
         }
 
         /*

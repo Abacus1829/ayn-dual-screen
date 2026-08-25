@@ -3,10 +3,8 @@ package com.abacus.dualscreen
 import android.content.Intent
 import android.os.Bundle
 import android.util.TypedValue
-import android.view.Gravity
 import android.view.View
 import android.widget.ArrayAdapter
-import android.widget.CheckBox
 import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
@@ -16,18 +14,34 @@ import com.abacus.dualscreen.connect.DisplayChoice
 import com.abacus.dualscreen.connect.Orientation
 import com.abacus.dualscreen.databinding.ActivitySettingsBinding
 import com.abacus.dualscreen.ui.Feedback
+import com.abacus.dualscreen.ui.Motion
 import com.abacus.dualscreen.ui.Nav
+import com.abacus.dualscreen.ui.Ui
 
 /**
- * Everything the app remembers, in one place.
+ * Everything the app remembers, in one place — and only the things that are settings.
  *
- * The settings were spread across four screens — some on the home page, some in Appearance, some
- * behind a menu on the saved-connections list. Each of those made sense where it was and none of
- * them was findable if you did not already know. This gathers them.
+ * ## What changed, and why it was worth changing
  *
- * It does not own any of them. Every switch here writes the same preference the original screen
- * writes, and the screens that own a whole subject — appearance, saved connections, control profiles
- * — are linked rather than duplicated, because two editors for one thing is how they drift apart.
+ * This screen used to list **eight things that are also tiles on the home screen**: the FTP server,
+ * the dashboard, macros, layouts, themes, the keyboard, game codes. Opening Settings and finding a
+ * second copy of the app's navigation is exactly what made this feel like separate tools sharing an
+ * icon rather than one application. A settings screen that is also a launcher is a settings screen
+ * nobody trusts to hold the settings.
+ *
+ * So the rule now is: **Settings holds preferences. The home screen holds tools.** A tool appears
+ * here only when the screen genuinely *is* its own settings — the keyboard, which has nothing but
+ * settings — or when it is not on the home grid at all and would otherwise be unreachable.
+ *
+ * Two subjects were merged rather than listed twice:
+ *
+ * - **Themes** was a separate entry beside Appearance. They are one subject: how the app looks. It
+ *   is reached from inside Appearance now.
+ * - **Layouts** was a separate entry beside Macros. A layout is an arrangement of macros; it is
+ *   reached from the macro screen that owns them.
+ *
+ * The order is deliberate and follows how often somebody needs each: what the app connects to, what
+ * happens when it does, how it looks and sounds, then the things you set once.
  */
 class SettingsActivity : AppCompatActivity() {
 
@@ -53,182 +67,184 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun build() {
-        binding.settingsList.removeAllViews()
+        val list = binding.settingsList
+        list.removeAllViews()
 
-        section(R.string.settings_connection)
-        toggle(R.string.opt_autodetect, R.string.opt_autodetect_detail, settings.autoDetect) {
-            settings.autoDetect = it
-        }
-        toggle(R.string.opt_auto_switch, R.string.opt_auto_switch_detail, settings.autoSwitchGame) {
-            settings.autoSwitchGame = it
-        }
-        toggle(R.string.opt_reconnect, R.string.opt_reconnect_detail, settings.autoReconnect) {
-            settings.autoReconnect = it
-        }
-        toggle(R.string.opt_remember_display, R.string.opt_remember_display_detail, settings.rememberDisplay) {
-            settings.rememberDisplay = it
-        }
-        link(R.string.settings_saved_connections) {
-            startActivity(Intent(this, ProfilesActivity::class.java))
-        }
+        // ── what it connects to ─────────────────────────────────────────────
+        list.add(Ui.section(this, R.string.settings_connection))
+        list.add(
+            Ui.toggle(this, settings, R.string.opt_autodetect, R.string.opt_autodetect_detail, settings.autoDetect) {
+                settings.autoDetect = it
+            }
+        )
+        list.add(
+            Ui.toggle(this, settings, R.string.opt_auto_switch, R.string.opt_auto_switch_detail, settings.autoSwitchGame) {
+                settings.autoSwitchGame = it
+            }
+        )
+        list.add(
+            Ui.toggle(this, settings, R.string.opt_reconnect, R.string.opt_reconnect_detail, settings.autoReconnect) {
+                settings.autoReconnect = it
+            }
+        )
+        list.add(
+            Ui.link(this, settings, R.string.settings_saved_connections, glyph = "⇢") {
+                startActivity(Intent(this, ProfilesActivity::class.java))
+            }
+        )
 
-        section(R.string.settings_session)
-        choice(
-            R.string.profile_opens_on,
-            DisplayChoice.entries.map { displayLabel(it) },
-            DisplayChoice.byId(settings.displayChoice).ordinal,
-        ) { settings.displayChoice = DisplayChoice.entries[it].id }
-
-        choice(
-            R.string.profile_orientation,
-            Orientation.entries.map { orientationLabel(it) },
-            Orientation.byId(settings.orientation).ordinal,
-        ) { settings.orientation = Orientation.entries[it].id }
-
-        choice(
-            R.string.profile_awake,
-            Awake.entries.map { awakeLabel(it) },
-            Awake.byId(settings.awakeMode).ordinal,
-        ) {
-            settings.awakeMode = Awake.entries[it].id
-            // Kept in step, because the older connect screen still reads the boolean.
-            settings.keepAwake = settings.awakeMode != Awake.NEVER.id
-        }
-
-        toggle(R.string.profiles_show_controls, 0, settings.showControls) {
-            settings.showControls = it
-        }
-
+        // ── what happens on the second screen ───────────────────────────────
+        list.add(Ui.section(this, R.string.settings_session))
+        list.add(
+            choice(
+                R.string.profile_opens_on,
+                DisplayChoice.entries.map { displayLabel(it) },
+                DisplayChoice.byId(settings.displayChoice).ordinal,
+            ) { settings.displayChoice = DisplayChoice.entries[it].id }
+        )
+        list.add(
+            choice(
+                R.string.profile_orientation,
+                Orientation.entries.map { orientationLabel(it) },
+                Orientation.byId(settings.orientation).ordinal,
+            ) { settings.orientation = Orientation.entries[it].id }
+        )
+        list.add(
+            choice(
+                R.string.profile_awake,
+                Awake.entries.map { awakeLabel(it) },
+                Awake.byId(settings.awakeMode).ordinal,
+            ) {
+                settings.awakeMode = Awake.entries[it].id
+                // Kept in step, because the older connect screen still reads the boolean.
+                settings.keepAwake = settings.awakeMode != Awake.NEVER.id
+            }
+        )
+        list.add(
+            Ui.toggle(this, settings, R.string.profiles_show_controls, 0, settings.showControls) {
+                settings.showControls = it
+            }
+        )
         /*
          * The one that decides whether a game keeps working while you use the app.
          *
          * Here rather than buried in the session, because somebody whose controller has stopped
          * responding in the game will come looking for it in Settings.
          */
-        toggle(
-            R.string.opt_keep_game_focus,
-            R.string.opt_keep_game_focus_detail,
-            settings.keepGameFocus,
-        ) { settings.keepGameFocus = it }
+        list.add(
+            Ui.toggle(
+                this, settings,
+                R.string.opt_keep_game_focus, R.string.opt_keep_game_focus_detail,
+                settings.keepGameFocus,
+            ) { settings.keepGameFocus = it }
+        )
+        list.add(
+            Ui.toggle(this, settings, R.string.opt_remember_display, R.string.opt_remember_display_detail, settings.rememberDisplay) {
+                settings.rememberDisplay = it
+            }
+        )
+
+        // ── how it looks, sounds and feels ──────────────────────────────────
+        list.add(Ui.section(this, R.string.settings_look))
+        list.add(
+            Ui.link(this, settings, R.string.settings_appearance, R.string.settings_appearance_detail, "◈") {
+                startActivity(Intent(this, AppearanceActivity::class.java))
+            }
+        )
+        list.add(
+            Ui.toggle(this, settings, R.string.settings_sounds, R.string.settings_sounds_detail, settings.sounds) {
+                settings.sounds = it
+                com.abacus.dualscreen.ui.Sounds.setEnabled(it)
+                // Played immediately so the switch demonstrates itself rather than describing itself.
+                if (it) Feedback.success(binding.root)
+            }
+        )
+        list.add(
+            Ui.toggle(this, settings, R.string.settings_haptics, R.string.settings_haptics_detail, settings.haptics) {
+                settings.haptics = it
+                Feedback.setHapticsEnabled(it)
+                if (it) Feedback.success(binding.root)
+            }
+        )
+        list.add(
+            Ui.toggle(this, settings, R.string.settings_intro, R.string.settings_intro_detail, settings.bootAnimation) {
+                settings.bootAnimation = it
+            }
+        )
+
+        // ── controls ────────────────────────────────────────────────────────
+        list.add(Ui.section(this, R.string.settings_controls))
+        list.add(
+            Ui.link(this, settings, R.string.settings_macros, R.string.settings_macros_detail, "⚙") {
+                startActivity(Intent(this, MacrosActivity::class.java))
+            }
+        )
+        list.add(
+            Ui.link(this, settings, R.string.settings_keyboard, R.string.settings_keyboard_detail, "⌨") {
+                startActivity(Intent(this, KeyboardActivity::class.java))
+            }
+        )
+
+        // ── the things you set once ─────────────────────────────────────────
+        list.add(Ui.section(this, R.string.settings_system))
+        list.add(
+            Ui.link(this, settings, R.string.settings_check_updates, R.string.settings_updates_detail, "⇩") {
+                startActivity(Intent(this, UpdateActivity::class.java))
+            }
+        )
+        list.add(
+            Ui.link(this, settings, R.string.settings_permissions, R.string.settings_permissions_detail, "◈") {
+                startActivity(Intent(this, SetupActivity::class.java))
+            }
+        )
+        list.add(
+            Ui.link(this, settings, R.string.settings_developer, R.string.settings_developer_detail, "⌥") {
+                startActivity(Intent(this, DeveloperActivity::class.java))
+            }
+        )
 
         /*
-         * Updates, near the top rather than buried.
+         * Game codes, listed only once the feature has been found.
          *
-         * This app is installed by downloading an APK, so the update path is the only one there is
-         * — there is no store quietly doing it in the background. Somebody who wants to know
-         * whether they are current should not have to hunt for the answer.
-         */
-        section(R.string.settings_updates)
-        link(R.string.settings_check_updates) {
-            startActivity(Intent(this, UpdateActivity::class.java))
-        }
-
-        /*
-         * Developer tools, listed plainly rather than hidden behind a tap-seven-times gesture.
-         *
-         * This app is sideloaded from a repository by the people who work on it, and the questions
-         * it answers — what this device sends, what it calls its displays, how to reach it without a
-         * cable — are asked by whoever is holding the handheld when something misbehaves.
-         */
-        link(R.string.settings_developer) {
-            startActivity(Intent(this, DeveloperActivity::class.java))
-        }
-
-        /*
-         * The same screen the first run shows, minus the first-run wording.
-         *
-         * One place to see what has been granted and what each one turned on — which is the thing
-         * that was missing while every permission lived on the screen that happened to need it.
-         */
-        link(R.string.settings_permissions) {
-            startActivity(Intent(this, SetupActivity::class.java))
-        }
-
-        section(R.string.settings_look)
-        link(R.string.settings_appearance) {
-            startActivity(Intent(this, AppearanceActivity::class.java))
-        }
-        link(R.string.settings_themes) {
-            startActivity(Intent(this, ThemesActivity::class.java))
-        }
-
-        section(R.string.settings_controls)
-        link(R.string.settings_macros) {
-            startActivity(Intent(this, MacrosActivity::class.java))
-        }
-        link(R.string.settings_layouts) {
-            startActivity(Intent(this, LayoutEditorActivity::class.java))
-        }
-        link(R.string.settings_keyboard) {
-            startActivity(Intent(this, KeyboardActivity::class.java))
-        }
-
-        section(R.string.settings_tools)
-        link(R.string.settings_ftp) {
-            startActivity(Intent(this, FtpActivity::class.java))
-        }
-        link(R.string.settings_dashboard) {
-            startActivity(Intent(this, WidgetsActivity::class.java))
-        }
-
-        /*
-         * Only listed once the feature has been found.
-         *
-         * A "Game Codes" row on a device where it has never been unlocked would give away that there
-         * is something to unlock, which is the one thing the feature must not do.
+         * The exception to "tools are not listed here": it is deliberately absent from the home grid
+         * until it is unlocked, so for somebody who has unlocked it this is a reasonable place to
+         * find it again. Listing it before then would give away that there is something to find.
          */
         if (com.abacus.dualscreen.codes.CodeSettings(this).visible) {
-            link(R.string.tool_game_codes) {
-                startActivity(Intent(this, GameCodesActivity::class.java))
-            }
+            list.add(
+                Ui.link(this, settings, R.string.tool_game_codes, glyph = "◈") {
+                    startActivity(Intent(this, GameCodesActivity::class.java))
+                }
+            )
         }
-    }
 
-    // ── the pieces ──────────────────────────────────────────────────────────
-
-    private fun section(title: Int) {
-        binding.settingsList.addView(TextView(this).apply {
-            setText(title)
+        // Says where the tools went, once, at the bottom. Somebody who came here looking for the FTP
+        // server should be told rather than left to conclude it was removed.
+        list.add(TextView(this).apply {
+            setText(R.string.settings_tools_moved)
             setTextColor(getColor(R.color.text_faint))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
-            setPadding(dp(2), dp(16), 0, dp(6))
-        })
-    }
-
-    private fun toggle(title: Int, detail: Int, initial: Boolean, onChange: (Boolean) -> Unit) {
-        val row = card()
-
-        row.addView(CheckBox(this).apply {
-            setText(title)
-            setTextColor(getColor(R.color.text))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            isChecked = initial
-            setOnCheckedChangeListener { view, on ->
-                Feedback.tap(view)
-                onChange(on)
-            }
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setPadding(Ui.dp(this@SettingsActivity, 2), Ui.dp(this@SettingsActivity, 18), 0, Ui.dp(this@SettingsActivity, 8))
         })
 
-        if (detail != 0) {
-            row.addView(TextView(this).apply {
-                setText(detail)
-                setTextColor(getColor(R.color.text_dim))
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
-                setPadding(dp(2), 0, 0, 0)
-            })
-        }
-
-        binding.settingsList.addView(row)
+        Motion.enterChildren(list)
     }
 
-    /** A labelled dropdown. The listener is attached after the initial selection, not before. */
-    private fun choice(title: Int, labels: List<String>, selected: Int, onChange: (Int) -> Unit) {
-        val row = card()
+    private fun LinearLayout.add(view: View) = addView(view)
+
+    /**
+     * A labelled dropdown.
+     *
+     * Kept local rather than promoted into [Ui]: it is the only spinner-shaped setting in the app,
+     * and a component with one caller is a component that has not earned its abstraction yet.
+     */
+    private fun choice(title: Int, labels: List<String>, selected: Int, onChange: (Int) -> Unit): View {
+        val row = Ui.card(this, settings)
 
         row.addView(TextView(this).apply {
             setText(title)
             setTextColor(getColor(R.color.text_dim))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
         })
 
         val spinner = Spinner(this).apply {
@@ -236,6 +252,7 @@ class SettingsActivity : AppCompatActivity() {
                 this@SettingsActivity, android.R.layout.simple_spinner_item, labels
             ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
             setSelection(selected.coerceIn(0, labels.size - 1))
+            minimumHeight = Ui.dp(this@SettingsActivity, 48)
         }
 
         // Posted, because a Spinner delivers its initial selection asynchronously and attaching the
@@ -243,7 +260,9 @@ class SettingsActivity : AppCompatActivity() {
         spinner.post {
             spinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
                 override fun onItemSelected(p: android.widget.AdapterView<*>?, v: View?, pos: Int, id: Long) {
-                    if (pos != selected) onChange(pos)
+                    if (pos == selected) return
+                    Feedback.select(v)
+                    onChange(pos)
                 }
 
                 override fun onNothingSelected(p: android.widget.AdapterView<*>?) = Unit
@@ -251,46 +270,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         row.addView(spinner)
-        binding.settingsList.addView(row)
-    }
-
-    /** A row that opens the screen which actually owns the subject. */
-    private fun link(title: Int, onClick: () -> Unit) {
-        val row = card().apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setOnClickListener {
-                Feedback.tap(it)
-                onClick()
-            }
-        }
-
-        row.addView(TextView(this).apply {
-            setText(title)
-            setTextColor(getColor(R.color.text))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        })
-
-        row.addView(TextView(this).apply {
-            text = "›"
-            setTextColor(Appearance.accentOf(settings))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
-        })
-
-        binding.settingsList.addView(row)
-    }
-
-    private fun card() = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(dp(14), dp(12), dp(14), dp(12))
-        background = Appearance.panel(
-            this@SettingsActivity, settings, getColor(R.color.card), getColor(R.color.edge)
-        )
-        layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-        ).apply { bottomMargin = dp(6) }
+        return row
     }
 
     private fun displayLabel(choice: DisplayChoice) = getString(
@@ -318,6 +298,4 @@ class SettingsActivity : AppCompatActivity() {
             Awake.NEVER -> R.string.awake_never
         }
     )
-
-    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 }

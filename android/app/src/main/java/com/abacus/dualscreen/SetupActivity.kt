@@ -98,6 +98,10 @@ class SetupActivity : AppCompatActivity() {
         }
 
         binding.summaryText.text = getString(R.string.setup_summary, granted, offered)
+
+        // The rows arrive one after another. On the screen somebody sees first, this is the app's
+        // first impression of itself moving — worth the twenty-six milliseconds a row.
+        com.abacus.dualscreen.ui.Motion.enterChildren(binding.permissionList)
     }
 
     /**
@@ -196,9 +200,10 @@ class SetupActivity : AppCompatActivity() {
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                 ).apply { topMargin = dp(10) }
                 setOnClickListener {
-                    Feedback.tap(it)
+                    Feedback.select(it)
                     ask(permission, state)
                 }
+                com.abacus.dualscreen.ui.Motion.pressable(this)
             })
         }
 

@@ -41,6 +41,34 @@ class Settings(context: Context) {
         set(value) = prefs.edit().putBoolean(KEY_BOOT_ANIMATION, value).apply()
 
     /**
+     * Interface sounds.
+     *
+     * On, because a handheld companion that answers when you press it is most of what "premium"
+     * means in this category — and because it is gated three ways regardless: this switch, the
+     * system's touch-sounds setting, and the ringer not being silent. Somebody who has already told
+     * Android they dislike interface noise never hears a thing whatever this says.
+     */
+    var sounds: Boolean
+        get() = prefs.getBoolean(KEY_SOUNDS, true)
+        set(value) = prefs.edit().putBoolean(KEY_SOUNDS, value).apply()
+
+    /** Haptics. Separate from sound, because people want them in different combinations. */
+    var haptics: Boolean
+        get() = prefs.getBoolean(KEY_HAPTICS, true)
+        set(value) = prefs.edit().putBoolean(KEY_HAPTICS, value).apply()
+
+    /**
+     * The version the intro last played its full length for.
+     *
+     * The long introduction is for a first launch and for the launch after an update — the two
+     * moments when it is telling you something. Every other launch gets the short one, because an
+     * animation you have seen forty times is a toll booth however good it is.
+     */
+    var introShownFor: String
+        get() = prefs.getString(KEY_INTRO_FOR, "").orEmpty()
+        set(value) = prefs.edit().putString(KEY_INTRO_FOR, value).apply()
+
+    /**
      * Let whatever is playing keep the controller while a second screen is open.
      *
      * On by default, because it is what a second screen is for. Android focuses one window at a
@@ -372,6 +400,9 @@ class Settings(context: Context) {
         const val KEY_ADVANCED = "advanced"
         const val KEY_BOOT_ANIMATION = "boot_animation"
         const val KEY_SETUP_DONE = "setup_done"
+        const val KEY_SOUNDS = "sounds"
+        const val KEY_HAPTICS = "haptics"
+        const val KEY_INTRO_FOR = "intro_shown_for"
         const val KEY_KEEP_GAME_FOCUS = "keep_game_focus"
         const val KEY_AUTO_DETECT = "auto_detect"
         const val KEY_RECONNECT = "auto_reconnect"

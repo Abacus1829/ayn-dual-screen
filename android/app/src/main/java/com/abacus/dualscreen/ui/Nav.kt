@@ -29,8 +29,11 @@ object Nav {
      */
     fun back(activity: Activity, view: View?) {
         view ?: return
+        Motion.pressable(view)
         view.setOnClickListener {
-            Feedback.tap(view)
+            // The downward step, everywhere something closes. Paired with the upward one in
+            // [Feedback.select], it means direction is audible without anybody being told.
+            Feedback.back(view)
             activity.finish()
         }
     }
@@ -43,7 +46,7 @@ object Nav {
      * a pile of identical screens behind it.
      */
     fun home(activity: Activity, view: View? = null) {
-        Feedback.tap(view)
+        Feedback.back(view)
 
         activity.startActivity(
             Intent(activity, HomeActivity::class.java)

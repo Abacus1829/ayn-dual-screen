@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The background behind every dialog in the app.
+
+    Dialogs were the last stock-Android surface left: a light-grey rounded rectangle appearing in
+    the middle of a dark, accented interface, which is jarring in a way that is hard to place until
+    you see the two next to each other. This is the same card the rest of the app is built from.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/card" />
+    <corners android:radius="@dimen/corner" />
+    <stroke android:width="1dp" android:color="@color/edge_hi" />
+</shape>

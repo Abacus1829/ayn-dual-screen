@@ -70,6 +70,29 @@ class AbacusBootView @JvmOverloads constructor(
     /** The simulation. Rebuilt on each play, so a second run is identical to the first. */
     private var beads = Beads()
 
+    /**
+     * The long version, for a first launch and the launch after an update.
+     *
+     * The short version is the same physics run faster with the dwell at the end removed — not a
+     * different animation, so the mark still assembles and still lands. Speeding it up rather than
+     * cutting it is what keeps a repeat launch feeling like the same app in a hurry rather than like
+     * a cheaper version of it.
+     */
+    var full: Boolean = true
+
+    /** Called as each bead reaches its stop, with its index, so a knock can land on that frame. */
+    var onBeadSeated: ((Int) -> Unit)? = null
+
+    /** Called once, when the mark has arrived and the red has settled. */
+    var onLanded: (() -> Unit)? = null
+
+    /** Beads that have already reported arriving, so each knocks once. */
+    private val seated = mutableSetOf<Int>()
+    private var landed = false
+
+    /** The short version runs the same clock faster. */
+    private val rate: Float get() = if (full) 1f else 1.9f
+
     private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER }
     private val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
@@ -164,8 +187,9 @@ class AbacusBootView @JvmOverloads constructor(
         // One clock. The simulation is advanced to wall-clock time in fixed sub-steps, and
         // everything — the frame's angle, the beads, the wordmark — is drawn from where it got to.
         // A stalled frame therefore runs the animation a fraction late rather than skipping physics.
-        beads.advanceTo((System.currentTimeMillis() - startedAt).toFloat())
+        beads.advanceTo((System.currentTimeMillis() - startedAt) * rate)
         val elapsed = beads.timeMs.toLong()
+        announce(elapsed)
 
         // Past its natural end, and nothing is holding it: start the fade.
         if (fadeStartedAt == 0L && elapsed >= holdMs && !waiting)
@@ -187,6 +211,34 @@ class AbacusBootView @JvmOverloads constructor(
         drawMark(canvas, elapsed)
         drawWord(canvas, elapsed)
         postInvalidateOnAnimation()
+    }
+
+    /**
+     * Tell whoever is listening about the moments worth hearing.
+     *
+     * A bead counts as arrived when it has stopped moving *and* is close to where it will end up —
+     * both, because a bead at the far wall mid-bounce is momentarily still and a bead drifting past
+     * its target is momentarily in the right place. Reported once each, in the order they settle, so
+     * six knocks arrive in the rhythm the physics produced rather than on a schedule somebody wrote.
+     */
+    private fun announce(elapsed: Long) {
+        if (elapsed < 200) return
+
+        for (rod in 0 until Beads.RODS) {
+            for (index in 0 until Beads.PER_ROD) {
+                val key = rod * Beads.PER_ROD + index
+                if (key in seated) continue
+                if (!beads.settled(rod, index)) continue
+
+                seated += key
+                onBeadSeated?.invoke(seated.size - 1)
+            }
+        }
+
+        if (!landed && elapsed >= Beads.TOTAL_MS - 40) {
+            landed = true
+            onLanded?.invoke()
+        }
     }
 
     // ── the mark ────────────────────────────────────────────────────────────

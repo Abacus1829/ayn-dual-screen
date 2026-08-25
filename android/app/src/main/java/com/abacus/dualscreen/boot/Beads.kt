@@ -90,6 +90,20 @@ internal class Beads {
     fun positionOf(rod: Int, index: Int): Float = rods[rod][index].x
 
     /**
+     * Has this bead arrived and stopped?
+     *
+     * Both conditions, and both are needed. A bead at the far wall mid-bounce is momentarily still
+     * but nowhere near home; a bead drifting past its target is momentarily in the right place but
+     * still travelling. Used to sound a knock on the frame a bead actually lands, rather than at a
+     * timestamp that was right on whichever device it was tuned on.
+     */
+    fun settled(rod: Int, index: Int): Boolean {
+        val target = targets?.get(rod)?.get(index) ?: return false
+        val bead = rods[rod][index]
+        return abs(bead.v) < STILL_SPEED && abs(bead.x - target) < STILL_DISTANCE
+    }
+
+    /**
      * How red a bead is, 0..1.
      *
      * A hand-off is a short crossfade rather than a swap: the colour visibly leaves one bead and
@@ -300,6 +314,10 @@ internal class Beads {
         private const val HOP_MS = 95f
 
         private const val EPSILON = 1e-6f
+
+        /** Slow enough and close enough to count as arrived. See [settled]. */
+        private const val STILL_SPEED = 0.05f
+        private const val STILL_DISTANCE = 0.012f
 
         private val TOP_TARGETS = floatArrayOf(LEFT, LEFT + GAP, RIGHT)
         private val BOTTOM_TARGETS = floatArrayOf(LEFT, LEFT + GAP, LEFT + GAP * 2)

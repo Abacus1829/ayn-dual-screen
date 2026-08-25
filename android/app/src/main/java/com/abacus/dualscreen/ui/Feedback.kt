@@ -18,17 +18,80 @@ import com.abacus.dualscreen.R
  * obvious one: it honours the system's own touch-feedback setting, needs no VIBRATE permission, and
  * does nothing at all on a device that has haptics switched off. Vibrator would have overridden the
  * user's choice, which is exactly what an accessibility setting exists to prevent.
+ *
+ * Sound is bound to the same calls rather than being a separate concern a screen has to remember.
+ * That is the point of routing everything through here: a press is a press, and deciding what a
+ * press feels like *and* sounds like in one place is what stops the two drifting apart. See
+ * [Sounds] for what each cue is and when it stays quiet.
  */
 object Feedback {
 
-    /** An ordinary press: a saved note, a tapped tile. */
+    /**
+     * The app's haptics switch, mirrored from settings.
+     *
+     * Checked here rather than at every call site. The system's own setting still applies underneath
+     * — this can only ever take feedback away, never add it back for somebody who turned it off.
+     */
+    @Volatile
+    private var hapticsOn = true
+
+    fun setHapticsEnabled(on: Boolean) {
+        hapticsOn = on
+    }
+
+    private fun buzz(view: View?, constant: Int) {
+        if (!hapticsOn) return
+        view?.performHapticFeedback(constant)
+    }
+
+    /**
+     * An ordinary press: a saved note, a tapped tile.
+     *
+     * The quietest of the set, and by far the most frequent. Everything else is defined by how it
+     * differs from this one.
+     */
     fun tap(view: View?) {
-        view?.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+        buzz(view, HapticFeedbackConstants.VIRTUAL_KEY)
+        sound(view, Sounds.Cue.TAP, 0.7f)
+    }
+
+    /**
+     * Going somewhere: opening a screen, choosing an item from a list.
+     *
+     * Distinct from [tap] on purpose. A press and an arrival feel the same under the thumb
+     * otherwise, and after a while that makes the whole app feel like one undifferentiated surface.
+     */
+    fun select(view: View?) {
+        buzz(view, HapticFeedbackConstants.VIRTUAL_KEY)
+        sound(view, Sounds.Cue.SELECT)
+    }
+
+    /** Coming back out. The same step as [select], downward, so direction is audible. */
+    fun back(view: View?) {
+        buzz(view, HapticFeedbackConstants.VIRTUAL_KEY)
+        sound(view, Sounds.Cue.BACK)
+    }
+
+    /** A switch moving. The sound follows the switch: up for on, down for off. */
+    fun toggle(view: View?, on: Boolean) {
+        buzz(view, HapticFeedbackConstants.CLOCK_TICK)
+        sound(view, if (on) Sounds.Cue.TOGGLE_ON else Sounds.Cue.TOGGLE_OFF)
     }
 
     /** Something completed. Distinct from [tap] so a confirmation feels different from a press. */
     fun success(view: View?) {
-        view?.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+        buzz(view, HapticFeedbackConstants.CONTEXT_CLICK)
+        sound(view, Sounds.Cue.CONFIRM, 0.9f)
+    }
+
+    /** A wooden knock, for something arriving at a stop. Used by the intro. */
+    fun knock(view: View?, volume: Float = 1f) {
+        sound(view, Sounds.Cue.BEAD, volume)
+    }
+
+    private fun sound(view: View?, cue: Sounds.Cue, volume: Float = 1f) {
+        val context = view?.context ?: return
+        Sounds.play(context, cue, volume)
     }
 
     /**
@@ -38,12 +101,14 @@ object Feedback {
      * API 30 and would be silent on the rest, which is worse than a slightly wrong buzz.
      */
     fun error(view: View?) {
-        view?.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+        buzz(view, HapticFeedbackConstants.LONG_PRESS)
+        sound(view, Sounds.Cue.ERROR, 0.85f)
+        view?.let { Motion.shake(it) }
     }
 
     /** A press that begins a drag or a hold, so the gesture is acknowledged before it finishes. */
     fun hold(view: View?) {
-        view?.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+        buzz(view, HapticFeedbackConstants.LONG_PRESS)
     }
 
     // ── saying what happened ────────────────────────────────────────────────

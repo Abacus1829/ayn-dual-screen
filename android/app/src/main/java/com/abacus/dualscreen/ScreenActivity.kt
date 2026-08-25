@@ -183,18 +183,22 @@ class ScreenActivity : AppCompatActivity() {
 
         binding.menuButton.setOnClickListener {
             markActive()
-            binding.menuPanel.visibility = View.VISIBLE
+            com.abacus.dualscreen.ui.Feedback.select(it)
+            showMenu(true)
         }
         markActive()
-        binding.cancelButton.setOnClickListener { binding.menuPanel.visibility = View.GONE }
+        binding.cancelButton.setOnClickListener {
+            com.abacus.dualscreen.ui.Feedback.back(it)
+            showMenu(false)
+        }
         binding.reloadButton.setOnClickListener {
-            binding.menuPanel.visibility = View.GONE
+            showMenu(false)
             attempt = 0
             load()
         }
         binding.quitButton.setOnClickListener { quitToMenu(null) }
         binding.backToScreenButton.setOnClickListener {
-            binding.menuPanel.visibility = View.GONE
+            showMenu(false)
             backToScreen()
         }
 
@@ -215,7 +219,7 @@ class ScreenActivity : AppCompatActivity() {
         // back steps out one layer at a time: menu, then the wiki, then the session
         onBackPressedDispatcher.addCallback(this) {
             when {
-                binding.menuPanel.visibility == View.VISIBLE -> binding.menuPanel.visibility = View.GONE
+                binding.menuPanel.visibility == View.VISIBLE -> showMenu(false)
                 binding.webView.canGoBack() && offSite -> binding.webView.goBack()
                 offSite -> backToScreen()
                 else -> quitToMenu(null)
@@ -224,6 +228,34 @@ class ScreenActivity : AppCompatActivity() {
 
         load()
         handler.postDelayed(healthCheck, HEALTH_INTERVAL_MS)
+    }
+
+    /**
+     * Open or close the session menu.
+     *
+     * Faded and lifted rather than switched on, and kept short — this panel sits over a live game on
+     * the other panel, and anything longer than a fifth of a second spent covering it is time the
+     * screen is not doing its job.
+     */
+    private fun showMenu(open: Boolean) {
+        val panel = binding.menuPanel
+        val motion = com.abacus.dualscreen.ui.Motion
+
+        if (!motion.animated(this)) {
+            panel.visibility = if (open) View.VISIBLE else View.GONE
+            return
+        }
+
+        if (open) {
+            panel.alpha = 0f
+            panel.visibility = View.VISIBLE
+            panel.animate().alpha(1f).setDuration(motion.QUICK)
+                .setInterpolator(motion.ENTER).start()
+        } else {
+            panel.animate().alpha(0f).setDuration(motion.QUICK)
+                .setInterpolator(motion.EXIT)
+                .withEndAction { panel.visibility = View.GONE }.start()
+        }
     }
 
     /**
@@ -395,7 +427,7 @@ class ScreenActivity : AppCompatActivity() {
                         Toast.LENGTH_LONG
                     ).show()
                     binding.backToScreenButton.visibility = View.VISIBLE
-                    binding.menuPanel.visibility = View.VISIBLE
+                    showMenu(true)
                     return
                 }
 
@@ -513,7 +545,7 @@ class ScreenActivity : AppCompatActivity() {
         }
         control(R.string.control_reload) { binding.webView.reload() }
         control(R.string.control_reconnect) {
-            binding.menuPanel.visibility = View.GONE
+            showMenu(false)
             attempt = 0
             healthMisses = 0
             setLink(Link.CONNECTING)

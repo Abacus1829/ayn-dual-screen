@@ -813,4 +813,21 @@
     <string name="codes_favourites">Favourites</string>
     <string name="codes_show_tile">Show the tile without the sequence</string>
     <string name="codes_show_tile_detail">The button sequence is still the way in, but it needs this handheld to report its d-pad in a way the app recognises. If it will not, this puts the tile on the home screen anyway.</string>
+    <!-- ===== settings, reorganised ===== -->
+    <string name="settings_system">Device</string>
+    <string name="settings_appearance_detail">Accent, background, fonts, corners, the tool grid and console skins.</string>
+    <string name="settings_sounds">Interface sounds</string>
+    <string name="settings_sounds_detail">Short tones for presses, selections and confirmations. Silent anyway when your device has touch sounds off or the ringer on silent.</string>
+    <string name="settings_haptics">Haptics</string>
+    <string name="settings_haptics_detail">A small buzz on presses, toggles and confirmations. Follows your device\'s own touch-feedback setting.</string>
+    <string name="settings_intro">Startup animation</string>
+    <string name="settings_intro_detail">The abacus assembling itself when the app opens. Full length on a first launch and after an update, brief every other time. Tap it to skip.</string>
+    <string name="settings_macros_detail">The floating pad, its layouts and the sequence builder.</string>
+    <string name="settings_keyboard_detail">The on-screen keyboard, its shape and its size.</string>
+    <string name="settings_updates_detail">What is installed, what is published, and when to check.</string>
+    <string name="settings_permissions_detail">What the app can use, what each one turns on, and what it costs.</string>
+    <string name="settings_developer_detail">Connect over Wi-Fi, the input test, and what this device reports about itself.</string>
+    <string name="settings_tools_moved">Tools — the second screen, notes, mirror, FTP server, dashboard, scribble — live on the home screen rather than in here.</string>
+    <string name="codes_empty_title">Nothing on offer</string>
+    <string name="codes_empty_detail">The companion answered but advertises no codes. Either the mod has game codes switched off in its own config, or it is older than the feature. Nothing is wrong at this end.</string>
 </resources>

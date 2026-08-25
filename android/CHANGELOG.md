@@ -7,6 +7,88 @@ time — so they say what the commits show and no more.
 
 ---
 
+## 0.19.0 — 2026-08-24
+
+A pass over how the whole app looks, moves, sounds and is organised. No feature was removed; several
+were put where they belong.
+
+### It has a voice now
+
+Every sound in the app is **synthesised at runtime** — sine partials, an envelope, a little filtered
+noise for the wooden ones. No audio file ships in the APK, which is both a licensing answer and a
+practical one: a handful of oscillators weighs nothing and is tuned by changing a number.
+
+- **One pentatonic scale for everything**, so no two sounds can clash whatever order they play in.
+- **Direction is audible.** Going deeper into the app steps up, coming back out steps down, a toggle
+  moves the way the switch moves. After a day you know what happened without looking.
+- **Three ways to be silent**, checked in this order: the app's switch, the system's *touch sounds*
+  setting, and the ringer not being silent. Somebody who has already told Android they dislike
+  interface noise never hears a thing.
+- Unit tests render every cue and check it is audible, unclipped, short enough to be feedback, and
+  starts with an attack rather than a click — which is how the press sound was caught reaching nine
+  tenths of its peak in its first millisecond.
+
+### Haptics with a vocabulary
+
+Press, select, back, toggle, confirm and error are now six distinguishable things rather than one
+buzz used for all of them, and they are paired with the sounds in a single place so the two cannot
+drift apart. All of it still routes through the system's own touch-feedback setting.
+
+### Motion
+
+One place decides how the app moves: 120ms for a press, 200ms for a panel, 320ms for something big,
+26ms between staggered rows. Reduced motion is honoured properly — the system's animator duration
+scale switches all of it off and lands on the end state.
+
+- Screens arrive with a staggered fade-and-lift rather than appearing all at once.
+- Presses follow the finger, scaling down on the way down and springing back on release.
+- Panels fade, sections expand by their measured height, status colours crossfade rather than
+  switching between frames, failures shake, successes pulse.
+- **Except on the second screen.** A window opening on the *other panel* is not arriving from
+  anywhere you are looking, so the session has no transition at all — it appears, the way a second
+  monitor wakes.
+
+### The intro
+
+- **Full length on a first launch and after an update; brief every other time.** The short version
+  is the same physics run faster with the dwell removed, not a different animation — a repeat launch
+  should feel like the same app in a hurry, not a cheaper one.
+- **Sound and haptics are driven by the animation**, not scheduled alongside it: each bead knocks on
+  the frame it actually reaches its stop, because the physics decides when that is. The rising
+  figure plays as the mark lands, and only on the full version — a two-second phrase over a
+  one-second animation is a phrase that gets cut off.
+- A tap still skips it, silently. Somebody skipping an intro has said what they think of it.
+
+### Menus that stop repeating themselves
+
+Settings listed **eight things that are also home-screen tiles**. Opening Settings and finding a
+second copy of the app's navigation is exactly what made this feel like separate tools sharing an
+icon.
+
+- **Settings holds preferences. The home screen holds tools.** A tool is listed here only when the
+  screen genuinely *is* its own settings, like the keyboard.
+- **Themes** folded into Appearance — they are one subject, and Appearance already owned the link.
+- **Layouts** folded into Macros, which owns them.
+- Regrouped into what it connects to, what happens on the second screen, how it looks and sounds,
+  controls, and the things you set once. A line at the bottom says where the tools went, because
+  somebody who came looking for the FTP server deserves better than concluding it was deleted.
+
+### Components instead of fourteen near-identical cards
+
+Fourteen screens each built their own card out of a LinearLayout and a padding value. They were all
+*nearly* the same, which is worse than being different. There is now one card, one section heading,
+one link row, one toggle row, one empty state and one loading indicator, and screens compose them.
+
+Empty states in particular were a single grey sentence; they now say what is empty, why, and what to
+do about it.
+
+### Dialogs
+
+The last stock-Android surface: a light rounded rectangle arriving in the middle of a dark accented
+interface. They are the app's own card now, and wide enough to read at arm's length.
+
+---
+
 ## 0.18.0 — 2026-08-24
 
 ### A first run that explains itself

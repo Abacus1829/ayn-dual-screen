@@ -10,6 +10,7 @@ import android.widget.ArrayAdapter
 import androidx.appcompat.app.AppCompatActivity
 import com.abacus.dualscreen.databinding.ActivityUpdateBinding
 import com.abacus.dualscreen.ui.Feedback
+import com.abacus.dualscreen.ui.Motion
 import com.abacus.dualscreen.ui.Nav
 import com.abacus.dualscreen.update.AppSource
 import com.abacus.dualscreen.update.Channel
@@ -45,6 +46,14 @@ class UpdateActivity : AppCompatActivity() {
 
     private val listener: (UpdateManager.State) -> Unit = { render(it) }
 
+    /**
+     * The state last announced, so an outcome is sounded once rather than on every redraw.
+     *
+     * render() runs for any state change and for every resume; without this, coming back from the
+     * installer would replay the confirmation chime for a download that finished ten minutes ago.
+     */
+    private var announced: String? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityUpdateBinding.inflate(layoutInflater)
@@ -55,9 +64,13 @@ class UpdateActivity : AppCompatActivity() {
 
         Nav.back(this, binding.backButton)
         binding.primaryButton.setOnClickListener {
-            Feedback.tap(it)
+            Feedback.select(it)
             action()
         }
+        Motion.pressable(binding.primaryButton)
+        Motion.pressable(binding.laterButton)
+        Motion.pressable(binding.skipButton)
+        Motion.pressable(binding.grantButton)
         binding.laterButton.setOnClickListener {
             Feedback.tap(it)
             updates.remindLater()
@@ -124,6 +137,8 @@ class UpdateActivity : AppCompatActivity() {
             is UpdateManager.State.Failed -> state.update
             else -> null
         }
+
+        announce(state)
 
         showUpdate(update)
         binding.progressGroup.visibility = View.GONE
@@ -205,8 +220,9 @@ class UpdateActivity : AppCompatActivity() {
             }
 
             is UpdateManager.State.Failed -> {
+                // The buzz belongs to announce(), which fires once per outcome. Doing it here too
+                // would buzz again on every redraw and on every return to this screen.
                 say(Feedback.State.BAD, describe(state.failure))
-                Feedback.error(binding.primaryButton)
 
                 when {
                     state.failure.error == UpdateError.PERMISSION -> {
@@ -221,6 +237,42 @@ class UpdateActivity : AppCompatActivity() {
                     else -> primary(R.string.update_check_again) { updates.checkNow() }
                 }
             }
+        }
+    }
+
+    /**
+     * Say out loud what just happened, once per outcome.
+     *
+     * Only the two that are outcomes rather than progress. A download finishing and a download
+     * failing are the moments somebody may not be looking at the screen — this app is used beside a
+     * game — and they are exactly the moments a sound earns its place. Everything in between stays
+     * silent, because a chime for each of five intermediate states is noise.
+     */
+    private fun announce(state: UpdateManager.State) {
+        val key = when (state) {
+            is UpdateManager.State.Ready -> "ready:" + state.update.version.text
+            is UpdateManager.State.Failed -> "failed:" + state.failure.error.name
+            else -> null
+        }
+
+        if (key == null || key == announced) {
+            if (key == null) announced = null
+            return
+        }
+        announced = key
+
+        when (state) {
+            is UpdateManager.State.Ready -> {
+                Feedback.success(binding.primaryButton)
+                Motion.pulse(binding.primaryButton)
+            }
+
+            is UpdateManager.State.Failed ->
+                // Cancelling is a choice, not a failure, and buzzing at somebody for making it
+                // would be the app disagreeing with them.
+                if (state.failure.error != UpdateError.CANCELLED) Feedback.error(binding.statusText)
+
+            else -> Unit
         }
     }
 

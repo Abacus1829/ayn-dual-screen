@@ -681,15 +681,16 @@ class HomeActivity : AppCompatActivity() {
                     setMargins(dp(3), dp(3), dp(3), dp(3))
                 }
                 setOnClickListener {
-                    // a short tick on tap: on a handheld this is most of what makes a grid feel solid
-                    performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    // Select rather than tap: opening a tool is *going somewhere*, and it should not
+                    // feel and sound identical to pressing a button that stays put. See ui/Feedback.
+                    com.abacus.dualscreen.ui.Feedback.select(it)
                     openTool(tool)
                 }
 
                 // Hiding a tool was buried three screens deep in Appearance. Holding the tile itself is
                 // where anyone would reach for it first, so it works there too.
                 setOnLongClickListener {
-                    performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                    com.abacus.dualscreen.ui.Feedback.hold(it)
                     confirmHide(tool)
                     true
                 }
@@ -786,6 +787,11 @@ class HomeActivity : AppCompatActivity() {
             }
 
             cell.addView(label)
+
+            // The press follows the finger rather than waiting for the release. On a grid this is
+            // most of the difference between tiles that feel like buttons and tiles that feel like
+            // pictures of buttons.
+            com.abacus.dualscreen.ui.Motion.pressable(cell)
             binding.toolGrid.addView(cell)
         }
 
@@ -803,7 +809,22 @@ class HomeActivity : AppCompatActivity() {
                 })
             }
         }
+
+        /*
+         * The grid arrives a tile at a time.
+         *
+         * Only when the screen is new, not on every rebuild: this method also runs when coming back
+         * from a tool, and re-animating a grid somebody is already looking at reads as a glitch
+         * rather than as a flourish. The stagger caps out, so a long grid does not become a wait.
+         */
+        if (!gridShown) {
+            gridShown = true
+            com.abacus.dualscreen.ui.Motion.enterChildren(binding.toolGrid)
+        }
     }
+
+    /** Whether the tool grid has already made its entrance in this instance of the screen. */
+    private var gridShown = false
 
     /**
      * With a skin on, the home screen IS the console menu — everything else goes.
@@ -949,7 +970,7 @@ class HomeActivity : AppCompatActivity() {
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
                 setPadding(dp(14), dp(4), dp(14), dp(4))
                 setOnClickListener {
-                    performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    com.abacus.dualscreen.ui.Feedback.select(it)
                     openTool(tool)
                 }
             })
