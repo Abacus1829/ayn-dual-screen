@@ -83,6 +83,13 @@ object DeviceStats {
         /** Named zones in °C, where sysfs allowed it. Often empty. */
         val temperatures: Map<String, Float>,
 
+        /**
+         * The one temperature worth putting on a dashboard, in °C.
+         *
+         * Picked rather than maximised. See [socTemperature].
+         */
+        val socCelsius: Float?,
+
         val refreshHz: Float?,
         val supportedHz: List<Float>,
     )
@@ -99,6 +106,7 @@ object DeviceStats {
         }.getOrNull()
 
         val manager = context.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
+        val zones = temperatures()
 
         return Reading(
             ramUsedBytes = (memory.totalMem - memory.availMem).takeIf { memory.totalMem > 0 },
@@ -127,7 +135,8 @@ object DeviceStats {
             watts = watts(manager, battery?.getIntExtra(BatteryManager.EXTRA_VOLTAGE, -1) ?: -1),
 
             thermalHeadroom = thermalHeadroom(context),
-            temperatures = temperatures(),
+            temperatures = zones,
+            socCelsius = socTemperature(zones),
 
             refreshHz = display?.refreshRate,
             supportedHz = supportedRefreshRates(display),
@@ -138,13 +147,30 @@ object DeviceStats {
 
     /** Read once. The model does not change, and parsing it per frame would be silly. */
     private val cpuModel: String? by lazy {
-        runCatching {
+        /*
+         * `/proc/cpuinfo` no longer names the chip on modern arm64 builds.
+         *
+         * The Thor has neither a `Hardware` nor a `model name` line — this reported "not available"
+         * on a device whose SoC is perfectly well known to the framework. Android 12 added
+         * [Build.SOC_MODEL] for exactly this, so ask that first and keep the file as the fallback for
+         * older builds that still write the line.
+         */
+        val fromBuild = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            listOfNotNull(Build.SOC_MANUFACTURER, Build.SOC_MODEL)
+                .filter { it.isNotBlank() && it != Build.UNKNOWN }
+                .joinToString(" ")
+                .takeIf { it.isNotBlank() }
+        } else {
+            null
+        }
+
+        fromBuild ?: runCatching {
             File("/proc/cpuinfo").readLines()
                 .firstOrNull { it.startsWith("Hardware") || it.startsWith("model name") }
                 ?.substringAfter(':')
                 ?.trim()
                 ?.takeIf { it.isNotBlank() }
-        }.getOrNull()
+        }.getOrNull() ?: Build.HARDWARE.takeIf { it.isNotBlank() && it != Build.UNKNOWN }
     }
 
     /**
@@ -270,6 +296,35 @@ object DeviceStats {
         }
     }.getOrDefault(emptyMap())
 
+    /**
+     * Which of fifty-eight thermal zones is *the* temperature.
+     *
+     * A Thor reports 58 of them, and taking the hottest is wrong in a way that matters: the hottest
+     * on a healthy, idle device is `pm8550b_lite_tz` at 50.5°C — a power-management regulator, which
+     * runs hot by design and means nothing to somebody looking at a handheld. Reporting it puts a
+     * number on screen that looks like the console is in trouble when it is sitting at 36°C.
+     *
+     * The zones that answer the question a dashboard is actually asking are the CPU ones. On the same
+     * device those read 34–40°C, and their maximum is 40.0°C — which is exactly the figure AYN's own
+     * dashboard shows. So: the hottest CPU zone, then the hottest GPU zone, then the battery, and
+     * nothing else. Regulators, modems, cameras and the USB port are all excluded by not being asked.
+     */
+    private fun socTemperature(zones: Map<String, Float>): Float? {
+        if (zones.isEmpty()) return null
+
+        fun hottest(prefix: String): Float? = zones
+            .filterKeys { it.startsWith(prefix, ignoreCase = true) }
+            .values
+            .maxOrNull()
+
+        // cpu-N-M are the individual cores; cpuss-N are the subsystem sensors. Both are wanted, and
+        // both start with "cpu".
+        return hottest("cpu")
+            ?: hottest("gpuss")
+            ?: hottest("gpu")
+            ?: zones["battery"]
+    }
+
     // ── the display ─────────────────────────────────────────────────────────
 
     /**
@@ -327,6 +382,7 @@ object DeviceStats {
         line("GPU clock", reading.gpuMhz?.let { "$it MHz${reading.gpuMaxMhz?.let { max -> " of $max MHz" } ?: ""}" })
         line("Power", reading.watts?.let { "%.2f W".format(it) })
         line("Thermal headroom", reading.thermalHeadroom?.let { "%.2f (1.0 = throttling)".format(it) })
+        line("SoC temperature", reading.socCelsius?.let { "%.1f °C (the figure the dashboard shows)".format(it) })
         line(
             "Thermal zones",
             reading.temperatures.takeIf { it.isNotEmpty() }

@@ -182,7 +182,9 @@ object Dashboard {
         }
 
         // ── the two stat cards ──────────────────────────────────────────────
-        val hottest = reading.temperatures.maxByOrNull { it.value }?.value ?: reading.batteryCelsius
+        // Chosen by DeviceStats rather than maximised here: the hottest of a Thor's 58 zones is a
+        // power regulator at 50°C, which is meaningless on a handheld sitting at 36.
+        val hottest = reading.socCelsius ?: reading.batteryCelsius
         views.temperature.text = hottest?.let { "%.0f°C".format(it) } ?: "—"
         (views.temperature.parent as? View)?.visibility = if (hottest != null) View.VISIBLE else View.GONE
 
