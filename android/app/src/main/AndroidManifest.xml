@@ -151,6 +151,11 @@
             android:resizeableActivity="true" />
 
         <activity
+            android:name=".DashboardActivity"
+            android:exported="false"
+            android:resizeableActivity="true" />
+
+        <activity
             android:name=".DeveloperActivity"
             android:exported="false"
             android:resizeableActivity="true" />

@@ -653,6 +653,9 @@
     <string name="home_no_screen">This build of Android has no home-app screen to open.</string>
     <string name="home_restore_hint">Pick the AYN dashboard in the list that opens.</string>
 
+    <string name="tool_dashboard">Dashboard</string>
+    <string name="dash_title">Dashboard</string>
+    <string name="dash_blurb">What the console is doing right now. Only the readings this device actually reports are shown.</string>
     <string name="dash_temp">Temp</string>
     <string name="dash_memory">Memory</string>
     <string name="dash_power">Power</string>
@@ -849,7 +852,7 @@
     <string name="settings_system">Device</string>
     <string name="settings_appearance_detail">Accent, background, fonts, corners, the tool grid and console skins.</string>
     <string name="settings_sounds">Interface sounds</string>
-    <string name="settings_sounds_detail">Short tones for presses, selections and confirmations. Silent anyway when your device has touch sounds off or the ringer on silent.</string>
+    <string name="settings_sounds_detail">Short tones for presses, selections and confirmations, played at your media volume. Turn this off to silence the app completely, including the intro.</string>
     <string name="settings_haptics">Haptics</string>
     <string name="settings_haptics_detail">A small buzz on presses, toggles and confirmations. Follows your device\'s own touch-feedback setting.</string>
     <string name="settings_intro">Startup animation</string>

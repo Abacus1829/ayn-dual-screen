@@ -62,13 +62,28 @@ object Dashboard {
      * broken and is the most obvious way to get this wrong.
      */
     fun build(activity: Activity, settings: Settings, host: LinearLayout, reading: DeviceStats.Reading) {
-        val existing = host.getTag(R.id.tag_base_size) as? Views
+        /*
+         * The cache has to be checked against the host, not just read off it.
+         *
+         * The views were remembered on a tag and reused on every poll. A tag outlives the views it
+         * points at, though: anything that empties the host — a theme change rebuilding the tree, the
+         * activity being recreated on a display move, a configuration change — leaves the tag holding
+         * a set of detached views that are then dutifully updated forever while the screen shows
+         * nothing. That is the dashboard "sometimes disappearing", and it is why it never came back
+         * without leaving the screen.
+         *
+         * So the cache is only trusted while its views are still the ones actually in the host.
+         */
+        val cached = host.getTag(R.id.tag_base_size) as? Views
+        val usable = cached?.takeIf { it.root === host && host.childCount > 0 && it.cpu.parent != null }
 
-        val views = existing ?: create(activity, settings, host).also {
+        val views = usable ?: create(activity, settings, host).also {
             host.setTag(R.id.tag_base_size, it)
         }
 
-        update(activity, views, reading, animate = existing != null)
+        // Animate only when carrying on from a previous reading. A freshly built set sweeps from
+        // zero, which is the right first impression and the wrong thing to do twice a second.
+        update(activity, views, reading, animate = usable != null)
     }
 
     /** The pieces that get updated, held so the second poll does not rebuild the first one's views. */

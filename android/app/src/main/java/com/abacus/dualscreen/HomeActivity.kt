@@ -221,46 +221,14 @@ class HomeActivity : AppCompatActivity() {
      * Two seconds, and stopped in onPause. A dashboard is read rather than watched, and polling
      * sysfs behind a screen nobody is looking at is a way to spend battery on nothing.
      */
-    private val statsTick = object : Runnable {
-        override fun run() {
-            refreshDeviceStats()
-            statsHandler.postDelayed(this, 2_000L)
-        }
-    }
-
-    private val statsHandler = android.os.Handler(android.os.Looper.getMainLooper())
-
-    private fun refreshDeviceStats() {
-        // The reads are a handful of small files. Off the main thread regardless, because a
-        // refusing sysfs path can block far longer than a file that size has any right to.
-        Thread {
-            val reading = com.abacus.dualscreen.companion.DeviceStats.read(this, panelDisplay)
-            runOnUiThread {
-                if (!isFinishing) {
-                    com.abacus.dualscreen.companion.Dashboard.build(
-                        this, settings, binding.deviceStats, reading
-                    )
-                }
-            }
-        }.apply { isDaemon = true }.start()
-    }
-
-    private val panelDisplay: android.view.Display?
-        get() = runCatching {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) display
-            else @Suppress("DEPRECATION") windowManager.defaultDisplay
-        }.getOrNull()
-
     override fun onStart() {
         super.onStart()
         updates.observe(updateListener)
-        statsHandler.post(statsTick)
     }
 
     override fun onStop() {
         super.onStop()
         updates.forget(updateListener)
-        statsHandler.removeCallbacks(statsTick)
     }
 
     override fun onPause() {
@@ -1231,6 +1199,7 @@ class HomeActivity : AppCompatActivity() {
         }
 
         when (tool) {
+            Tool.DASHBOARD -> startActivity(Intent(this, DashboardActivity::class.java))
             Tool.SECOND_SCREEN -> open()
             Tool.NOTES -> startActivity(Intent(this, NotesActivity::class.java))
             // Two tiles, one screen, but each opens on the half it names.

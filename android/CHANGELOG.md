@@ -7,6 +7,48 @@ time — so they say what the commits show and no more.
 
 ---
 
+## 0.24.0 — 2026-08-25
+
+### The dashboard is its own screen
+
+It was a strip on the home screen, which was the wrong place for it twice over.
+The home screen is about connecting to a game and already carries a status card, a
+game picker, an address form and a tool grid — a live hardware readout was
+competing with all of that. And it is a thing you go and look at deliberately, in
+the way you would open the console's own dashboard, rather than something you want
+glancing at you while you pick a profile.
+
+So it is a tool now, near the top of the grid where a destination belongs.
+
+### Why it kept disappearing
+
+The tiles were remembered on a view tag and reused on every poll, so the gauges
+could animate between readings rather than being rebuilt from zero twice a second.
+
+A tag outlives the views it points at. Anything that empties the host — a theme
+change rebuilding the tree, the activity being recreated on a display move, a
+configuration change — left the tag holding a set of detached views, which were
+then dutifully updated forever while the screen showed nothing. That is exactly
+the shape of the reported fault: gone, and not coming back without leaving the
+screen and returning.
+
+The cache is now only trusted while its views are still the ones actually in the
+host, and rebuilt otherwise.
+
+### Turning sounds off
+
+There has been a switch for this since the interface sounds were added, at
+**Settings → Interface sounds**, and it silences everything including the intro.
+
+What was wrong was its description. It still read "silent anyway when your device
+has touch sounds off or the ringer on silent" — which described the behaviour
+removed in 0.22.0, and was therefore telling people the opposite of the truth
+about why they could or could not hear anything. It now says what actually
+happens: the sounds play at your media volume, and this switch silences the app
+completely.
+
+---
+
 ## 0.23.0 — 2026-08-25
 
 Two corrections, both found by running the probe on a Thor and reading what came

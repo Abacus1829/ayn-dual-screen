@@ -80,21 +80,7 @@
                 running, the line under it is where and what, and the primary action is inside the
                 same card as the thing it acts on rather than four cards further down.
             -->
-            <!--
-                The console's own vital signs.
-
-                Built at runtime rather than declared here, because which tiles exist depends on
-                what this particular Android build will answer: a device that refuses cpufreq gets
-                no processor tile rather than one full of dashes. See DashboardCard.
-            -->
-            <LinearLayout
-                android:id="@+id/deviceStats"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:tag="plain"
-                android:visibility="gone" />
-            <LinearLayout
+           <LinearLayout
                 android:id="@+id/statusCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

@@ -46,6 +46,14 @@ enum class Tool(
      */
     PROFILES("profiles", R.string.tool_profiles, "⇢"),
 
+    /**
+     * The console's own vital signs.
+     *
+     * High in the list because it is a destination rather than a utility — the thing you open to
+     * find out how hot the console is running, in the way you would open the vendor's dashboard.
+     */
+    DASHBOARD("dashboard", R.string.tool_dashboard, "◍"),
+
     SECOND_SCREEN("screen", R.string.tool_second_screen, "▣"),
     NOTES("notes", R.string.tool_notes, "✎"),
     VOLUME("volume", R.string.tool_volume, "◧"),
