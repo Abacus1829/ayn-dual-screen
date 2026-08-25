@@ -20,7 +20,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="@dimen/space_screen">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -39,7 +39,7 @@
                     android:layout_height="wrap_content"
                     android:tag="accent"
                     android:text="@string/input_title"
-                    android:textSize="20sp"
+                    android:textSize="@dimen/text_title"
                     android:textStyle="bold" />
 
                 <TextView
@@ -49,7 +49,7 @@
                     android:lineSpacingExtra="2dp"
                     android:text="@string/input_blurb"
                     android:textColor="@color/text_dim"
-                    android:textSize="12sp" />
+                    android:textSize="@dimen/text_caption" />
             </LinearLayout>
 
             <Button
@@ -64,9 +64,9 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="@dimen/space"
             android:orientation="vertical"
-            android:padding="14dp"
+            android:padding="@dimen/space"
             android:tag="accentEdge">
 
             <TextView
@@ -79,10 +79,10 @@
                 android:id="@+id/sequenceState"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="@dimen/space_tight"
                 android:tag="accent"
                 android:text="@string/input_seq_progress"
-                android:textSize="17sp"
+                android:textSize="@dimen/text_heading"
                 android:textStyle="bold" />
 
             <TextView
@@ -105,14 +105,14 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:textColor="@color/text_dim"
-                android:textSize="12sp" />
+                android:textSize="@dimen/text_caption" />
 
             <Button
                 android:id="@+id/copyButton"
                 style="@style/Action"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="@dimen/space_small"
                 android:text="@string/input_copy" />
 
             <Button
@@ -129,7 +129,7 @@
             android:layout_height="0dp"
             android:layout_marginTop="10dp"
             android:layout_weight="1"
-            android:padding="12dp"
+            android:padding="@dimen/space"
             android:tag="card">
 
             <TextView
@@ -139,24 +139,24 @@
                 android:fontFamily="monospace"
                 android:textColor="@color/text"
                 android:textIsSelectable="true"
-                android:textSize="11sp" />
+                android:textSize="@dimen/text_label" />
         </ScrollView>
 
         <TextView
             style="@style/Label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="@dimen/space"
             android:text="@string/input_devices" />
 
         <TextView
             android:id="@+id/devicesText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:layout_marginBottom="4dp"
+            android:layout_marginTop="@dimen/space_tight"
+            android:layout_marginBottom="@dimen/space_tight"
             android:fontFamily="monospace"
             android:textColor="@color/text_dim"
-            android:textSize="11sp" />
+            android:textSize="@dimen/text_label" />
     </LinearLayout>
 </FrameLayout>

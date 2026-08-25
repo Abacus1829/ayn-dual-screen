@@ -90,8 +90,12 @@ class HomeActivity : AppCompatActivity() {
     private var showable = false
 
     /** Re-checked whenever the update state moves, in case the check outlives the animation. */
-    private val updateListener: (com.abacus.dualscreen.update.UpdateManager.State) -> Unit =
-        { maybePrompt() }
+    private val updateListener: (com.abacus.dualscreen.update.UpdateManager.State) -> Unit = {
+        // The chip appears the moment the check finishes, without waiting for a return to this
+        // screen -- which on a startup check is usually while somebody is still looking at it.
+        if (showable) buildChips()
+        maybePrompt()
+    }
 
     /**
      * What happens when the app opens.
@@ -483,6 +487,10 @@ class HomeActivity : AppCompatActivity() {
 
         if (settings.autoDetect) detect(announce = false)
 
+        // Rebuilt on every return: a server started from its own screen should be reflected the
+        // moment you come back here, not the next time the app is launched.
+        buildChips()
+
         showable = true
         maybePrompt()
     }
@@ -534,6 +542,9 @@ class HomeActivity : AppCompatActivity() {
         binding.hostField.setText(settings.hostFor(game))
         binding.portField.setText(settings.portFor(game).toString())
         binding.accentBar.setBackgroundColor(Appearance.accentOf(settings))
+        // The dashboard names what is selected even before anything has answered, so the card is
+        // never blank while a probe is out.
+        headline(getString(game.label))
         showInSpinner(game)
 
         if (settings.rememberDisplay) {
@@ -1238,6 +1249,84 @@ class HomeActivity : AppCompatActivity() {
         row.addView(check)
         row.addView(caption)
         binding.toggleGroup.addView(row)
+    }
+
+    /**
+     * The dashboard headline: what is running, in as few words as possible.
+     *
+     * Separate from [say] because they answer different questions. The headline is *what* — the
+     * game, or the fact that there is not one — and changes rarely. The line under it is *how it is
+     * going*, and changes constantly. Putting both in one string was why the old status line had to
+     * repeat the game's name in every message it produced.
+     */
+    private fun headline(title: String) {
+        if (binding.statusTitle.text == title) return
+        com.abacus.dualscreen.ui.Motion.crossfade(binding.statusTitle) {
+            binding.statusTitle.text = title
+        }
+    }
+
+    /**
+     * The chips: what this device is doing right now, one tap from doing something about it.
+     *
+     * Only ever shows things that are *true and actionable* — an update waiting, a server running, a
+     * mirror on, the pad up. The row disappears entirely when there is nothing to say, because a
+     * dashboard whose status area is permanently empty trains people to stop reading it.
+     */
+    private fun buildChips() {
+        val row = binding.chipRow
+        row.removeAllViews()
+
+        val accent = Appearance.accentOf(settings)
+
+        fun chip(label: String, onClick: () -> Unit) {
+            val view = TextView(this).apply {
+                text = label
+                setTextColor(accent)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                setPadding(dp(10), dp(6), dp(10), dp(6))
+                background = Appearance.panel(
+                    this@HomeActivity, settings, getColor(R.color.card_hi), accent
+                )
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ).apply { marginEnd = dp(6) }
+                setOnClickListener {
+                    com.abacus.dualscreen.ui.Feedback.select(it)
+                    onClick()
+                }
+            }
+            com.abacus.dualscreen.ui.Motion.pressable(view)
+            row.addView(view)
+        }
+
+        (updates.state as? com.abacus.dualscreen.update.UpdateManager.State.Available)?.let { state ->
+            chip(getString(R.string.chip_update, state.update.version.text)) {
+                startActivity(Intent(this, UpdateActivity::class.java))
+            }
+        }
+
+        if (settings.ftpRunning) {
+            chip(getString(R.string.chip_ftp)) {
+                startActivity(Intent(this, FtpActivity::class.java))
+            }
+        }
+
+        if (MirrorService.running) {
+            chip(getString(R.string.chip_mirror)) {
+                startActivity(Intent(this, MirrorActivity::class.java))
+            }
+        }
+
+        if (MacroOverlayService.running) {
+            chip(getString(R.string.chip_macros)) {
+                startActivity(Intent(this, MacrosActivity::class.java))
+            }
+        }
+
+        row.visibility = if (row.childCount == 0) View.GONE else View.VISIBLE
+        if (row.childCount > 0) com.abacus.dualscreen.ui.Motion.enterChildren(row)
     }
 
     /**

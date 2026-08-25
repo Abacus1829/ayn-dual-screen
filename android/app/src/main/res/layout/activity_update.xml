@@ -28,7 +28,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="@dimen/space_screen">
 
             <!-- ===== header ===== -->
             <LinearLayout
@@ -48,7 +48,7 @@
                         android:layout_height="wrap_content"
                         android:tag="accent"
                         android:text="@string/update_title"
-                        android:textSize="20sp"
+                        android:textSize="@dimen/text_title"
                         android:textStyle="bold" />
 
                     <TextView
@@ -57,7 +57,7 @@
                         android:layout_marginTop="2dp"
                         android:text="@string/update_blurb"
                         android:textColor="@color/text_dim"
-                        android:textSize="12sp" />
+                        android:textSize="@dimen/text_caption" />
                 </LinearLayout>
 
                 <Button
@@ -72,9 +72,9 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="@dimen/space"
                 android:orientation="vertical"
-                android:padding="14dp"
+                android:padding="@dimen/space"
                 android:tag="card">
 
                 <LinearLayout
@@ -98,7 +98,7 @@
                             android:id="@+id/installedVersion"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
+                            android:layout_marginTop="@dimen/space_tight"
                             android:textColor="@color/text"
                             android:textSize="18sp"
                             android:textStyle="bold" />
@@ -109,11 +109,11 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_gravity="center_vertical"
-                        android:paddingStart="8dp"
-                        android:paddingEnd="8dp"
+                        android:paddingStart="@dimen/space_small"
+                        android:paddingEnd="@dimen/space_small"
                         android:tag="accent"
                         android:text="→"
-                        android:textSize="20sp"
+                        android:textSize="@dimen/text_title"
                         android:visibility="gone" />
 
                     <LinearLayout
@@ -134,7 +134,7 @@
                             android:id="@+id/latestVersion"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
+                            android:layout_marginTop="@dimen/space_tight"
                             android:tag="accent"
                             android:textSize="18sp"
                             android:textStyle="bold" />
@@ -152,7 +152,7 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginTop="@dimen/space"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
@@ -170,7 +170,7 @@
                         android:lineSpacingExtra="2dp"
                         android:text="@string/update_status_idle"
                         android:textColor="@color/text_dim"
-                        android:textSize="13sp" />
+                        android:textSize="@dimen/text_detail" />
                 </LinearLayout>
 
                 <!-- ===== download progress ===== -->
@@ -204,7 +204,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:orientation="vertical"
-                android:padding="14dp"
+                android:padding="@dimen/space"
                 android:tag="accentEdge"
                 android:visibility="gone">
 
@@ -221,7 +221,7 @@
                     android:lineSpacingExtra="2dp"
                     android:text="@string/update_permission_detail"
                     android:textColor="@color/text_dim"
-                    android:textSize="12sp" />
+                    android:textSize="@dimen/text_caption" />
 
                 <Button
                     android:id="@+id/grantButton"
@@ -237,20 +237,20 @@
                 android:id="@+id/primaryButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:paddingTop="16dp"
-                android:paddingBottom="16dp"
+                android:layout_marginTop="@dimen/space"
+                android:paddingTop="@dimen/button_padding_primary"
+                android:paddingBottom="@dimen/button_padding_primary"
                 android:tag="accentFill"
                 android:text="@string/update_check_now"
                 android:textAllCaps="false"
-                android:textSize="16sp"
+                android:textSize="@dimen/text_body"
                 android:textStyle="bold" />
 
             <LinearLayout
                 android:id="@+id/secondaryRow"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="@dimen/space_small"
                 android:orientation="horizontal"
                 android:visibility="gone">
 
@@ -259,7 +259,7 @@
                     style="@style/Action"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
+                    android:layout_marginEnd="@dimen/space_small"
                     android:layout_weight="1"
                     android:text="@string/update_later" />
 
@@ -277,9 +277,9 @@
                 android:id="@+id/notesCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="@dimen/space"
                 android:orientation="vertical"
-                android:padding="14dp"
+                android:padding="@dimen/space"
                 android:tag="card"
                 android:visibility="gone">
 
@@ -293,20 +293,20 @@
                     android:id="@+id/notesText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="@dimen/space_small"
                     android:lineSpacingExtra="3dp"
                     android:textColor="@color/text_dim"
                     android:textIsSelectable="true"
-                    android:textSize="13sp" />
+                    android:textSize="@dimen/text_detail" />
             </LinearLayout>
 
             <!-- ===== preferences ===== -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="@dimen/space"
                 android:orientation="vertical"
-                android:padding="14dp"
+                android:padding="@dimen/space"
                 android:tag="card">
 
                 <TextView
@@ -336,7 +336,7 @@
                     android:id="@+id/bootAnimationBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="@dimen/space_small"
                     android:text="@string/update_boot_animation"
                     android:textColor="@color/text"
                     android:textSize="14sp" />
@@ -353,14 +353,14 @@
                     style="@style/Label"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
+                    android:layout_marginTop="@dimen/space"
                     android:text="@string/update_channel" />
 
                 <Spinner
                     android:id="@+id/channelSpinner"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="@dimen/space_tight"
                     android:minHeight="46dp" />
 
                 <TextView
@@ -377,7 +377,7 @@
                 style="@style/Caption"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="@dimen/space"
                 android:layout_marginBottom="6dp" />
 
         </LinearLayout>

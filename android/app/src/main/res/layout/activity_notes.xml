@@ -16,7 +16,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="@dimen/space_screen">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -30,7 +30,7 @@
                 android:layout_weight="1"
                 android:tag="accent"
                 android:text="@string/notes_title"
-                android:textSize="20sp"
+                android:textSize="@dimen/text_title"
                 android:textStyle="bold" />
 
             <Button
@@ -45,14 +45,14 @@
                 style="@style/Action"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="@dimen/space_small"
                 android:text="@string/action_cancel" />
         </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="@dimen/space"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:padding="10dp"
@@ -74,14 +74,14 @@
                 android:id="@+id/sortSpinner"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp" />
+                android:layout_marginStart="@dimen/space_small" />
         </LinearLayout>
 
         <ScrollView
             android:id="@+id/notesScroll"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="@dimen/space"
             android:layout_weight="1"
             android:scrollbars="none">
 
@@ -96,8 +96,8 @@
             android:id="@+id/notesStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="@dimen/space_small"
             android:textColor="@color/text_faint"
-            android:textSize="11sp" />
+            android:textSize="@dimen/text_label" />
     </LinearLayout>
 </FrameLayout>

@@ -7,6 +7,53 @@ time — so they say what the commits show and no more.
 
 ---
 
+## 0.20.0 — 2026-08-24
+
+The two things 0.19.0 deferred.
+
+### The home screen is a dashboard
+
+It used to open as a *form*: pick a game, type an address, press connect. That is the right set of
+controls and the wrong first thing to say, because nine launches in ten the answer is already known
+and the only question is whether it is there.
+
+State comes first now and controls come second.
+
+- **A headline** naming what is actually running, with the status dot beside it. It crossfades rather
+  than switching, because it changes while you are looking at it.
+- **The line under it** says where and what — the farm, the world, the address.
+- **Status chips**: an update waiting, the FTP server running, the mirror on, the macro pad up. Each
+  is one tap from the screen that deals with it, and the row disappears entirely when there is
+  nothing to say. A dashboard whose status area is permanently empty teaches people to stop reading
+  it.
+- **The primary button moved into the same card as the state it acts on.** It used to be four cards
+  further down, under a status line you had to scroll to — and a status you scroll to is not a
+  status.
+
+The chips refresh when you come back to the screen *and* when the update check finishes, which on a
+startup check is usually while you are still looking at it.
+
+Nothing was removed: the game picker, the manual address, the display choice and the behaviour
+toggles are all still there, below, exactly as they were.
+
+### The layouts use the scale
+
+0.19.0 put a spacing and type scale in `dimens.xml` and wired the shared styles to it, but left the
+27 layouts on the literal values they had drifted to. **399 values across 26 layouts** now read from
+the scale, so cards are one distance apart everywhere and a caption is one size everywhere.
+
+Deliberately narrow: only margins, padding and text sizes were converted. Widths, heights, stroke
+widths and corner radii were left alone — a 9dp status dot is 9dp because it is a dot, and feeding
+it through a spacing scale would be a rename rather than a decision. Values not in the scale were
+left as they were rather than snapped to the nearest one; anything unusual is unusual on purpose
+until somebody says otherwise.
+
+One token was added while doing it: **primary buttons** are taller than ordinary ones, which the
+conversion first rendered as "section spacing" because the number happened to match. They now say
+what they are.
+
+---
+
 ## 0.19.0 — 2026-08-24
 
 A pass over how the whole app looks, moves, sounds and is organised. No feature was removed; several

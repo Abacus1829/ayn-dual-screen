@@ -25,7 +25,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="12dp">
+        android:padding="@dimen/space">
 
         <!-- Header: title and Done. -->
         <LinearLayout
@@ -40,7 +40,7 @@
                 android:layout_weight="1"
                 android:tag="accent"
                 android:text="@string/ftp_title"
-                android:textSize="20sp"
+                android:textSize="@dimen/text_title"
                 android:textStyle="bold" />
 
             <Button
@@ -55,9 +55,9 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="@dimen/space_small"
             android:orientation="vertical"
-            android:padding="12dp"
+            android:padding="@dimen/space"
             android:tag="accentEdge">
 
             <TextView
@@ -74,10 +74,10 @@
                 android:id="@+id/ftpStatus"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="@dimen/space_tight"
                 android:lineSpacingExtra="2dp"
                 android:textColor="@color/text_dim"
-                android:textSize="12sp" />
+                android:textSize="@dimen/text_caption" />
         </LinearLayout>
 
         <!--
@@ -90,7 +90,7 @@
             android:id="@+id/consoleCard"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="@dimen/space_small"
             android:layout_weight="1"
             android:orientation="vertical"
             android:padding="10dp"
@@ -109,7 +109,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:textColor="@color/text_dim"
-                    android:textSize="12sp" />
+                    android:textSize="@dimen/text_caption" />
 
                 <Button
                     android:id="@+id/clearButton"
@@ -126,7 +126,7 @@
                 android:layout_marginTop="6dp"
                 android:layout_weight="1"
                 android:background="@color/bg"
-                android:padding="8dp"
+                android:padding="@dimen/space_small"
                 android:scrollbars="vertical">
 
                 <TextView
@@ -137,7 +137,7 @@
                     android:lineSpacingExtra="2dp"
                     android:textColor="@color/text_dim"
                     android:textIsSelectable="true"
-                    android:textSize="11sp" />
+                    android:textSize="@dimen/text_label" />
             </ScrollView>
         </LinearLayout>
 
@@ -161,16 +161,16 @@
                     style="@style/Caption"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="@dimen/space_small"
                     android:text="@string/ftp_blurb"
-                    android:textSize="12sp" />
+                    android:textSize="@dimen/text_caption" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="@dimen/space_small"
                     android:orientation="vertical"
-                    android:padding="12dp"
+                    android:padding="@dimen/space"
                     android:tag="card">
 
                     <TextView
@@ -183,16 +183,16 @@
                         android:id="@+id/scopeText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="@dimen/space_tight"
                         android:textColor="@color/text_dim"
-                        android:textSize="13sp" />
+                        android:textSize="@dimen/text_detail" />
 
                     <Button
                         android:id="@+id/grantButton"
                         style="@style/Action"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="@dimen/space_small"
                         android:text="@string/ftp_grant"
                         android:visibility="gone" />
                 </LinearLayout>
@@ -200,9 +200,9 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="@dimen/space_small"
                     android:orientation="vertical"
-                    android:padding="12dp"
+                    android:padding="@dimen/space"
                     android:tag="card">
 
                     <TextView
@@ -246,17 +246,17 @@
                         android:id="@+id/autoStartCheck"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="@dimen/space_small"
                         android:text="@string/ftp_autostart"
-                        android:textSize="13sp" />
+                        android:textSize="@dimen/text_detail" />
 
                     <TextView
                         style="@style/Caption"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="@dimen/space_small"
                         android:text="@string/ftp_plain_warning"
-                        android:textSize="12sp" />
+                        android:textSize="@dimen/text_caption" />
                 </LinearLayout>
             </LinearLayout>
         </ScrollView>
@@ -266,13 +266,13 @@
             android:id="@+id/startButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:paddingTop="14dp"
-            android:paddingBottom="14dp"
+            android:layout_marginTop="@dimen/space_small"
+            android:paddingTop="@dimen/space"
+            android:paddingBottom="@dimen/space"
             android:tag="accentFill"
             android:text="@string/ftp_start"
             android:textAllCaps="false"
-            android:textSize="16sp"
+            android:textSize="@dimen/text_body"
             android:textStyle="bold" />
 
         <!-- Reopen the console window after backing out of it; the server is still running. -->
@@ -280,13 +280,13 @@
             android:id="@+id/openConsoleButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:paddingTop="14dp"
-            android:paddingBottom="14dp"
+            android:layout_marginTop="@dimen/space_small"
+            android:paddingTop="@dimen/space"
+            android:paddingBottom="@dimen/space"
             android:tag="accentFill"
             android:text="@string/ftp_open_console"
             android:textAllCaps="false"
-            android:textSize="16sp"
+            android:textSize="@dimen/text_body"
             android:textStyle="bold"
             android:visibility="gone" />
 
@@ -295,7 +295,7 @@
             style="@style/Action"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="@dimen/space_small"
             android:text="@string/ftp_stop" />
     </LinearLayout>
 </FrameLayout>

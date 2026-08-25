@@ -45,6 +45,14 @@
     -->
     <dimen name="touch_min">48dp</dimen>
     <dimen name="button_padding">14dp</dimen>
+    <!--
+        The one button on a screen that is the whole point of it: connect, install, continue.
+
+        Taller than an ordinary button on purpose. It is the target somebody reaches for without
+        looking while holding the device in both hands, and it is the difference between a screen
+        with a clear next step and a screen with six equal buttons on it.
+    -->
+    <dimen name="button_padding_primary">18dp</dimen>
 
     <!-- ===== corners =====
          The user's corner-radius setting overrides these wherever Appearance draws a background in

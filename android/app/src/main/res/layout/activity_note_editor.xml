@@ -16,7 +16,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="@dimen/space_screen">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -43,7 +43,7 @@
                 style="@style/Action"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="@dimen/space_small"
                 android:text="@string/notes_pin" />
 
             <Button
@@ -51,7 +51,7 @@
                 style="@style/Action"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="@dimen/space_small"
                 android:text="@string/notes_done" />
         </LinearLayout>
 
@@ -60,7 +60,7 @@
             style="@style/Field"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="@dimen/space"
             android:layout_weight="1"
             android:autofillHints="none"
             android:gravity="top|start"
@@ -72,7 +72,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="@dimen/space_small"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -82,7 +82,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:textColor="@color/text_faint"
-                android:textSize="11sp" />
+                android:textSize="@dimen/text_label" />
 
             <Button
                 android:id="@+id/shareButton"
@@ -96,7 +96,7 @@
                 style="@style/Action"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="@dimen/space_small"
                 android:text="@string/notes_delete" />
         </LinearLayout>
     </LinearLayout>

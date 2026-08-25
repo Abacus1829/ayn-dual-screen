@@ -22,7 +22,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="@dimen/space_screen">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -37,7 +37,7 @@
                     android:tag="accent"
                     android:id="@+id/screenTitle"
                     android:text="@string/controls_title"
-                    android:textSize="20sp"
+                    android:textSize="@dimen/text_title"
                     android:textStyle="bold" />
 
                 <Button
@@ -52,9 +52,9 @@
                 android:id="@+id/volumeCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="@dimen/space"
                 android:orientation="vertical"
-                android:padding="14dp"
+                android:padding="@dimen/space"
                 android:tag="card">
                 <TextView
                     style="@style/Label"
@@ -67,7 +67,7 @@
                     android:layout_marginTop="10dp"
                     android:text="@string/vol_media"
                     android:textColor="@color/text"
-                    android:textSize="13sp" />
+                    android:textSize="@dimen/text_detail" />
                 <SeekBar
                     android:id="@+id/volMedia"
                     android:layout_width="match_parent"
@@ -79,7 +79,7 @@
                     android:layout_marginTop="10dp"
                     android:text="@string/vol_ring"
                     android:textColor="@color/text"
-                    android:textSize="13sp" />
+                    android:textSize="@dimen/text_detail" />
                 <SeekBar
                     android:id="@+id/volRing"
                     android:layout_width="match_parent"
@@ -91,7 +91,7 @@
                     android:layout_marginTop="10dp"
                     android:text="@string/vol_alarm"
                     android:textColor="@color/text"
-                    android:textSize="13sp" />
+                    android:textSize="@dimen/text_detail" />
                 <SeekBar
                     android:id="@+id/volAlarm"
                     android:layout_width="match_parent"
@@ -103,7 +103,7 @@
                     android:layout_marginTop="10dp"
                     android:text="@string/vol_notification"
                     android:textColor="@color/text"
-                    android:textSize="13sp" />
+                    android:textSize="@dimen/text_detail" />
                 <SeekBar
                     android:id="@+id/volNotification"
                     android:layout_width="match_parent"
@@ -113,10 +113,10 @@
                     android:id="@+id/volumeNote"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="@dimen/space_small"
                     android:text="@string/vol_dnd_note"
                     android:textColor="@color/state_busy"
-                    android:textSize="11sp"
+                    android:textSize="@dimen/text_label"
                     android:visibility="gone" />
             </LinearLayout>
 
@@ -124,9 +124,9 @@
                 android:id="@+id/brightnessCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="@dimen/space"
                 android:orientation="vertical"
-                android:padding="14dp"
+                android:padding="@dimen/space"
                 android:tag="card">
                 <TextView
                     style="@style/Label"
@@ -139,7 +139,7 @@
                     android:layout_marginTop="10dp"
                     android:text="@string/bright_app"
                     android:textColor="@color/text"
-                    android:textSize="13sp" />
+                    android:textSize="@dimen/text_detail" />
                 <SeekBar
                     android:id="@+id/brightApp"
                     android:layout_width="match_parent"
@@ -151,14 +151,14 @@
                     android:layout_marginTop="2dp"
                     android:text="@string/bright_app_detail"
                     android:textColor="@color/text_faint"
-                    android:textSize="11sp" />
+                    android:textSize="@dimen/text_label" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:text="@string/bright_system"
                     android:textColor="@color/text"
-                    android:textSize="13sp" />
+                    android:textSize="@dimen/text_detail" />
                 <SeekBar
                     android:id="@+id/brightSystem"
                     android:layout_width="match_parent"
@@ -170,13 +170,13 @@
                     android:layout_marginTop="2dp"
                     android:text="@string/bright_system_detail"
                     android:textColor="@color/text_faint"
-                    android:textSize="11sp" />
+                    android:textSize="@dimen/text_label" />
                 <Button
                     android:id="@+id/grantButton"
                     style="@style/Action"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="@dimen/space_small"
                     android:text="@string/bright_grant"
                     android:visibility="gone"
                      />
@@ -186,7 +186,7 @@
                     android:layout_marginTop="10dp"
                     android:text="@string/bright_no_per_display"
                     android:textColor="@color/text_faint"
-                    android:textSize="11sp" />
+                    android:textSize="@dimen/text_label" />
             </LinearLayout>
 
         </LinearLayout>

@@ -830,4 +830,9 @@
     <string name="settings_tools_moved">Tools — the second screen, notes, mirror, FTP server, dashboard, scribble — live on the home screen rather than in here.</string>
     <string name="codes_empty_title">Nothing on offer</string>
     <string name="codes_empty_detail">The companion answered but advertises no codes. Either the mod has game codes switched off in its own config, or it is older than the feature. Nothing is wrong at this end.</string>
+    <!-- ===== dashboard chips ===== -->
+    <string name="chip_update">Update %1$s</string>
+    <string name="chip_ftp">FTP running</string>
+    <string name="chip_mirror">Mirroring</string>
+    <string name="chip_macros">Pad on screen</string>
 </resources>

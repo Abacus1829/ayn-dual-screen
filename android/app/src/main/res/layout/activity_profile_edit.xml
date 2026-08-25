@@ -16,7 +16,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="@dimen/space_screen">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -31,7 +31,7 @@
                 android:layout_weight="1"
                 android:tag="accent"
                 android:text="@string/profile_new_title"
-                android:textSize="20sp"
+                android:textSize="@dimen/text_title"
                 android:textStyle="bold" />
 
             <Button
@@ -46,7 +46,7 @@
                 style="@style/Action"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="@dimen/space_small"
                 android:text="@string/notes_save" />
 
             <Button
@@ -54,14 +54,14 @@
                 style="@style/Action"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="@dimen/space_small"
                 android:text="@string/nav_back" />
         </LinearLayout>
 
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="@dimen/space"
             android:layout_weight="1"
             android:scrollbars="none">
 
@@ -74,7 +74,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="14dp"
+                    android:padding="@dimen/space"
                     android:tag="card">
 
                     <TextView
@@ -156,9 +156,9 @@
                         android:id="@+id/testResult"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="@dimen/space_small"
                         android:textColor="@color/text_faint"
-                        android:textSize="12sp" />
+                        android:textSize="@dimen/text_caption" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -166,7 +166,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:orientation="vertical"
-                    android:padding="14dp"
+                    android:padding="@dimen/space"
                     android:tag="card">
 
                     <TextView
@@ -185,7 +185,7 @@
                         style="@style/Label"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginTop="@dimen/space"
                         android:text="@string/profile_orientation" />
 
                     <Spinner
@@ -198,7 +198,7 @@
                         style="@style/Label"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginTop="@dimen/space"
                         android:text="@string/profile_awake" />
 
                     <Spinner
@@ -211,7 +211,7 @@
                         android:id="@+id/autoConnectCheck"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginTop="@dimen/space"
                         android:text="@string/profile_autoconnect"
                         android:textColor="@color/text" />
 
@@ -221,7 +221,7 @@
                         android:layout_marginTop="2dp"
                         android:text="@string/profile_autoconnect_detail"
                         android:textColor="@color/text_faint"
-                        android:textSize="11sp" />
+                        android:textSize="@dimen/text_label" />
                 </LinearLayout>
 
                 <Button
@@ -229,7 +229,7 @@
                     style="@style/Action"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginTop="@dimen/space"
                     android:text="@string/profiles_delete"
                     android:visibility="gone" />
             </LinearLayout>

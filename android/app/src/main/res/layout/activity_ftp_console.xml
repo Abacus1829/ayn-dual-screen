@@ -25,10 +25,10 @@
         android:background="#2F6FB5"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="8dp"
-        android:paddingTop="4dp"
-        android:paddingEnd="8dp"
-        android:paddingBottom="4dp">
+        android:paddingStart="@dimen/space_small"
+        android:paddingTop="@dimen/space_tight"
+        android:paddingEnd="@dimen/space_small"
+        android:paddingBottom="@dimen/space_tight">
 
         <TextView
             android:id="@+id/consoleTitle"
@@ -39,7 +39,7 @@
             android:fontFamily="monospace"
             android:maxLines="1"
             android:textColor="#FFFFFF"
-            android:textSize="12sp" />
+            android:textSize="@dimen/text_caption" />
 
         <TextView
             android:id="@+id/consoleClock"
@@ -48,7 +48,7 @@
             android:fontFamily="monospace"
             android:gravity="center"
             android:textColor="#FFFFFF"
-            android:textSize="12sp" />
+            android:textSize="@dimen/text_caption" />
 
         <TextView
             android:id="@+id/consoleStorage"
@@ -57,7 +57,7 @@
             android:fontFamily="monospace"
             android:paddingStart="10dp"
             android:textColor="#FFFFFF"
-            android:textSize="12sp" />
+            android:textSize="@dimen/text_caption" />
     </LinearLayout>
 
     <!-- Menu row. -->
@@ -67,8 +67,8 @@
         android:background="#141414"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="8dp"
-        android:paddingEnd="4dp">
+        android:paddingStart="@dimen/space_small"
+        android:paddingEnd="@dimen/space_tight">
 
         <TextView
             android:layout_width="0dp"
@@ -77,7 +77,7 @@
             android:fontFamily="monospace"
             android:text="@string/ftp_menu"
             android:textColor="#D0D0D0"
-            android:textSize="12sp" />
+            android:textSize="@dimen/text_caption" />
 
         <Button
             android:id="@+id/smallerButton"
@@ -89,7 +89,7 @@
             android:paddingEnd="10dp"
             android:text="@string/console_smaller"
             android:textColor="#D0D0D0"
-            android:textSize="12sp" />
+            android:textSize="@dimen/text_caption" />
 
         <Button
             android:id="@+id/biggerButton"
@@ -101,7 +101,7 @@
             android:paddingEnd="10dp"
             android:text="@string/console_bigger"
             android:textColor="#D0D0D0"
-            android:textSize="12sp" />
+            android:textSize="@dimen/text_caption" />
 
         <Button
             android:id="@+id/clearButton"
@@ -113,7 +113,7 @@
             android:paddingEnd="10dp"
             android:text="@string/ftp_clear"
             android:textColor="#D0D0D0"
-            android:textSize="12sp" />
+            android:textSize="@dimen/text_caption" />
 
         <Button
             android:id="@+id/stopButton"
@@ -125,7 +125,7 @@
             android:paddingEnd="10dp"
             android:text="@string/ftp_stop_short"
             android:textColor="#E58A8A"
-            android:textSize="12sp" />
+            android:textSize="@dimen/text_caption" />
 
         <Button
             android:id="@+id/backButton"
@@ -137,7 +137,7 @@
             android:paddingEnd="10dp"
             android:text="@string/nav_back"
             android:textColor="#9FB4D8"
-            android:textSize="12sp" />
+            android:textSize="@dimen/text_caption" />
     </LinearLayout>
 
     <!-- The log. -->
@@ -147,7 +147,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:paddingStart="6dp"
-        android:paddingTop="4dp"
+        android:paddingTop="@dimen/space_tight"
         android:paddingEnd="6dp"
         android:scrollbarStyle="outsideOverlay"
         android:scrollbars="vertical">
@@ -160,7 +160,7 @@
             android:lineSpacingExtra="1dp"
             android:textColor="#E6E6E6"
             android:textIsSelectable="true"
-            android:textSize="12sp" />
+            android:textSize="@dimen/text_caption" />
     </ScrollView>
 
     <!-- The session box: where the connected client is, framed the way ftpd frames it. -->
@@ -172,7 +172,7 @@
         android:background="@drawable/console_box"
         android:fontFamily="monospace"
         android:minHeight="52dp"
-        android:padding="8dp"
+        android:padding="@dimen/space_small"
         android:textColor="#D0D0D0"
-        android:textSize="12sp" />
+        android:textSize="@dimen/text_caption" />
 </LinearLayout>

@@ -24,7 +24,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="@dimen/space_screen">
 
             <!-- ===== header ===== -->
             <LinearLayout
@@ -36,7 +36,7 @@
                     android:id="@+id/accentBar"
                     android:layout_width="4dp"
                     android:layout_height="match_parent"
-                    android:layout_marginEnd="12dp"
+                    android:layout_marginEnd="@dimen/space"
                     android:background="@color/accent" />
 
                 <LinearLayout
@@ -58,7 +58,7 @@
                         android:layout_height="wrap_content"
                         android:text="@string/app_tagline"
                         android:textColor="@color/text_faint"
-                        android:textSize="12sp" />
+                        android:textSize="@dimen/text_caption" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -68,13 +68,93 @@
                     android:orientation="horizontal" />
             </LinearLayout>
 
+            <!--
+                ===== the dashboard =====
+
+                What this screen used to open with was a form: pick a game, type an address, press
+                connect. That is the right set of controls and the wrong first thing to say, because
+                nine launches in ten the answer is already known and the question is just "is it
+                there?".
+
+                So state comes first and controls come second. The headline is whatever is actually
+                running, the line under it is where and what, and the primary action is inside the
+                same card as the thing it acts on rather than four cards further down.
+            -->
+            <LinearLayout
+                android:id="@+id/statusCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space"
+                android:orientation="vertical"
+                android:padding="@dimen/space"
+                android:tag="accentEdge">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <View
+                        android:id="@+id/statusDot"
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
+                        android:layout_marginEnd="10dp" />
+
+                    <TextView
+                        android:id="@+id/statusTitle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:tag="accent"
+                        android:textSize="19sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/statusText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_tight"
+                    android:lineSpacingExtra="2dp"
+                    android:text="@string/status_idle"
+                    android:textColor="@color/text_dim"
+                    android:textSize="@dimen/text_detail" />
+
+                <!--
+                    What is running on the device right now, as one-tap chips. Built in code and
+                    absent entirely when there is nothing to say — a row of empty state is worse
+                    than no row.
+                -->
+                <LinearLayout
+                    android:id="@+id/chipRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal"
+                    android:visibility="gone" />
+
+                <Button
+                    android:id="@+id/openButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space"
+                    android:paddingTop="@dimen/button_padding_primary"
+                    android:paddingBottom="@dimen/button_padding_primary"
+                    android:tag="accentFill"
+                    android:text="@string/action_open"
+                    android:textAllCaps="false"
+                    android:textSize="@dimen/text_heading"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
             <!-- ===== connect to ===== -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
+                android:layout_marginTop="@dimen/space"
                 android:orientation="vertical"
-                android:padding="14dp"
+                android:padding="@dimen/space"
                 android:tag="card">
 
                 <TextView
@@ -86,7 +166,7 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="@dimen/space_small"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
@@ -94,7 +174,7 @@
                         android:id="@+id/gameSpinner"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
+                        android:layout_marginEnd="@dimen/space_small"
                         android:layout_weight="1"
                         android:minHeight="46dp" />
 
@@ -113,7 +193,7 @@
                     android:layout_marginTop="10dp"
                     android:lineSpacingExtra="2dp"
                     android:textColor="@color/text_dim"
-                    android:textSize="12sp" />
+                    android:textSize="@dimen/text_caption" />
 
                 <!--
                     The way into saved connections, on the card people already look at to connect.
@@ -136,7 +216,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:orientation="vertical"
-                android:padding="14dp"
+                android:padding="@dimen/space"
                 android:tag="card">
 
                 <TextView
@@ -156,7 +236,7 @@
                         style="@style/Field"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
+                        android:layout_marginEnd="@dimen/space_small"
                         android:layout_weight="3"
                         android:autofillHints="none"
                         android:hint="@string/hint_host"
@@ -187,7 +267,7 @@
                         style="@style/Action"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
+                        android:layout_marginEnd="@dimen/space_small"
                         android:layout_weight="1"
                         android:text="@string/action_find" />
 
@@ -208,7 +288,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:orientation="vertical"
-                android:padding="14dp"
+                android:padding="@dimen/space"
                 android:tag="card"
                 android:visibility="gone">
 
@@ -222,7 +302,7 @@
                     android:id="@+id/displayGroup"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp" />
+                    android:layout_marginTop="@dimen/space_tight" />
             </LinearLayout>
 
             <!-- ===== behaviour (advanced) ===== -->
@@ -232,7 +312,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:orientation="vertical"
-                android:padding="14dp"
+                android:padding="@dimen/space"
                 android:tag="card">
 
                 <TextView
@@ -256,7 +336,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:orientation="vertical"
-                android:padding="14dp"
+                android:padding="@dimen/space"
                 android:tag="card"
                 android:visibility="gone">
 
@@ -274,68 +354,37 @@
                     android:orientation="vertical" />
             </LinearLayout>
 
-            <!-- ===== status ===== -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <View
-                    android:id="@+id/statusDot"
-                    android:layout_width="9dp"
-                    android:layout_height="9dp"
-                    android:layout_marginEnd="9dp" />
-
-                <TextView
-                    android:id="@+id/statusText"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:lineSpacingExtra="2dp"
-                    android:text="@string/status_idle"
-                    android:textColor="@color/text_dim"
-                    android:textSize="13sp" />
-            </LinearLayout>
-
-            <Button
-                android:id="@+id/openButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:paddingTop="18dp"
-                android:paddingBottom="18dp"
-                android:tag="accentFill"
-                android:text="@string/action_open"
-                android:textAllCaps="false"
-                android:textSize="17sp"
-                android:textStyle="bold" />
+            <!--
+                The status line and the primary button used to live here, four cards below the top
+                of the screen. Both moved into the dashboard card at the top: a status you have to
+                scroll to is not a status, and a primary action separated from the state it acts on
+                is a button you have to think about.
+            -->
 
             <!-- ===== tools ===== -->
             <TextView
                 style="@style/Label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
+                android:layout_marginTop="@dimen/space_section"
                 android:text="@string/label_tools" />
 
             <GridLayout
                 android:id="@+id/toolGrid"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="@dimen/space_small"
                 android:columnCount="4" />
 
             <TextView
                 android:id="@+id/modeBlurb"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:layout_marginBottom="4dp"
+                android:layout_marginTop="@dimen/space"
+                android:layout_marginBottom="@dimen/space_tight"
                 android:lineSpacingExtra="2dp"
                 android:textColor="@color/text_faint"
-                android:textSize="12sp" />
+                android:textSize="@dimen/text_caption" />
 
         </LinearLayout>
     </ScrollView>

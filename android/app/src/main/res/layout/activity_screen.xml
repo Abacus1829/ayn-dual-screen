@@ -19,7 +19,7 @@
         android:layout_width="34dp"
         android:layout_height="34dp"
         android:layout_gravity="top|start"
-        android:layout_margin="8dp"
+        android:layout_margin="@dimen/space_small"
         android:alpha="0.45"
         android:background="@drawable/bg_round"
         android:contentDescription="@string/screen_menu_title"
@@ -39,7 +39,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="top|end"
-        android:layout_margin="8dp"
+        android:layout_margin="@dimen/space_small"
         android:alpha="0"
         android:background="@drawable/bg_round"
         android:paddingStart="10dp"
@@ -47,7 +47,7 @@
         android:paddingEnd="10dp"
         android:paddingBottom="5dp"
         android:textColor="@color/text"
-        android:textSize="11sp" />
+        android:textSize="@dimen/text_label" />
 
     <LinearLayout
         android:id="@+id/menuPanel"
@@ -72,10 +72,10 @@
             android:id="@+id/menuStatus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="@dimen/space_screen"
             android:gravity="center"
             android:textColor="@color/text_dim"
-            android:textSize="12sp" />
+            android:textSize="@dimen/text_caption" />
 
         <!--
             The page controls. Inside the menu rather than on the screen, because the second display
@@ -86,7 +86,7 @@
             android:id="@+id/controlsRow"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="14dp"
+            android:layout_marginBottom="@dimen/space"
             android:gravity="center"
             android:orientation="horizontal" />
 
@@ -95,7 +95,7 @@
             style="@style/Action"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
+            android:layout_marginBottom="@dimen/space_small"
             android:minWidth="240dp"
             android:text="@string/action_back_to_screen"
             android:visibility="gone" />
@@ -109,7 +109,7 @@
             style="@style/Action"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
+            android:layout_marginBottom="@dimen/space_small"
             android:minWidth="240dp"
             android:text="@string/focus_take_input" />
 
@@ -126,7 +126,7 @@
             style="@style/Action"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="@dimen/space_small"
             android:minWidth="240dp"
             android:text="@string/action_reload" />
 
@@ -135,7 +135,7 @@
             style="@style/Action"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="@dimen/space_small"
             android:minWidth="240dp"
             android:text="@string/action_cancel" />
 
@@ -156,14 +156,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="@color/text"
-            android:textSize="20sp"
+            android:textSize="@dimen/text_title"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/errorDetail"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="@dimen/space_small"
             android:gravity="center"
             android:textColor="@color/text_dim"
             android:textSize="14sp" />
@@ -182,7 +182,7 @@
             style="@style/Action"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="@dimen/space_small"
             android:minWidth="200dp"
             android:text="@string/action_back" />
 
@@ -196,7 +196,7 @@
             style="@style/Action"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="@dimen/space_small"
             android:minWidth="200dp"
             android:text="@string/action_quit_to_menu" />
 
