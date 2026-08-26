@@ -70,13 +70,20 @@ object ControlCenter {
             background = Appearance.panel(
                 activity, settings, activity.getColor(R.color.card_hi), Appearance.accentOf(settings)
             )
+            /*
+             * The right edge, halfway down — not the top corner.
+             *
+             * Twenty-seven of this app's layouts put a Done button in the top-right, so a handle
+             * anchored there would sit directly on top of the way out of the screen. Halfway down the
+             * right edge is the one part of a screen this app never puts a control on, and on a
+             * handheld it is where a thumb already rests.
+             */
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT,
-                Gravity.TOP or Gravity.END,
+                Gravity.CENTER_VERTICAL or Gravity.END,
             ).apply {
-                topMargin = Ui.dp(activity, 6)
-                marginEnd = Ui.dp(activity, 6)
+                marginEnd = Ui.dp(activity, 2)
             }
             setOnClickListener {
                 Feedback.tap(it)
