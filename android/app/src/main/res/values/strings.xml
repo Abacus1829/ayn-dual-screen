@@ -9,11 +9,8 @@
     <string name="simple_blurb">One tap: finds the PC on your network, works out which game it\'s running, and opens the second screen.</string>
     <string name="advanced_blurb">Set the address by hand, choose the display, and control how the screen behaves.</string>
 
-    <string name="label_game">Game</string>
     <string name="label_address">Address</string>
-    <string name="label_host">PC address</string>
     <string name="hint_host">192.168.1.20</string>
-    <string name="label_port">Port</string>
     <string name="label_display">Show on</string>
     <string name="label_behaviour">Behaviour</string>
     <string name="label_found">Found on your network</string>
@@ -95,7 +92,6 @@
 
     <string name="tool_second_screen">Second Screen</string>
     <string name="tool_notes">Notes</string>
-    <string name="tool_volume">Volume</string>
     <string name="tool_brightness">Brightness</string>
     <string name="tool_appearance">Appearance</string>
     <string name="tool_keyboard">Keyboard</string>
@@ -109,7 +105,6 @@
     <string name="appearance_console_themes">Console themes (experimental)</string>
     <string name="themes_title">Themes (experimental)</string>
     <string name="themes_blurb">Experimental. These looks are unfinished and change how the whole app appears. Pick Ayn Dual Screen at any time to return to the standard look.</string>
-    <string name="theme_applied">%1$s applied</string>
     <string name="theme_from_file">from a file</string>
     <string name="theme_make_own">Make your own</string>
     <string name="theme_make_own_hint">A theme is one small JSON file, plus a folder of PNG icons if you want them. Every field is optional. The quickest way to get files onto the device is this app\'s own FTP server.</string>
@@ -117,7 +112,6 @@
     <string name="theme_folder_ready">Ready: %1$s\n\nexample.json and README.txt are in there. Copy the example, rename it, and it appears in this list.</string>
     <string name="theme_folder_denied">Could not create the folder. Grant all-files access on the FTP screen first.</string>
     <string name="tool_stream">Stream</string>
-    <string name="tool_stream_blocked">Not finished — the app can pair with a PC, but nothing decodes video yet.</string>
 
     <!-- Streaming -->
     <string name="stream_title">Game streaming</string>
@@ -136,7 +130,6 @@
     <string name="stream_pin_label">Type this on the PC</string>
     <string name="stream_pin_hint">Sunshine shows a PIN page in its web interface. GeForce Experience pops up a box on the desktop.</string>
     <string name="stream_log">What happened</string>
-    <string name="blocked_needs_agent">Needs a companion program on the PC — not built yet.</string>
 
     <!-- FTP -->
     <string name="ftp_title">FTP server</string>
@@ -145,7 +138,6 @@
     <string name="ftp_stop">Stop server</string>
     <string name="ftp_off">Server is off</string>
     <string name="ftp_off_hint">Server is off. Start it, then type this address into your PC\'s file manager.</string>
-    <string name="ftp_clients">Connections</string>
     <string name="ftp_console">Console</string>
     <string name="ftp_clear">Clear</string>
     <string name="ftp_stop_short">Stop</string>
@@ -153,11 +145,9 @@
     <string name="ftp_autostart">Start the server when the app opens</string>
     <string name="console_smaller">A−</string>
     <string name="console_bigger">A+</string>
-    <string name="ftp_sessions">Sessions</string>
     <string name="ftp_menu">Menu</string>
     <string name="ftp_console_stopped">Server stopped.</string>
     <string name="ftp_console_stopped_hint">The server is not running. Go back and press Start server.</string>
-    <string name="ftp_console_failed">Server could not start</string>
     <string name="ftp_start_failed">Could not start the server: %1$s</string>
     <string name="ftp_failed_hint">Go back, change the port if that is the problem, and try again. If this keeps happening, the message above is the exact reason — send it on.</string>
     <string name="ftp_open_console">Open console</string>
@@ -180,7 +170,6 @@
 
     <string name="notes_title">Notes</string>
     <string name="notes_hint">Anything worth keeping to hand: seed numbers, boss order, a shopping list.</string>
-    <string name="notes_saved">Saved</string>
 
     <string name="controls_title">Quick controls</string>
     <string name="controls_volume">Volume</string>
@@ -484,7 +473,6 @@
     <string name="builder_running">Running \"%1$s\"</string>
     <string name="builder_delete_confirm">Delete \"%1$s\"? Buttons that run it will stop working.</string>
 
-    <string name="editor_title">Macro</string>
     <string name="editor_name_hint">Macro name</string>
     <string name="editor_add">Add step</string>
     <string name="editor_run">Run</string>
@@ -630,12 +618,8 @@
     <string name="settings_tools">TOOLS</string>
     <string name="settings_saved_connections">Saved connections</string>
     <string name="settings_appearance">Appearance</string>
-    <string name="settings_themes">Themes</string>
     <string name="settings_macros">Macro pad</string>
-    <string name="settings_layouts">Layout editor</string>
     <string name="settings_keyboard">Keyboard</string>
-    <string name="settings_ftp">FTP server</string>
-    <string name="settings_dashboard">Dashboard</string>
     <string name="codes_hide_tab">Hide the tab until the code is entered again</string>
     <string name="codes_hide_detail">Takes the tile away without switching game codes off. Your settings are kept.</string>
     <string name="codes_hidden">Hidden. Enter the sequence again to bring it back.</string>
@@ -665,19 +649,7 @@
     <string name="dash_refresh_allow">Allow</string>
     <string name="dash_refresh_refused">The console did not switch to %1$d Hz</string>
     <string name="dash_temp">Temp</string>
-    <string name="dash_memory">Memory</string>
-    <string name="dash_power">Power</string>
-    <string name="dash_processor">Processor</string>
-    <string name="dash_thermal">Thermal</string>
     <string name="dash_display">Display</string>
-    <string name="dash_of_total">of %1$d MB</string>
-    <string name="dash_cores">%1$d cores</string>
-    <string name="dash_charging">charging</string>
-    <string name="dash_charging_at">charging %1$d mA</string>
-    <string name="dash_drawing">drawing %1$d mA</string>
-    <string name="dash_headroom">%1$d%% to throttle</string>
-    <string name="dash_modes">modes %1$s Hz</string>
-    <string name="dash_single_mode">one refresh mode</string>
     <string name="boot_wordmark">ABACUS</string>
     <string name="boot_subtitle">DUAL SCREEN INTERFACE</string>
     <string name="boot_byline">Made by Abacus</string>

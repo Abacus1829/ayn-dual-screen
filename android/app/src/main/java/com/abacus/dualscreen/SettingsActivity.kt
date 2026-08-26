@@ -274,7 +274,7 @@ class SettingsActivity : AppCompatActivity() {
 
         if (!mine) {
             list.add(
-                Ui.link(this, settings, R.string.opt_home_set, glyph = "⌂") {
+                Ui.link(this, settings, R.string.opt_home_set, R.string.opt_home_set_detail, "⌂") {
                     val intent = HomeRole.request(this)
                     if (intent == null) {
                         Feedback.error(binding.root)
@@ -290,7 +290,7 @@ class SettingsActivity : AppCompatActivity() {
         // app has nothing to restore, and a row that opens a system screen for no reason is clutter.
         if (mine) {
             list.add(
-                Ui.link(this, settings, R.string.opt_home_restore, glyph = "↺") {
+                Ui.link(this, settings, R.string.opt_home_restore, R.string.opt_home_restore_detail, "↺") {
                     val intent = HomeRole.restore(this)
                     if (intent == null) {
                         Feedback.error(binding.root)
