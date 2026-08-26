@@ -211,7 +211,19 @@ internal class Beads {
                     // place" means. The bead bound for the far stop is held until the stack has
                     // finished compressing, so it leaves rather than drifting out with the others.
                     val target = targets!![rod][index]
-                    val held = timeMs < PLAY_MS + SEAT_MS && target == RIGHT
+
+                    /*
+                     * The phase clock, not the wall clock.
+                     *
+                     * This asks "are we still seating", and it used to ask it of \`timeMs\` — which was
+                     * the same thing right up until the intro learned to hold. After a twelve-second
+                     * hold \`timeMs\` is already far past PLAY_MS + SEAT_MS when seating *begins*, so
+                     * the test was false from the first frame and the bead bound for the far stop
+                     * left immediately instead of waiting for the stack to finish compressing.
+                     *
+                     * Same question, asked of the clock the phases are actually measured on.
+                     */
+                    val held = phaseMs < PLAY_MS + SEAT_MS && target == RIGHT
                     val to = if (held) bead.x else target
                     bead.v += (-SEAT_K * (bead.x - to) - 2f * sqrt(SEAT_K) * bead.v) * dt
                 } else {

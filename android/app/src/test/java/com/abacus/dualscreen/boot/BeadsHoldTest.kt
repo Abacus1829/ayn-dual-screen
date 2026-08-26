@@ -174,6 +174,57 @@ class BeadsHoldTest {
     }
 
     @Test
+    fun `the ending is the same however long it was held`() {
+        /*
+         * However long the wait, the mark settles into the same shape.
+         *
+         * This is the backstop for the hold as a whole: a change that broke seating after a long wait
+         * — targets computed from the wrong clock, a phase skipped, the spring never engaging — shows
+         * up here as beads finishing somewhere other than their slots.
+         *
+         * It does **not** catch everything. The seat is a critically damped spring, so given enough
+         * settling time it converges from almost any starting state, which means differences in the
+         * *timing* of the ending are invisible to it. One such difference was found and fixed by
+         * reading the code rather than by this test: the line deciding whether the outermost bead is
+         * still being held through the seat was asking the wall clock instead of the phase clock, and
+         * after twelve seconds of holding the wall clock is long past that point before the seat even
+         * begins. No test here distinguishes that, and pretending otherwise would be worse than
+         * saying so.
+         */
+        fun endingOf(holdMs: Float): List<Float> {
+            val beads = Beads()
+            beads.holding = true
+            beads.runTo(holdMs)
+            beads.holding = false
+
+            // Well past the eject. The seat is a critically damped spring, so how long it takes to
+            // arrive depends on how fast the bead was travelling when it started — and after a brief
+            // hold the beads are still flying. Comparing before both have converged measures the
+            // entry velocity, not the ending.
+            beads.runTo(beads.timeMs + Beads.SEAT_MS + Beads.EJECT_MS + 2_000f)
+
+            // Sorted per rod: which *bead* ends in which slot is decided by the collisions and is
+            // legitimately different after twelve seconds of them. What must not change is the shape
+            // the mark settles into.
+            return (0 until Beads.RODS).flatMap { rod ->
+                (0 until Beads.PER_ROD).map { beads.positionOf(rod, it) }.sorted()
+            }
+        }
+
+        val brief = endingOf(200f)
+        val long = endingOf(12_000f)
+
+        brief.forEachIndexed { index, position ->
+            assertEquals(
+                "the mark settles into a different shape after a long hold",
+                position.toDouble(),
+                long[index].toDouble(),
+                0.02,
+            )
+        }
+    }
+
+    @Test
     fun `the frame keeps moving while it waits`() {
         /*
          * The reason the hold is not just a paused frame.
