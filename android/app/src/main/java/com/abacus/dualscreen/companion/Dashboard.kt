@@ -10,6 +10,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.abacus.dualscreen.R
 import com.abacus.dualscreen.Settings
+import com.abacus.dualscreen.ui.Feedback
 import com.abacus.dualscreen.ui.Ui
 
 /**
@@ -95,6 +96,7 @@ object Dashboard {
         val power: RingGauge,
         val memory: RingGauge,
         val details: LinearLayout,
+        val rates: LinearLayout,
     )
 
     private fun create(activity: Activity, settings: Settings, host: LinearLayout): Views {
@@ -152,6 +154,22 @@ object Dashboard {
          * Reusing Widget.ALL rather than reimplementing it: each one already knows how to read
          * itself, and a second copy of that logic would be a second thing to keep correct.
          */
+        /*
+         * The refresh control, above the readouts.
+         *
+         * Above, because it is the one thing on this screen you can *act* on, and burying the only
+         * control under six paragraphs of numbers is how people conclude a dashboard is read-only.
+         */
+        val rates = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = Ui.dp(activity, 8) }
+        }
+        host.addView(rates)
+
         val details = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(
@@ -161,8 +179,110 @@ object Dashboard {
         }
         host.addView(details)
 
-        return Views(host, temperature.second, refresh.second, cpu, gpu, power, memory, details)
+        return Views(host, temperature.second, refresh.second, cpu, gpu, power, memory, details, rates)
     }
+
+    /**
+     * The refresh-rate buttons, when there is more than one rate and we are allowed to pick.
+     *
+     * Three states, and each says something different:
+     *
+     * - **One mode only** — nothing to choose. The row is not drawn at all.
+     * - **Several modes, no permission** — drawn, with a button that goes and asks for it. Showing
+     *   the choice and explaining why it is unavailable beats hiding a capability the device has.
+     * - **Several modes, permission held** — real buttons, and the one that is lit is the rate the
+     *   *panel* reports, not the one last asked for. Those can disagree, and the panel is right.
+     */
+    private fun updateRates(activity: Activity, host: LinearLayout, reading: DeviceStats.Reading) {
+        val modes = reading.supportedHz.map { kotlin.math.round(it).toInt() }.distinct().sorted()
+
+        if (modes.size <= 1) {
+            host.visibility = View.GONE
+            return
+        }
+
+        host.visibility = View.VISIBLE
+
+        val permitted = RefreshRate.permitted(activity)
+        val running = reading.refreshHz?.let { kotlin.math.round(it).toInt() }
+        val signature = "${modes.joinToString()}|$permitted|$running"
+
+        // Rebuilt only when something about it actually changed. These are buttons, and a button
+        // replaced underneath a finger that is already on it does not register the tap.
+        if (host.getTag(R.id.tag_base_size) == signature) return
+        host.setTag(R.id.tag_base_size, signature)
+        host.removeAllViews()
+
+        host.addView(TextView(activity).apply {
+            text = activity.getString(R.string.dash_refresh).uppercase()
+            setTextColor(0xCCFFFFFF.toInt())
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+            letterSpacing = 0.08f
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply { marginEnd = Ui.dp(activity, 12) }
+        })
+
+        if (!permitted) {
+            host.addView(pill(activity, activity.getString(R.string.dash_refresh_allow), lit = false) {
+                Feedback.tap(it)
+                runCatching {
+                    activity.startActivity(
+                        android.content.Intent(
+                            android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS,
+                            android.net.Uri.parse("package:${activity.packageName}"),
+                        ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                }
+            })
+            return
+        }
+
+        for (hz in modes) {
+            host.addView(pill(activity, "$hz Hz", lit = hz == running) { view ->
+                Feedback.select(view)
+
+                val settled = RefreshRate.apply(activity, activity.windowManager.defaultDisplay, hz)
+                if (settled == null || settled != hz) {
+                    /*
+                     * Said out loud rather than swallowed.
+                     *
+                     * These keys are not a documented API and a device may accept the write and
+                     * carry on at whatever rate it likes. A button that reports success and changes
+                     * nothing is worse than one that admits it did not work.
+                     */
+                    Feedback.failed(
+                        activity,
+                        host,
+                        activity.getString(R.string.dash_refresh_refused, hz),
+                    )
+                }
+
+                // Forces a rebuild on the next poll so the lit button follows the panel.
+                host.setTag(R.id.tag_base_size, null)
+            })
+        }
+    }
+
+    /** A rounded pill button, matching the mode badge in the reference. */
+    private fun pill(activity: Activity, label: String, lit: Boolean, onClick: (View) -> Unit): View =
+        TextView(activity).apply {
+            text = label
+            setTextColor(if (lit) 0xFF0B1020.toInt() else Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setPadding(Ui.dp(activity, 16), Ui.dp(activity, 7), Ui.dp(activity, 16), Ui.dp(activity, 7))
+            background = GradientDrawable().apply {
+                cornerRadius = Ui.dp(activity, 999).toFloat()
+                setColor(if (lit) 0xFF6EC1FF.toInt() else CARD_FILL)
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply { marginEnd = Ui.dp(activity, 8) }
+            setOnClickListener { onClick(it) }
+        }
 
     /**
      * The widget rows, rebuilt from their own readings.
@@ -290,6 +410,7 @@ object Dashboard {
         views.temperature.text = hottest?.let { "%.0f°C".format(it) } ?: "—"
         (views.temperature.parent as? View)?.visibility = if (hottest != null) View.VISIBLE else View.GONE
 
+        updateRates(activity, views.rates, reading)
         updateDetails(activity, views.details)
 
         val hz = reading.refreshHz

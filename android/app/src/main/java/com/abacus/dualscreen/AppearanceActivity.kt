@@ -17,6 +17,8 @@ import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.abacus.dualscreen.databinding.ActivityAppearanceBinding
+import com.abacus.dualscreen.ui.Feedback
+import com.abacus.dualscreen.ui.Ui
 
 /**
  * Everything about how the app looks.
@@ -249,18 +251,37 @@ class AppearanceActivity : AppCompatActivity() {
     /*********
      * Which tools show
      *********/
+    /**
+     * Which tools show, **and in what order**.
+     *
+     * The order half is new, and it is new because `toolOrder` has been stored and read since the
+     * grid was written with nothing anywhere able to set it — the home screen faithfully honoured a
+     * preference that no screen could change. A saved setting with no way in is worse than no
+     * setting: it looks like a feature in the code and is invisible from the outside.
+     *
+     * Arrows rather than drag-and-drop. Dragging a row on a 3.9-inch panel while the list scrolls
+     * under your thumb is a fight; two buttons are boring and always work.
+     */
     private fun buildToolToggles() {
         binding.toolToggles.removeAllViews()
+
         val hidden = settings.hiddenTools
+        val ordered = visibleTools()
 
         // Tools flagged hidden are not on the grid to begin with, so a checkbox promising to put
         // one there would simply lie.
-        for (tool in Tool.entries.filter { !it.hidden }) {
+        ordered.forEachIndexed { index, tool ->
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+
             val check = CheckBox(this).apply {
                 text = getString(tool.label)
                 isChecked = tool.id !in hidden
                 setTextColor(getColor(R.color.text))
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 setOnCheckedChangeListener { _, visible ->
                     // a fresh set: SharedPreferences keeps the instance it was given, so mutating the
                     // one we read back would leave the stored value and the live value the same object
@@ -269,8 +290,63 @@ class AppearanceActivity : AppCompatActivity() {
                     }
                 }
             }
-            binding.toolToggles.addView(check)
+
+            row.addView(check)
+            row.addView(moveButton(tool, "\u25B2", enabled = index > 0, delta = -1))
+            row.addView(moveButton(tool, "\u25BC", enabled = index < ordered.lastIndex, delta = 1))
+
+            binding.toolToggles.addView(row)
         }
+    }
+
+    /**
+     * The grid's order, resolved the same way the home screen resolves it.
+     *
+     * Saved ids first, then anything a later version added that the saved list cannot know about.
+     * Reading it identically in both places is the point: an order that looked different here than
+     * it does on the grid would make every move button appear to do the wrong thing.
+     */
+    private fun visibleTools(): List<Tool> =
+        (settings.toolOrder.mapNotNull { Tool.byId(it) } + Tool.entries)
+            .distinct()
+            .filter { !it.hidden }
+
+    private fun moveButton(tool: Tool, glyph: String, enabled: Boolean, delta: Int): View =
+        android.widget.TextView(this).apply {
+            text = glyph
+            isEnabled = enabled
+            alpha = if (enabled) 1f else 0.25f
+            setTextColor(Appearance.accentOf(settings))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            val pad = Ui.dp(this@AppearanceActivity, 10)
+            setPadding(pad, pad, pad, pad)
+            if (enabled) setOnClickListener {
+                Feedback.tap(it)
+                move(tool, delta)
+            }
+        }
+
+    /**
+     * Move one tool up or down, and write the whole order back.
+     *
+     * The full list is persisted rather than only the visible part. The home screen tolerates a
+     * partial list — it appends whatever is missing — but a stored order that quietly omits half the
+     * tools is a thing that behaves correctly until somebody unhides one and finds it somewhere
+     * surprising.
+     */
+    private fun move(tool: Tool, delta: Int) {
+        val order = visibleTools().toMutableList()
+        val from = order.indexOf(tool)
+        val to = from + delta
+        if (from < 0 || to !in order.indices) return
+
+        order.add(to, order.removeAt(from))
+
+        // Visible order first, then everything else in its existing relative order.
+        val rest = Tool.entries.filter { it !in order }
+        settings.toolOrder = (order + rest).map { it.id }
+
+        buildToolToggles()
     }
 
     /*********

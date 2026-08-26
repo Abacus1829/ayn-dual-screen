@@ -230,8 +230,23 @@ class UpdateManager private constructor(private val context: Context) {
     fun install(activity: Context): Failure? {
         val ready = state as? State.Ready ?: return Failure(UpdateError.INSTALL_FAILED, "nothing ready")
 
+        /*
+         * Stash the notes before handing the file over, not after.
+         *
+         * Once Android takes the APK this process is on borrowed time — it is about to be replaced —
+         * so anything that needs writing has to be written first. WhatsNew keys them on the version
+         * they describe, so an install the user backs out of at Android own confirmation dialog
+         * simply never matches and the notes are discarded on the next launch instead of announcing
+         * a version that is not there.
+         */
+        WhatsNew.remember(activity, ready.update.version.text, ready.update.notes)
+
         val failure = Installer.install(activity, ready.file)
-        if (failure != null) publish(State.Failed(Stage.INSTALL, failure, ready.update))
+        if (failure != null) {
+            // It did not even reach the installer, so there is nothing to announce later.
+            WhatsNew.forget(activity)
+            publish(State.Failed(Stage.INSTALL, failure, ready.update))
+        }
         return failure
     }
 

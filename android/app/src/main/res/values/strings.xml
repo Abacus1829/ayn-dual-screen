@@ -653,10 +653,14 @@
     <string name="home_no_screen">This build of Android has no home-app screen to open.</string>
     <string name="home_restore_hint">Pick the AYN dashboard in the list that opens.</string>
 
+    <string name="whats_new_title">Updated to %1$s</string>
     <string name="tool_controls">Controls</string>
     <string name="tool_dashboard">Dashboard</string>
     <string name="dash_title">Dashboard</string>
     <string name="dash_blurb">What the console is doing right now. Only the readings this device actually reports are shown.</string>
+    <string name="dash_refresh">Refresh</string>
+    <string name="dash_refresh_allow">Allow</string>
+    <string name="dash_refresh_refused">The console did not switch to %1$d Hz</string>
     <string name="dash_temp">Temp</string>
     <string name="dash_memory">Memory</string>
     <string name="dash_power">Power</string>

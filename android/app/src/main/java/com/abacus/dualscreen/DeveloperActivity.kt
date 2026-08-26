@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.abacus.dualscreen.databinding.ActivityDeveloperBinding
 import com.abacus.dualscreen.ui.Sounds
 import com.abacus.dualscreen.companion.DeviceStats
+import com.abacus.dualscreen.companion.RefreshRate
 import com.abacus.dualscreen.setup.HomeRole
 import com.abacus.dualscreen.ui.Feedback
 import com.abacus.dualscreen.ui.Nav
@@ -209,6 +210,12 @@ class DeveloperActivity : AppCompatActivity() {
 
         append("\n\n── interface sound ──\n")
         append(Sounds.diagnose(this@DeveloperActivity))
+
+        // The one dashboard control that can fail while looking like it worked, so the whole picture
+        // is worth having in one place: what the panel supports, what it is doing, what was asked
+        // for, and whether we are even allowed to ask.
+        append("\n\n── refresh rate ──\n")
+        append(RefreshRate.describe(this@DeveloperActivity, panelDisplay))
 
         append("\n\n── home button ──\n")
         append(HomeRole.diagnose(this@DeveloperActivity))

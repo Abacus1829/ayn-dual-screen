@@ -211,9 +211,26 @@ class HomeActivity : AppCompatActivity() {
      */
     private fun maybePrompt() {
         if (!booted || !showable || isFinishing) return
+
+        /*
+         * What you just got comes before what you could get next.
+         *
+         * Both are dialogs and only one can be on screen, so the order matters. Notes for the version
+         * that is already running are the answer to a question somebody has right now; an offer of a
+         * further update is a question nobody asked. And the notes are shown once ever, so losing
+         * that race would mean losing them entirely.
+         */
+        if (com.abacus.dualscreen.update.WhatsNewPrompt.showIfDue(this, runningVersion)) return
+
         val update = updates.promptable() ?: return
         com.abacus.dualscreen.update.UpdatePrompt.show(this, update)
     }
+
+    /** The version actually running, which is what decides whether stashed notes are still relevant. */
+    private val runningVersion: String
+        get() = runCatching {
+            packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
+        }.getOrDefault("")
 
     /**
      * The device tiles, refreshed while the home screen is in front.
