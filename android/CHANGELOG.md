@@ -7,6 +7,54 @@ time — so they say what the commits show and no more.
 
 ---
 
+## 0.28.0-beta.1 — 2026-08-26 (beta)
+
+> **This is a beta.** You'll only be offered it if you've switched to the beta channel
+> (Settings → System → Check for updates → Channel). Stable users won't see it, which
+> is deliberate and there's a test making sure of it.
+
+The app grew as a pile of separate destinations — thirteen tiles on the home screen, each one its own screen you had to leave wherever you were to reach. That's a fine way to *build* an app and a rubbish way to *use* one, because the stuff you want mid-game is exactly the stuff you shouldn't have to abandon your game to get to.
+
+## Quick controls, from anywhere
+
+There's a handle on the right edge of every screen now. Tap it and you get a panel over whatever you were already doing:
+
+- **Volume and brightness** as live sliders
+- **Keep the screen awake**, applied to the screen you're actually looking at, immediately
+- One tap to the **keyboard, notes, macros, dashboard**, or home
+
+It's a panel, not a screen. Dismiss it and you're exactly where you were, nothing reloaded, nothing lost. It's on 22 screens — everywhere except the game surfaces and full-screen tools, where a handle floating over the thing you opened would just be in the way.
+
+Brightness works even without the system permission — it dims the window instead, which is what your eyes are judging anyway. No greyed-out slider with a lecture attached.
+
+**What's deliberately NOT on it:** writing a note, building a macro, arranging a layout, moving files. Anything you'd sit down and *do* stays a proper screen, because a panel you're supposed to dismiss is a terrible place to work. The test was "would you want this while a game is running".
+
+## Settings: 5 categories instead of 32 rows in a trench
+
+The groups were already there as headers — you just had to scroll past all of them to find anything. Now they're actual destinations, and each one renames the header so you know where you are instead of guessing from the back button.
+
+**Nothing moved and nothing was cut.** 33 rows before, 33 after.
+
+## Everything else from this run
+
+- **The controller works now.** It genuinely never did — boxes built in code with a click listener aren't reachable by D-pad, and that's basically every row and tile in the app. Tool grid, settings, profiles, notes, macros: all touch-only, on a console with a stick on it. All reachable now.
+- **You find out what an update changed**, after it installs, once.
+- **Rearrange your tools** — `toolOrder` has been saved and read since forever with nothing able to set it.
+- **60/120 Hz** on the Dashboard. Same permission the brightness slider already uses.
+- **FTP "serve whole device"** — there's been a grant-permission button there for ages with nothing behind it.
+- 28 dead strings, a dead setting, a dead drawable, all gone.
+
+## Known limitations
+
+- **Nothing here has run on a Thor.** It builds, lints and passes 78 tests on a desk. That's the whole claim.
+- **The Home button still might not work** and I still don't know why — Developer → Copy info tells me which of five reasons it is.
+- **No GPU ring yet** unless your device exposes its clock. Same report answers that.
+- **Fan control, real FPS, the eight quick toggles** are still absent and always will be. They're vendor driver calls.
+- **The tool grid is still 13 tiles.** I chose not to cull it: you can hide and reorder them yourself now, and guessing which ones you don't use seemed worse than leaving them.
+- Notes and macros aren't game-specific yet. Still on the list.
+
+---
+
 ## 0.27.0 — 2026-08-26
 
 A whole pass of quality-of-life, most of it found by writing scripts to audit the codebase rather than by me sitting here trying to remember what's broken. That turned out to be a much better idea than my usual approach.

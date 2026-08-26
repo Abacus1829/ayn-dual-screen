@@ -1,6 +1,8 @@
 package com.abacus.dualscreen.update
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -73,4 +75,33 @@ class VersionTest {
         assertEquals("0.4.0", Version.find("Stardew v0.4.0 - the in-game world map")!!.text)
         assertNull(Version.find("no numbers here at all"))
     }
+
+    @Test
+    fun `the shipped beta version is recognised as a pre-release`() {
+        /*
+         * The one thing that must be true before publishing a beta.
+         *
+         * Channel.STABLE refuses any version that reports isPreRelease, and that refusal is the only
+         * thing standing between a beta build and everybody who never asked for one. If the suffix
+         * this project actually ships were parsed as part of the version number instead of as a
+         * pre-release tag, stable users would be offered it and there would be no error anywhere —
+         * it would simply work, on the wrong devices.
+         *
+         * So this pins the literal string the build file carries.
+         */
+        val beta = Version.parse("0.28.0-beta.1")
+
+        assertNotNull(beta)
+        assertTrue("0.28.0-beta.1 is not being treated as a pre-release", beta!!.isPreRelease)
+        assertFalse("a stable channel would offer this beta", Channel.STABLE.accepts(beta))
+        assertTrue("the beta channel would not offer it", Channel.BETA.accepts(beta))
+
+        // And it is genuinely older than the release it precedes, so 0.28.0 supersedes it later.
+        val final = Version.parse("0.28.0")!!
+        assertTrue("the beta should sort below its own final release", beta < final)
+
+        // But newer than what it follows, or nobody on 0.27.0 would be offered it at all.
+        assertTrue("the beta should sort above the previous release", beta > Version.parse("0.27.0")!!)
+    }
+
 }
