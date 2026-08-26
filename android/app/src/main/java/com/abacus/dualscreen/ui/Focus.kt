@@ -3,6 +3,7 @@ package com.abacus.dualscreen.ui
 import android.app.Activity
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 
@@ -83,17 +84,31 @@ object Focus {
     }
 
     /**
-     * Give the first thing on a screen focus, once.
+     * Take focus on the first directional press, and not before.
      *
-     * Without this the first press of a D-pad on a fresh screen goes to whatever the framework picks,
-     * which is often nothing visible — so it reads as the controller not working rather than as
-     * focus starting somewhere unhelpful. Only acts when there is no focus already and when the last
-     * input was not a touch, so it never steals a selection from somebody using the screen.
+     * The obvious thing is to focus something when the screen opens. It is also wrong: it puts a
+     * focus ring on the screen for the large majority who are about to touch it, and a highlight
+     * nobody asked for reads as a stuck selection.
+     *
+     * So nothing is focused until somebody actually reaches for the stick or the pad. The *first*
+     * such press is swallowed to place focus — otherwise it moves from wherever the framework decides
+     * nothing is, which usually means the first press appears to do nothing at all — and every press
+     * after that navigates normally.
+     *
+     * Returns true when it consumed the event. Call it from `dispatchKeyEvent`, before super.
      */
-    fun start(root: View) {
-        root.post {
-            if (root.findFocus() != null) return@post
-            root.focusSearch(View.FOCUS_DOWN)?.requestFocus()
-        }
+    fun claimOnKey(root: View, keyCode: Int): Boolean {
+        if (keyCode !in DIRECTIONAL) return false
+        if (root.findFocus() != null) return false
+
+        val first = root.focusSearch(View.FOCUS_DOWN) ?: return false
+        return first.requestFocus()
     }
+
+    private val DIRECTIONAL = setOf(
+        KeyEvent.KEYCODE_DPAD_UP,
+        KeyEvent.KEYCODE_DPAD_DOWN,
+        KeyEvent.KEYCODE_DPAD_LEFT,
+        KeyEvent.KEYCODE_DPAD_RIGHT,
+    )
 }

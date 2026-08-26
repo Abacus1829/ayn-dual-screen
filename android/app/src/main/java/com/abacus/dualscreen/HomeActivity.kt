@@ -360,6 +360,17 @@ class HomeActivity : AppCompatActivity() {
         // through the sequence and land nowhere — a hold has to count once, like a press.
         if (event.action == android.view.KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
             secrets.forEach { it.onKey(event.keyCode) }
+
+            /*
+             * The first press of the stick puts focus somewhere visible.
+             *
+             * Before the tiles were made focusable there was nothing on this screen a D-pad could
+             * reach at all. Now there is, and the remaining problem is the first press: with nothing
+             * focused, directional navigation has no origin to move from and appears to do nothing.
+             * Consuming that one press to place focus is the difference between a controller that
+             * works and one that works from the second press onwards.
+             */
+            if (com.abacus.dualscreen.ui.Focus.claimOnKey(binding.root, event.keyCode)) return true
         }
 
         return super.dispatchKeyEvent(event)
