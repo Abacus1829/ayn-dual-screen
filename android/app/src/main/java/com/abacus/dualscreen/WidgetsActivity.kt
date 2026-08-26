@@ -88,6 +88,7 @@ class WidgetsActivity : AppCompatActivity() {
 
         buildReadings()
         Appearance.apply(this, binding.root, settings, binding.backgroundImage)
+        com.abacus.dualscreen.control.ControlCenter.attach(this, settings)
     }
 
     /**

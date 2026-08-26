@@ -94,6 +94,8 @@ class UpdateActivity : AppCompatActivity() {
         binding.sourceLine.text = getString(R.string.update_source, AppSource.OWNER + "/" + AppSource.REPO)
 
         Appearance.apply(this, binding.root, settings, binding.backgroundImage)
+
+        com.abacus.dualscreen.control.ControlCenter.attach(this, settings)
         binding.progressBar.progressTintList =
             ColorStateList.valueOf(Appearance.accentOf(settings))
 

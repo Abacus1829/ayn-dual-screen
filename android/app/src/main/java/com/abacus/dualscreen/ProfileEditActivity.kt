@@ -50,6 +50,8 @@ class ProfileEditActivity : AppCompatActivity() {
         binding.deleteButton.visibility = if (existing == null) View.GONE else View.VISIBLE
 
         Appearance.apply(this, binding.root, settings, binding.backgroundImage)
+
+        com.abacus.dualscreen.control.ControlCenter.attach(this, settings)
     }
 
     private fun buildSpinners() {

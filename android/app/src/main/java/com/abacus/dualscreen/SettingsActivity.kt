@@ -59,6 +59,7 @@ class SettingsActivity : AppCompatActivity() {
 
         build()
         Appearance.apply(this, binding.root, settings, binding.backgroundImage)
+        com.abacus.dualscreen.control.ControlCenter.attach(this, settings)
     }
 
     override fun onResume() {
@@ -67,11 +68,65 @@ class SettingsActivity : AppCompatActivity() {
         build()
     }
 
+    /**
+     * Which group of settings this screen is showing, or null for the list of groups.
+     *
+     * Settings had grown to thirty-two rows in one scroll, every one of them findable only by reading
+     * past the others. The grouping already existed as headers; this makes the groups *navigable*
+     * rather than merely visible, which is the difference between "it is in there somewhere" and
+     * knowing where to look.
+     *
+     * The same activity opens itself with a different extra rather than five new screens: every row
+     * keeps the code it already had, back behaves as it does everywhere else, and a sixth category
+     * later is one enum entry rather than a screen, a layout and a manifest line.
+     */
+    private enum class Section(val id: String, val title: Int, val detail: Int, val glyph: String) {
+        CONNECTION("connection", R.string.settings_connection, R.string.settings_cat_connection, "⇢"),
+        SESSION("session", R.string.settings_session, R.string.settings_cat_session, "▣"),
+        LOOK("look", R.string.settings_look, R.string.settings_cat_look, "◈"),
+        CONTROLS("controls", R.string.settings_controls, R.string.settings_cat_controls, "⌨"),
+        SYSTEM("system", R.string.settings_system, R.string.settings_cat_system, "⚙");
+
+        companion object {
+            fun byId(id: String?): Section? = entries.firstOrNull { it.id == id }
+        }
+    }
+
+    private val openSection: Section?
+        get() = Section.byId(intent.getStringExtra(EXTRA_SECTION))
+
     private fun build() {
         val list = binding.settingsList
         list.removeAllViews()
 
+        val open = openSection
+
+        /*
+         * The header says where you are.
+         *
+         * A sub-screen that still reads "Settings" leaves the back button as the only clue that you
+         * went anywhere, which is exactly the "where am I" problem categories were supposed to solve.
+         */
+        binding.settingsTitle.setText(open?.title ?: R.string.settings_title)
+        binding.settingsBlurb.setText(open?.detail ?: R.string.settings_blurb)
+
+        // The top level is the five categories and nothing else.
+        if (open == null) {
+            for (entry in Section.entries) {
+                list.add(
+                    Ui.link(this, settings, entry.title, entry.detail, entry.glyph) {
+                        startActivity(
+                            Intent(this, SettingsActivity::class.java)
+                                .putExtra(EXTRA_SECTION, entry.id)
+                        )
+                    }
+                )
+            }
+            return
+        }
+
         // ── what it connects to ─────────────────────────────────────────────
+        if (open == Section.CONNECTION) {
         list.add(Ui.section(this, R.string.settings_connection))
         list.add(
             Ui.toggle(this, settings, R.string.opt_autodetect, R.string.opt_autodetect_detail, settings.autoDetect) {
@@ -95,9 +150,14 @@ class SettingsActivity : AppCompatActivity() {
         )
 
         // ── the console's home button ───────────────────────────────────────
+        // Kept with the connection group: it is short enough that a category of its own would be a
+        // category containing one row, and it belongs with "what this console does when you press
+        // things" more than with anything else here.
         addHomeButtonSection(list)
+        }
 
         // ── what happens on the second screen ───────────────────────────────
+        if (open == Section.SESSION) {
         list.add(Ui.section(this, R.string.settings_session))
         list.add(
             choice(
@@ -148,7 +208,10 @@ class SettingsActivity : AppCompatActivity() {
             }
         )
 
+        }
+
         // ── how it looks, sounds and feels ──────────────────────────────────
+        if (open == Section.LOOK) {
         list.add(Ui.section(this, R.string.settings_look))
         list.add(
             Ui.link(this, settings, R.string.settings_appearance, R.string.settings_appearance_detail, "◈") {
@@ -176,7 +239,10 @@ class SettingsActivity : AppCompatActivity() {
             }
         )
 
+        }
+
         // ── controls ────────────────────────────────────────────────────────
+        if (open == Section.CONTROLS) {
         list.add(Ui.section(this, R.string.settings_controls))
         list.add(
             Ui.link(this, settings, R.string.settings_macros, R.string.settings_macros_detail, "⚙") {
@@ -189,7 +255,10 @@ class SettingsActivity : AppCompatActivity() {
             }
         )
 
+        }
+
         // ── the things you set once ─────────────────────────────────────────
+        if (open == Section.SYSTEM) {
         list.add(Ui.section(this, R.string.settings_system))
         list.add(
             Ui.link(this, settings, R.string.settings_check_updates, R.string.settings_updates_detail, "⇩") {
@@ -230,6 +299,7 @@ class SettingsActivity : AppCompatActivity() {
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setPadding(Ui.dp(this@SettingsActivity, 2), Ui.dp(this@SettingsActivity, 18), 0, Ui.dp(this@SettingsActivity, 8))
         })
+        }
 
         Motion.enterChildren(list)
     }
@@ -377,4 +447,9 @@ class SettingsActivity : AppCompatActivity() {
             Awake.NEVER -> R.string.awake_never
         }
     )
+    private companion object {
+        /** Which group to show. Absent means the list of groups. */
+        const val EXTRA_SECTION = "section"
+    }
+
 }

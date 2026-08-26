@@ -638,6 +638,18 @@
     <string name="home_restore_hint">Pick the AYN dashboard in the list that opens.</string>
 
     <string name="whats_new_title">Updated to %1$s</string>
+    <string name="settings_cat_connection">Finding games, saved connections, and the console’s Home button</string>
+    <string name="settings_cat_session">Which screen it opens on, orientation, and staying awake</string>
+    <string name="settings_cat_look">Theme, accent, sounds, haptics and the intro</string>
+    <string name="settings_cat_controls">Macros and the on-screen keyboard</string>
+    <string name="settings_cat_system">Updates, permissions, developer tools</string>
+    <string name="control_title">Quick controls</string>
+    <string name="control_open">Open quick controls</string>
+    <string name="control_volume">Volume</string>
+    <string name="control_brightness">Brightness</string>
+    <string name="control_awake">Keep the screen awake</string>
+    <string name="control_shortcuts">Go to</string>
+    <string name="control_home">Home</string>
     <string name="tool_controls">Controls</string>
     <string name="tool_dashboard">Dashboard</string>
     <string name="dash_title">Dashboard</string>
