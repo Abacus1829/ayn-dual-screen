@@ -1203,7 +1203,8 @@ class HomeActivity : AppCompatActivity() {
             Tool.SECOND_SCREEN -> open()
             Tool.NOTES -> startActivity(Intent(this, NotesActivity::class.java))
             // Two tiles, one screen, but each opens on the half it names.
-            Tool.VOLUME -> startActivity(ControlsActivity.volume(this))
+            // No panel asked for: the screen leads with volume and keeps brightness under it.
+            Tool.VOLUME -> startActivity(Intent(this, ControlsActivity::class.java))
             Tool.BRIGHTNESS -> startActivity(ControlsActivity.brightness(this))
             Tool.APPEARANCE -> startActivity(Intent(this, AppearanceActivity::class.java))
             Tool.KEYBOARD -> startActivity(Intent(this, KeyboardActivity::class.java))

@@ -10,7 +10,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.abacus.dualscreen.R
 import com.abacus.dualscreen.Settings
-import com.abacus.dualscreen.ui.Motion
 import com.abacus.dualscreen.ui.Ui
 
 /**
@@ -95,6 +94,7 @@ object Dashboard {
         val gpu: RingGauge,
         val power: RingGauge,
         val memory: RingGauge,
+        val details: LinearLayout,
     )
 
     private fun create(activity: Activity, settings: Settings, host: LinearLayout): Views {
@@ -141,7 +141,94 @@ object Dashboard {
         row.addView(rings)
         host.addView(row)
 
-        return Views(host, temperature.second, refresh.second, cpu, gpu, power, memory)
+        /*
+         * The rest of what the handheld knows about itself, underneath.
+         *
+         * These are the existing widgets — clock, battery, network, storage, memory, device — and
+         * they are here because their screen was *also* called "Dashboard", so the tool grid carried
+         * two tiles with the same name showing overlapping things. The gauges answer "how hard is it
+         * working"; these answer "what is it", and they belong on the same screen.
+         *
+         * Reusing Widget.ALL rather than reimplementing it: each one already knows how to read
+         * itself, and a second copy of that logic would be a second thing to keep correct.
+         */
+        val details = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = Ui.dp(activity, 8) }
+        }
+        host.addView(details)
+
+        return Views(host, temperature.second, refresh.second, cpu, gpu, power, memory, details)
+    }
+
+    /**
+     * The widget rows, rebuilt from their own readings.
+     *
+     * Cheap — every one of them is a system call or two — and rebuilt rather than diffed because
+     * there are six and none of them animates.
+     */
+    private fun updateDetails(activity: Activity, host: LinearLayout) {
+        val readings = com.abacus.dualscreen.widgets.Widget.ALL.mapNotNull { widget ->
+            runCatching { widget.read(activity) }.getOrNull()
+        }
+
+        if (readings.isEmpty()) {
+            host.visibility = View.GONE
+            return
+        }
+
+        host.visibility = View.VISIBLE
+
+        // Two per row, matching the tile pairing above it.
+        if (host.childCount != (readings.size + 1) / 2) host.removeAllViews()
+
+        readings.chunked(2).forEachIndexed { index, pair ->
+            val line = host.getChildAt(index) as? LinearLayout ?: LinearLayout(activity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ).apply { topMargin = Ui.dp(activity, 8) }
+                host.addView(this)
+            }
+
+            pair.forEachIndexed { column, reading ->
+                val existing = line.getChildAt(column) as? LinearLayout
+                val cell = existing ?: card(activity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(Ui.dp(activity, 14), Ui.dp(activity, 10), Ui.dp(activity, 14), Ui.dp(activity, 12))
+                    addView(TextView(activity).apply {
+                        setTextColor(0xCCFFFFFF.toInt())
+                        setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+                        letterSpacing = 0.08f
+                    })
+                    addView(TextView(activity).apply {
+                        setTextColor(Color.WHITE)
+                        setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f)
+                        setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    })
+                    addView(TextView(activity).apply {
+                        setTextColor(0x99FFFFFF.toInt())
+                        setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+                        maxLines = 1
+                        ellipsize = android.text.TextUtils.TruncateAt.END
+                    })
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                        .apply { if (column > 0) marginStart = Ui.dp(activity, 8) }
+                    line.addView(this)
+                }
+
+                (cell.getChildAt(0) as TextView).text = reading.title.uppercase()
+                (cell.getChildAt(1) as TextView).text = reading.value
+                (cell.getChildAt(2) as TextView).apply {
+                    text = reading.detail
+                    visibility = if (reading.detail.isBlank()) View.GONE else View.VISIBLE
+                }
+            }
+        }
     }
 
     private fun update(activity: Activity, views: Views, reading: DeviceStats.Reading, animate: Boolean) {
@@ -161,7 +248,7 @@ object Dashboard {
             views.cpu.set(peak / 1_000f, peak.toFloat() / observedCpuPeak, animate)
             views.cpu.visibility = View.VISIBLE
         } else {
-            views.cpu.visibility = View.GONE
+            hide(views.cpu)
         }
 
         // ── GPU ─────────────────────────────────────────────────────────────
@@ -172,7 +259,7 @@ object Dashboard {
             views.gpu.set(gpuMhz.toFloat(), gpuMhz.toFloat() / ceiling, animate)
             views.gpu.visibility = View.VISIBLE
         } else {
-            views.gpu.visibility = View.GONE
+            hide(views.gpu)
         }
 
         // ── power ───────────────────────────────────────────────────────────
@@ -183,7 +270,7 @@ object Dashboard {
             views.power.set(watts, kotlin.math.abs(watts) / 15f, animate)
             views.power.visibility = View.VISIBLE
         } else {
-            views.power.visibility = View.GONE
+            hide(views.power)
         }
 
         // ── memory ──────────────────────────────────────────────────────────
@@ -193,7 +280,7 @@ object Dashboard {
             views.memory.set(used / GIGABYTE, used.toFloat() / total, animate)
             views.memory.visibility = View.VISIBLE
         } else {
-            views.memory.visibility = View.GONE
+            hide(views.memory)
         }
 
         // ── the two stat cards ──────────────────────────────────────────────
@@ -203,9 +290,33 @@ object Dashboard {
         views.temperature.text = hottest?.let { "%.0f°C".format(it) } ?: "—"
         (views.temperature.parent as? View)?.visibility = if (hottest != null) View.VISIBLE else View.GONE
 
+        updateDetails(activity, views.details)
+
         val hz = reading.refreshHz
         views.refresh.text = hz?.let { "%.0f Hz".format(it) } ?: "—"
         (views.refresh.parent as? View)?.visibility = if (hz != null) View.VISIBLE else View.GONE
+    }
+
+    /**
+     * A reading that has gone away, without moving anything.
+     *
+     * **Never GONE.** These four gauges share a weighted row, so removing one makes the other three
+     * grow to fill the space and then shrink again when it returns — and several of these readings
+     * legitimately come and go between polls. Battery current reads exactly zero at the moment of
+     * a charge-state change, and the GPU clock node reports nothing at all when the GPU is idle. On
+     * a two-second timer that is the ring row jumping about every two seconds for no reason the
+     * viewer can see.
+     *
+     * A gauge that has never had a value at all is a different case: it is removed once, when the
+     * dashboard is built, because this device does not supply it.
+     */
+    private fun hide(gauge: RingGauge) {
+        if (gauge.hasReading) {
+            // Had a value and lost it. Keep the last one on screen rather than blinking out; it is a
+            // second or two stale at worst, and a stale number beats a hole in the layout.
+            return
+        }
+        gauge.visibility = View.GONE
     }
 
     // ── the pieces ──────────────────────────────────────────────────────────
@@ -264,9 +375,17 @@ object Dashboard {
             cornerRadius = Ui.dp(activity, CARD_RADIUS_DP).toFloat()
             setColor(CARD_FILL)
         }
-        // Styles itself; Appearance sets the typeface and leaves the colours be.
+        /*
+         * Deliberately **not** pressable.
+         *
+         * These are readouts, and the press animation is for things that respond to being pressed.
+         * On a view that is not clickable it also misbehaves outright: the scale-down runs on
+         * ACTION_DOWN, the card does not consume the event, the ScrollView takes the gesture and
+         * sends ACTION_CANCEL, and the spring-back overshoots past its own size on the way home.
+         * Hold a finger on the screen with any movement at all and that cycle repeats — which is
+         * the dashboard visibly shaking under your thumb.
+         */
         tag = "plain"
-        Motion.pressable(this)
     }
 
     private const val GIGABYTE = (1L shl 30).toFloat()

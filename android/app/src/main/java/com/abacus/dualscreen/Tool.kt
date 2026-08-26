@@ -56,10 +56,20 @@ enum class Tool(
 
     SECOND_SCREEN("screen", R.string.tool_second_screen, "▣"),
     NOTES("notes", R.string.tool_notes, "✎"),
-    VOLUME("volume", R.string.tool_volume, "◧"),
+    /**
+     * Volume and brightness, which are one screen and were two tiles.
+     *
+     * They always opened the same activity — it shows both sets of sliders — so the grid was
+     * spending two of its slots on one destination. Opened without asking for a particular panel it
+     * leads with volume and the brightness card is directly underneath, which is the arrangement
+     * anybody reaching for either one wants.
+     */
+    VOLUME("volume", R.string.tool_controls, "◧"),
     // Drawn rather than typed: ☀ has an emoji presentation, so on some devices it rendered as a
     // yellow sun that ignored the accent while every tile around it followed it.
-    BRIGHTNESS("brightness", R.string.tool_brightness, "☀", icon = R.drawable.ic_brightness),
+    // Folded into VOLUME, which is "Controls" now and carries both. Kept as an id so a saved tool
+    // order from an older version still resolves rather than silently dropping an entry.
+    BRIGHTNESS("brightness", R.string.tool_brightness, "☀", icon = R.drawable.ic_brightness, hidden = true),
     APPEARANCE("appearance", R.string.tool_appearance, "◈"),
     KEYBOARD("keyboard", R.string.tool_keyboard, "⌨"),
     // Drawn rather than typed: see the icon field above.
@@ -92,8 +102,13 @@ enum class Tool(
      * What the handheld knows about itself: clock, battery, network, storage, a stopwatch.
      *
      * The one tool that needs nothing -- no game, no server, no network, no extra permission.
+     *
+     * **Hidden, because it is the lower half of [DASHBOARD] now.** It was also called "Dashboard",
+     * so the grid carried two tiles with the same name showing overlapping things — battery, memory
+     * and device were on both. Its screen still exists and still works; nothing reaches it from the
+     * grid, because there is one dashboard.
      */
-    WIDGETS("widgets", R.string.tool_widgets, "◴"),
+    WIDGETS("widgets", R.string.tool_widgets, "◴", hidden = true),
 
     /**
      * Game codes, when a companion offers any.

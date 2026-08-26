@@ -653,6 +653,7 @@
     <string name="home_no_screen">This build of Android has no home-app screen to open.</string>
     <string name="home_restore_hint">Pick the AYN dashboard in the list that opens.</string>
 
+    <string name="tool_controls">Controls</string>
     <string name="tool_dashboard">Dashboard</string>
     <string name="dash_title">Dashboard</string>
     <string name="dash_blurb">What the console is doing right now. Only the readings this device actually reports are shown.</string>

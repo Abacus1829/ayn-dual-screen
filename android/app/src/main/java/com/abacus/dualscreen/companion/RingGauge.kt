@@ -69,6 +69,16 @@ class RingGauge @JvmOverloads constructor(
     var decimals: Int = 2
         set(value) { field = value; invalidate() }
 
+    /**
+     * Whether this gauge has ever been given a reading.
+     *
+     * Lets the dashboard tell "this device does not report a GPU clock" from "the GPU is idle right
+     * now". The first is a gauge that should not be on screen; the second is a gauge that should
+     * hold its last value rather than blinking out and resizing everything beside it.
+     */
+    var hasReading = false
+        private set
+
     private var target = 0f
     private var shown = 0f
 
@@ -85,6 +95,7 @@ class RingGauge @JvmOverloads constructor(
      * against a sensible ceiling chosen by the caller rather than against the number itself.
      */
     fun set(value: Float, fraction: Float, animate: Boolean = true) {
+        hasReading = true
         val cleanFraction = fraction.coerceIn(0f, 1f)
 
         if (!animate) {
