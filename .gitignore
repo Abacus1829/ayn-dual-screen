@@ -53,3 +53,7 @@ skyrimse/AynDualScreen-SkyrimSE.zip
 # same as the New Vegas one above, and for the same reason
 skyrimse/AynDualScreen.log
 skyrimse/AynDualScreen.boot.log
+
+# Release staging: assets pulled from the previous release while cutting a new one.
+# Rebuilt every time, and holds a full copy of every binary.
+dist/carry/

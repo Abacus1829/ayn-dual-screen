@@ -7,6 +7,20 @@ time — so they say what the commits show and no more.
 
 ---
 
+## 0.25.0 — 2026-08-25
+
+### It stopped shaking and there's only one Dashboard now
+
+**The touchscreen shook when you held it.** Entirely my fault. I put a press animation on the dashboard cards, except those cards aren't buttons. So: press → card shrinks → the scroll view goes "actually that touch is mine" → card springs back and overshoots past its own size → and round it goes again while your thumb just sits there. It was doing a little dance. It no longer does a little dance.
+
+**Found a second wobble on the way to that one.** The four ring gauges share a row, so any time one disappeared the other three grew to fill the gap and then shrank again when it came back. And they *do* disappear — battery current genuinely reads exactly zero the moment charging state flips, and the GPU clock reports nothing at all when the GPU is asleep. So the whole row was hopping about every two seconds for no visible reason. A gauge that's had a reading now just holds the last one instead of blinking out.
+
+**There were two tiles called "Dashboard".** Because I made a new one called Dashboard and completely failed to notice Widgets was *already* called Dashboard. They even showed the same battery and memory numbers. Genuinely excellent work. It's one screen now — the widget rows sit under the ring gauges.
+
+**Volume and Brightness were two tiles that opened the identical screen.** Not similar screens. The same one, which has both sets of sliders on it. That's one tile now, called **Controls**. If you'd reordered your tools, that still works — the old ids didn't go anywhere.
+
+---
+
 ## 0.24.0 — 2026-08-25
 
 ### The dashboard is its own screen
