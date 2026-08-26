@@ -45,6 +45,21 @@ class FtpActivity : AppCompatActivity() {
         binding.autoStartCheck.isChecked = settings.ftpAutoStart
         binding.autoStartCheck.setOnCheckedChangeListener { _, on -> settings.ftpAutoStart = on }
 
+        binding.wholeDeviceCheck.isChecked = settings.ftpWholeDevice
+        binding.wholeDeviceCheck.setOnCheckedChangeListener { _, on ->
+            settings.ftpWholeDevice = on
+            /*
+             * Only meaningful while the server is stopped.
+             *
+             * The root is chosen when the server starts, so flipping this under a running server
+             * changes a value nobody will read again until it is restarted. Said plainly rather than
+             * silently doing nothing.
+             */
+            if (FtpService.live != null) {
+                com.abacus.dualscreen.ui.Feedback.toast(this, getString(R.string.ftp_whole_device_restart))
+            }
+        }
+
         Appearance.apply(this, binding.root, settings, binding.backgroundImage)
     }
 
@@ -191,8 +206,19 @@ class FtpActivity : AppCompatActivity() {
         binding.setupGroup.visibility = if (running) View.GONE else View.VISIBLE
 
         binding.scopeText.text = Storage.describe()
-        binding.grantButton.visibility =
-            if (Storage.hasWholeDeviceAccess()) View.GONE else View.VISIBLE
+
+        /*
+         * The grant button and the switch are two halves of one decision, and only one of them
+         * applies at a time: ask for the permission, or choose what to do with it. Showing both at
+         * once offers a switch that cannot take effect, and showing neither hides the capability.
+         */
+        val granted = Storage.hasWholeDeviceAccess()
+        binding.grantButton.visibility = if (granted) View.GONE else View.VISIBLE
+
+        val scope = if (granted) View.VISIBLE else View.GONE
+        binding.wholeDeviceCheck.visibility = scope
+        binding.wholeDeviceNote.visibility = scope
+        binding.wholeDeviceCheck.isChecked = settings.ftpWholeDevice
 
         showAddress(running)
         showClients(server)

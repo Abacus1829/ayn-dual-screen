@@ -658,6 +658,9 @@
     <string name="tool_dashboard">Dashboard</string>
     <string name="dash_title">Dashboard</string>
     <string name="dash_blurb">What the console is doing right now. Only the readings this device actually reports are shown.</string>
+    <string name="ftp_whole_device">Serve the whole device</string>
+    <string name="ftp_whole_device_detail">Off, the server shares only your shared storage. On, it serves everything this app can read — convenient, and a much bigger thing to leave open on a network you do not control.</string>
+    <string name="ftp_whole_device_restart">Restart the server for this to take effect</string>
     <string name="dash_refresh">Refresh</string>
     <string name="dash_refresh_allow">Allow</string>
     <string name="dash_refresh_refused">The console did not switch to %1$d Hz</string>

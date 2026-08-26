@@ -195,6 +195,32 @@
                         android:layout_marginTop="@dimen/space_small"
                         android:text="@string/ftp_grant"
                         android:visibility="gone" />
+
+                    <!--
+                        The switch that decides what the server actually serves.
+
+                        There has been a "grant all files access" button here for a while and nothing
+                        that used the grant: the setting behind it was read in two places and written
+                        in none, so the server always served shared storage no matter what you
+                        allowed. Granting the permission and seeing no change is worse than not being
+                        offered it.
+                    -->
+                    <CheckBox
+                        android:id="@+id/wholeDeviceCheck"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_small"
+                        android:text="@string/ftp_whole_device"
+                        android:textSize="@dimen/text_detail"
+                        android:visibility="gone" />
+
+                    <TextView
+                        android:id="@+id/wholeDeviceNote"
+                        style="@style/Caption"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/ftp_whole_device_detail"
+                        android:visibility="gone" />
                 </LinearLayout>
 
                 <LinearLayout

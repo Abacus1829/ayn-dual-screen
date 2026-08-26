@@ -387,12 +387,6 @@ class Settings(context: Context) {
         get() = prefs.getInt(KEY_SCRIBBLE_INK, android.graphics.Color.WHITE)
         set(value) = prefs.edit().putInt(KEY_SCRIBBLE_INK, value).apply()
 
-    /** Which tools are pinned to the home screen, as an ordered list of ids. */
-    var pinnedTools: List<String>
-        get() = prefs.getString(KEY_TOOLS, null)?.split(',')?.filter { it.isNotBlank() }
-            ?: Tool.entries.map { it.id }
-        set(value) = prefs.edit().putString(KEY_TOOLS, value.joinToString(",")).apply()
-
     private companion object {
         const val PREFS = "dual_screen"
 
@@ -449,7 +443,6 @@ class Settings(context: Context) {
         const val KEY_NOTE_SORT = "note_sort"
         const val KEY_LAST_PAGE = "last_page"
         const val KEY_AUTO_SWITCH = "auto_switch_game"
-        const val KEY_TOOLS = "tools"
 
         const val KEY_SCRIBBLE_NAME = "scribble_name"
         const val KEY_SCRIBBLE_ROOM = "scribble_room"
