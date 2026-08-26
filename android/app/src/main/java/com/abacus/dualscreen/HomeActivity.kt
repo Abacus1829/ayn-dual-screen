@@ -782,6 +782,11 @@ class HomeActivity : AppCompatActivity() {
                     openTool(tool)
                 }
 
+                // Reachable with the stick and the D-pad, not only with a thumb on the glass. A
+                // LinearLayout with a click listener is clickable and *not* focusable, so before this
+                // the whole grid was invisible to the controller on a console built around one.
+                com.abacus.dualscreen.ui.Focus.reachable(this, accent)
+
                 // Hiding a tool was buried three screens deep in Appearance. Holding the tile itself is
                 // where anyone would reach for it first, so it works there too.
                 setOnLongClickListener {

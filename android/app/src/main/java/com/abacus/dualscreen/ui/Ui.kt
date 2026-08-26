@@ -117,6 +117,7 @@ object Ui {
             }
         }
         Motion.pressable(row, scale = 0.985f)
+        Focus.reachable(row, Appearance.accentOf(settings))
 
         if (glyph.isNotBlank()) {
             row.addView(TextView(activity).apply {
@@ -202,6 +203,7 @@ object Ui {
         // alone is a target you have to aim at.
         row.setOnClickListener { check.toggle() }
         Motion.pressable(row, scale = 0.985f)
+        Focus.reachable(row, Appearance.accentOf(settings))
 
         return row
     }
