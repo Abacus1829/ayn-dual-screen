@@ -7,6 +7,47 @@ time — so they say what the commits show and no more.
 
 ---
 
+## 0.27.0 — 2026-08-26
+
+A whole pass of quality-of-life, most of it found by writing scripts to audit the codebase rather than by me sitting here trying to remember what's broken. That turned out to be a much better idea than my usual approach.
+
+### You could not use the app with the controller
+
+This is the big one and I feel a bit stupid about it.
+
+A button you write in a layout file is reachable with a D-pad automatically. A **box you build in code and give a click listener to** is not. It's clickable, it looks exactly like a button, it responds to your thumb — and the D-pad walks straight past it like it isn't there.
+
+Almost every row and tile in this app is that second thing. The tool grid, the settings rows, your profiles, notes, macros. All of it. Touch-only. On a console with a perfectly good stick sitting right under your thumbs.
+
+Everything's reachable now, with a highlight so you can see where you are. The first press of the stick puts focus somewhere sensible instead of appearing to do nothing. Touch users won't see any of it — no focus ring shows up unless you actually reach for the stick.
+
+### You never found out what an update changed
+
+The release notes showed up in the "do you want to update" popup. Which is *before* you've updated, when they're basically an advert you skim on the way to hitting Yes — and that was the only time they ever appeared.
+
+Now you get them **after** it installs, once. And they're tied to the version they describe, so if you back out at Android's confirmation screen you don't get told about a version you don't have.
+
+### Rearranging your tools
+
+`toolOrder` has been saved and read since the grid was written, with nothing anywhere able to change it. The home screen has been faithfully honouring a setting that literally no screen could set. Appearance → arrows next to each tool. Arrows and not dragging, because dragging a row on a 3.9 inch screen while the list slides around under your finger is miserable.
+
+### 60/120 Hz actually works
+
+Turns out the refresh rate isn't locked away like the fan is — it sits behind the same permission the brightness slider already uses. No adb, no root.
+
+It's on the Dashboard. If you haven't granted the permission there's a button that takes you to grant it. And every switch is checked afterwards — these keys aren't a documented API and a device is free to accept the change and then ignore it, so if it doesn't take, it says so instead of lighting up and lying.
+
+### Bits and pieces
+
+- **FTP "serve the whole device"** — there's been a grant-permission button on that screen for ages with nothing behind it. The setting it needed was read in two places and written in none, so granting it did precisely nothing. There's a switch now.
+- **The Home button rows had explanations** written for them that were never actually shown. They are now.
+- **28 unused strings and a dead setting** deleted.
+- **An ending I broke.** Making the intro hold for 12 seconds quietly broke the last bit of it — one line was checking the wrong clock, so the final bead let go early instead of waiting for the others to settle.
+
+I tried twice to write a test for that last one and it passed both times *with the bug still in*, so I deleted it. A test that passes either way is worse than no test — it just makes you think something's covered.
+
+---
+
 ## 0.26.0 — 2026-08-25
 
 ### The bang at the end of the intro
