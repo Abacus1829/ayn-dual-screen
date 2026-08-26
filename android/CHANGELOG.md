@@ -7,6 +7,38 @@ time — so they say what the commits show and no more.
 
 ---
 
+## 0.26.0 — 2026-08-25
+
+### The bang at the end of the intro
+
+Two full sounds were firing on the same frame. `Feedback.success` plays a
+confirmation chord at nine tenths volume, and then the glass figure played at nine
+tenths on top of it — different keys, both at the top of their range. It was not
+one sound being too loud so much as there being two of them.
+
+The chord is gone. The glass beads stay, at a bit under half volume, because the
+figure already *is* the arrival and announcing an arrival twice is just louder. The
+haptic stays too. The six knocks in the run-up came down as well; at their old level
+they were competing with the thing they are supposed to be leading into.
+
+### Twelve seconds longer
+
+By holding, not by slowing anything down — which matters, because a stretched
+animation plays at half speed and looks broken. The hold already existed to wait on
+the update check, and holding *is* the animation continuing to run: the frame keeps
+rocking, the beads keep knocking about, and the wobble is kept at a floor so it
+never settles into a still picture. There is simply more of the part worth watching.
+
+Full intro goes from about 4.7 seconds to about 16.7. **Only the full one** — the
+short version still plays on the launches in between, because a sixteen-second
+introduction every time you open the app between rounds is how an intro stops being
+nice.
+
+A release that arrives early is remembered and applied when the minimum is up, so a
+fast update check no longer cuts it short. The safety timeout was raised to sit
+beyond the hold rather than firing in the middle of it.
+---
+
 ## 0.25.0 — 2026-08-25
 
 ### It stopped shaking and there's only one Dashboard now

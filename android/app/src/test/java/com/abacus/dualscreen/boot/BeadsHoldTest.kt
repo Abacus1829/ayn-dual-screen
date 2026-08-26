@@ -142,6 +142,38 @@ class BeadsHoldTest {
     }
 
     @Test
+    fun `a twelve second hold is twelve seconds of beads still moving`() {
+        /*
+         * The long intro is long by *holding*, not by slowing anything down.
+         *
+         * That distinction is the whole reason it works: a stretched animation plays at half speed
+         * and looks broken, whereas a held one is the same physics continuing to run. So the thing
+         * worth pinning is that the extra time is spent in free play with the beads actually going
+         * somewhere — not parked on a still frame waiting out a timer.
+         */
+        val beads = Beads()
+        beads.holding = true
+
+        var moved = 0
+        var previous = beads.positionOf(0, 0)
+        var at = 0f
+
+        while (at < 12_000f) {
+            at += 16f
+            beads.advanceTo(at)
+            val now = beads.positionOf(0, 0)
+            if (kotlin.math.abs(now - previous) > 0.0005f) moved++
+            previous = now
+        }
+
+        assertEquals("twelve seconds of holding left free play", Beads.Phase.PLAY, beads.phase)
+        assertTrue(
+            "the bead moved on only $moved of 750 frames, so most of the hold is a still picture",
+            moved > 375,
+        )
+    }
+
+    @Test
     fun `the frame keeps moving while it waits`() {
         /*
          * The reason the hold is not just a paused frame.

@@ -84,6 +84,18 @@ object Feedback {
         sound(view, Sounds.Cue.CONFIRM, 0.9f)
     }
 
+    /**
+     * An arrival that already has its own sound.
+     *
+     * The haptic half of [success], for the one place that plays a cue of its own on the same frame:
+     * the intro, where the glass figure *is* the arrival. Calling success there fired a confirmation
+     * chord underneath it, two full cues in different keys on one moment, which is a bang rather
+     * than a landing.
+     */
+    fun land(view: View?) {
+        buzz(view, HapticFeedbackConstants.CONTEXT_CLICK)
+    }
+
     /** A wooden knock, for something arriving at a stop. Used by the intro. */
     fun knock(view: View?, volume: Float = 1f) {
         sound(view, Sounds.Cue.BEAD, volume)

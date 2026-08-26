@@ -95,8 +95,26 @@ object Boot {
          * on screen, and resolves into the lockup only once [release] is called. That is the whole
          * loading screen: no second view, no spinner, and nothing that has to be dismissed.
          */
-        view.waiting = holdForStartup
-        if (holdForStartup) scheduleTimeout(view)
+        /*
+         * Hold, for startup work and for its own sake.
+         *
+         * The hold already existed to wait on the update check. It turns out to be exactly the knob
+         * for "make the intro longer" as well, because holding *is* the animation continuing to run
+         * — the frame keeps rocking and the beads keep knocking about, with the wobble held at a
+         * floor so it never settles into a still picture. Extending it does not stretch or slow
+         * anything; there is simply more of the part worth watching.
+         *
+         * Only the full version. The short one plays on the launches in between, and a sixteen-second
+         * introduction every time you open the app between rounds is how an intro stops being nice.
+         */
+        val extend = full
+        view.waiting = holdForStartup || extend
+
+        if (view.waiting) {
+            heldSince = System.currentTimeMillis()
+            minimumHold = if (extend) EXTRA_MS else 0L
+            scheduleTimeout(view)
+        }
 
         /*
          * Sound and haptics, driven by the animation rather than scheduled alongside it.
@@ -108,22 +126,28 @@ object Boot {
          * phrase that gets cut off.
          */
         view.onBeadSeated = { index ->
-            Feedback.knock(view, volume = 0.5f + 0.1f * index)
+            // Quieter than they were, and rising less steeply. Six of these land in the run-up to a
+            // figure that is itself made of struck beads; at the old level they were competing with
+            // the thing they are supposed to be leading into.
+            Feedback.knock(view, volume = 0.3f + 0.05f * index)
             if (index == 0) Feedback.tap(view)
         }
 
         view.onLanded = {
-            Feedback.success(view)
-
             /*
-             * Played on every intro, not only the long one.
+             * One sound at the arrival, and only the haptic beside it.
              *
-             * It used to be gated on `full`, which meant that after the first launch of a version
-             * the sound was simply gone — and "the intro sound does not work" is exactly what that
-             * looks like from the outside, on every launch but one. The figure is short enough to
-             * sit under the short version too.
+             * This used to call Feedback.success, which plays a confirmation chord at nine tenths
+             * volume — *and* then played the intro figure at nine tenths on the same frame. Two full
+             * cues stacked on one moment, in different keys, both at the top of their range. That is
+             * the bang at the end of the animation, and it was not the figure being too loud so much
+             * as there being two of them.
+             *
+             * The haptic stays, because a landing you can feel is worth having. The chord goes: the
+             * figure already is the arrival, and announcing an arrival twice is just louder.
              */
-            Sounds.play(activity, Sounds.Cue.INTRO, volume = 0.9f)
+            Feedback.land(view)
+            Sounds.play(activity, Sounds.Cue.INTRO, volume = 0.45f)
         }
 
         view.setOnClickListener {
@@ -142,8 +166,30 @@ object Boot {
      * because the thing that calls it is a network request and those arrive whenever they arrive.
      */
     fun release(view: AbacusBootView) {
+        /*
+         * Startup work finishing does not necessarily end the hold.
+         *
+         * On a good connection the update check answers in a couple of hundred milliseconds, which
+         * is long before the animation has shown anybody anything. So a release that arrives early
+         * is remembered and applied when the minimum is up, rather than cutting the intro short the
+         * moment the network happens to be quick.
+         */
+        val waited = System.currentTimeMillis() - heldSince
+        val remaining = minimumHold - waited
+
+        if (remaining > 0L) {
+            timeout?.let { handler.removeCallbacks(it) }
+            timeout = Runnable { finishHold(view) }.also { handler.postDelayed(it, remaining) }
+            return
+        }
+
+        finishHold(view)
+    }
+
+    private fun finishHold(view: AbacusBootView) {
         timeout?.let { handler.removeCallbacks(it) }
         timeout = null
+        minimumHold = 0L
         view.waiting = false
     }
 
@@ -170,8 +216,17 @@ object Boot {
      */
     private fun scheduleTimeout(view: AbacusBootView) {
         timeout?.let { handler.removeCallbacks(it) }
-        timeout = Runnable { view.waiting = false }.also { handler.postDelayed(it, HOLD_LIMIT_MS) }
+        // Whichever is longer. The escape hatch exists for a network that never answers, and it must
+        // not fire before an intro that is deliberately long has finished being long.
+        val limit = maxOf(HOLD_LIMIT_MS, minimumHold + 2_000L)
+        timeout = Runnable { finishHold(view) }.also { handler.postDelayed(it, limit) }
     }
+
+    private var heldSince = 0L
+    private var minimumHold = 0L
+
+    /** How much longer the full introduction runs than its own animation needs. */
+    private const val EXTRA_MS = 12_000L
 
     private const val HOLD_LIMIT_MS = 8_000L
 
