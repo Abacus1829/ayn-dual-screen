@@ -105,6 +105,10 @@ class MacroEditActivity : AppCompatActivity() {
             setOnClickListener { editStep(index) }
         }
 
+        // Reachable with the stick, not only with a thumb: a LinearLayout with a click
+        // listener is clickable and not focusable, so a D-pad walks straight past it.
+        com.abacus.dualscreen.ui.Focus.reachable(row, Appearance.accentOf(settings))
+
         row.addView(TextView(this).apply {
             text = "${index + 1}"
             setTextColor(getColor(R.color.text_faint))

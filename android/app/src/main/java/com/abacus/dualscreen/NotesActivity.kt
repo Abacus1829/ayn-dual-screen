@@ -154,6 +154,10 @@ class NotesActivity : AppCompatActivity() {
             setOnLongClickListener { actions(note); true }
         }
 
+        // Reachable with the stick, not only with a thumb: a LinearLayout with a click
+        // listener is clickable and not focusable, so a D-pad walks straight past it.
+        com.abacus.dualscreen.ui.Focus.reachable(row, Appearance.accentOf(settings))
+
         val column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
