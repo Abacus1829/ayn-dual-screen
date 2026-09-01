@@ -7,6 +7,40 @@ time — so they say what the commits show and no more.
 
 ---
 
+## 0.28.0-beta.2 — 2026-08-26 (beta)
+
+## "It doesn't work without internet"
+
+It did work. What broke was what it *said*.
+
+This app talks to a game on your own network. The only thing it ever needs the internet for is checking whether there's a new version of itself. But here's what a launch with no connection looked like:
+
+1. Update check fails instantly — no connection, fine, expected
+2. The intro puts **"No connection"** under the logo
+3. And then holds that message there for the full twelve seconds of the animation
+
+Nothing was broken. There was also no way on earth for anyone watching that to know it. Twelve seconds of a spinning logo telling you there's no connection is the app saying "I need the internet and I can't find it."
+
+**Offline now says nothing at all.** Because it's not a problem. A check that fails for some *other* reason still gets a quiet mention, since that one might actually be worth doing something about.
+
+## Also, the launch check was too patient
+
+`NET_CAPABILITY_INTERNET` means "this network is supposed to reach the internet", not "it does". Router with no line, hotspot with no data, your PC's own ad-hoc network — the check passes and then the request just sits there for the full fifteen second timeout.
+
+Fifteen seconds is fine if you tapped a button and are watching a spinner. It's a rubbish thing to do to someone who just opened the app. **Four seconds for the automatic check now, fifteen for one you asked for.**
+
+Small note on that fix: it compiled first time with the new timeout accepted and then completely ignored — the value stopped at the function signature and never reached the actual request. Would have shipped as a fix that changed nothing. Checked rather than trusting the green build.
+
+## Everything from beta.1 is still here
+
+Control Center, settings as five categories, working controller navigation, what's-new after updates, tool reordering, 60/120 Hz. See the previous beta if you missed it.
+
+## Known limitations
+
+Unchanged from beta.1: nothing has run on a Thor, the Home button is still unexplained, no GPU ring unless your device exposes the clock, and fan/FPS/quick-toggles remain out of reach.
+
+---
+
 ## 0.28.0-beta.1 — 2026-08-26 (beta)
 
 > **This is a beta.** You'll only be offered it if you've switched to the beta channel

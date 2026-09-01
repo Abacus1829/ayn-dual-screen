@@ -46,8 +46,8 @@ android {
          * lines before every test is how a wrong number eventually ships. Like `testMinSdk` above,
          * a build made this way is NOT shippable — it claims to be a version it is not.
          */
-        versionCode = (project.findProperty("testVersionCode") as String?)?.toInt() ?: 29
-        versionName = (project.findProperty("testVersionName") as String?) ?: "0.28.0-beta.1"
+        versionCode = (project.findProperty("testVersionCode") as String?)?.toInt() ?: 30
+        versionName = (project.findProperty("testVersionName") as String?) ?: "0.28.0-beta.2"
     }
 
     signingConfigs {
