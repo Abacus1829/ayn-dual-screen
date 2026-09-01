@@ -39,7 +39,16 @@ object GitHub {
      * 304, which GitHub does not count against the rate limit — the single most effective thing an
      * app that checks on every launch can do to stay under it.
      */
-    fun releases(repo: GitHubRepo, count: Int = PAGE, etag: String? = null): Answer {
+    /**
+     * @param connectMs how long to wait for the connection itself. The default suits somebody who
+     *   pressed a button and is watching; a check nobody asked for should pass something shorter.
+     */
+    fun releases(
+        repo: GitHubRepo,
+        count: Int = PAGE,
+        etag: String? = null,
+        connectMs: Int = Http.DEFAULT_CONNECT_MS,
+    ): Answer {
         val headers = buildMap {
             put("Accept", "application/vnd.github+json")
             put("X-GitHub-Api-Version", "2022-11-28")
@@ -47,7 +56,7 @@ object GitHub {
         }
 
         val connection = try {
-            Http.get(repo.releasesUrl(count), headers)
+            Http.get(repo.releasesUrl(count), headers, connectMs = connectMs)
         } catch (error: Exception) {
             return Answer.Broken(Http.classify(error))
         }

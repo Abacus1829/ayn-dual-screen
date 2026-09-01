@@ -22,15 +22,26 @@ object UpdateChecker {
         data class Broken(val failure: Failure) : Outcome
     }
 
+    /**
+     * @param connectMs how long to wait for a connection before giving up.
+     *
+     * The automatic check at launch passes something short. `NET_CAPABILITY_INTERNET` means "this
+     * network is meant to reach the internet", not "it does" — a router with no line, a phone
+     * hotspot with no data, the PC's own ad-hoc network — and on all of those the capability check
+     * passes and the request then sits there until it times out. Fifteen seconds of that is fine for
+     * somebody who pressed a button and is watching; it is a poor thing to do to somebody who merely
+     * opened the app.
+     */
     fun check(
         context: Context,
         source: UpdateSource,
         channel: Channel,
         etag: String? = null,
+        connectMs: Int = Http.DEFAULT_CONNECT_MS,
     ): Outcome {
         if (!Http.online(context)) return Outcome.Broken(Failure(UpdateError.OFFLINE))
 
-        val answer = when (val reply = GitHub.releases(source.repo, etag = etag)) {
+        val answer = when (val reply = GitHub.releases(source.repo, etag = etag, connectMs = connectMs)) {
             is GitHub.Answer.Broken -> return Outcome.Broken(reply.failure)
 
             // Nothing has been published since the last look. The caller keeps what it had.

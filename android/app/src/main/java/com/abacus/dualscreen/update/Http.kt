@@ -37,7 +37,7 @@ internal object Http {
     fun get(
         url: String,
         headers: Map<String, String> = emptyMap(),
-        connectMs: Int = 15_000,
+        connectMs: Int = DEFAULT_CONNECT_MS,
         readMs: Int = 30_000,
     ): HttpURLConnection {
         var target = url
@@ -103,6 +103,18 @@ internal object Http {
         val capabilities = manager.getNetworkCapabilities(network) ?: return false
         capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }.getOrDefault(true)  // if the system will not say, try the request rather than refusing
+
+    /** What somebody who pressed a button and is watching will put up with. */
+    const val DEFAULT_CONNECT_MS = 15_000
+
+    /**
+     * What somebody who merely opened the app will put up with.
+     *
+     * A launch check is speculative — nobody asked for it and nothing waits on the answer — so it
+     * should give up quickly on a network that is not going to reply. Four seconds is comfortably
+     * longer than a working connection needs and comfortably shorter than the introduction.
+     */
+    const val STARTUP_CONNECT_MS = 4_000
 
     /** Turn a thrown network exception into something with a sentence attached. */
     fun classify(error: Throwable): Failure = when (error) {

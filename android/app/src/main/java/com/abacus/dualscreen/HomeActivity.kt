@@ -175,7 +175,23 @@ class HomeActivity : AppCompatActivity() {
             is com.abacus.dualscreen.update.UpdateManager.State.Ready -> boot.release(view)
 
             is com.abacus.dualscreen.update.UpdateManager.State.Failed -> {
-                boot.status(view, getString(R.string.boot_status_offline))
+                /*
+                 * Being offline is a normal state for this app, not a fault.
+                 *
+                 * It mirrors a game on your own network and needs no internet for anything except
+                 * looking for its own updates. So a launch with no connection used to put "No
+                 * connection" under the logo and then hold it there for the whole introduction —
+                 * which reads, entirely reasonably, as "this app needs the internet and cannot find
+                 * it". Somebody watching that concludes the app does not work.
+                 *
+                 * Offline therefore says nothing at all. A check that failed for some *other* reason
+                 * is worth a quiet word, because that one might actually be worth acting on, and it
+                 * is reported on the home screen's chip either way.
+                 */
+                val offline = state.failure.error ==
+                    com.abacus.dualscreen.update.UpdateError.OFFLINE
+
+                if (!offline) boot.status(view, getString(R.string.boot_status_no_update))
                 boot.release(view)
             }
         }

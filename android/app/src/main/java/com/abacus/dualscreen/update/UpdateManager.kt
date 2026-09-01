@@ -135,7 +135,9 @@ class UpdateManager private constructor(private val context: Context) {
         publish(State.Checking)
 
         start {
-            val outcome = UpdateChecker.check(context, source, prefs.channel, prefs.etag)
+            // The automatic check gives up quickly; a check somebody asked for waits properly.
+            val patience = if (manual) Http.DEFAULT_CONNECT_MS else Http.STARTUP_CONNECT_MS
+            val outcome = UpdateChecker.check(context, source, prefs.channel, prefs.etag, patience)
             prefs.lastCheck = System.currentTimeMillis()
 
             when (outcome) {
