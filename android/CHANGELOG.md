@@ -7,6 +7,35 @@ time — so they say what the commits show and no more.
 
 ---
 
+## 0.28.0-beta.4 — 2026-09-01 (beta)
+
+## The loud noise at the end — actually gone this time
+
+Second time you've reported this, and it turned out to be a completely different cause from the first.
+
+The collision solver runs **six passes every four milliseconds** — roughly two dozen times per frame you see. And a pair of beads that's touching gets *resolved* on every single one of those passes. I was treating each one as a fresh strike, so one collision fired dozens of sounds.
+
+The seat is the worst possible place for that to happen: a spring holds every bead pressed against its neighbour there, so it just fired continuously. That was the noise.
+
+A strike is a **transition** now — apart, then touching. Held contact is silence, which is also what two beads resting against each other actually sound like.
+
+I counted it rather than trusting my ears, since I can't hear it from here:
+
+| | sounds |
+|---|---|
+| whole introduction | **10** |
+| the seat and eject (the ending) | **0** |
+
+So the ending is completely silent now. Every clink left is during the free-play part where the beads are genuinely knocking into each other.
+
+Tests pin all three cases, and I checked they actually catch it by putting the old behaviour back — they fail.
+
+## Known limitations
+
+Unchanged: nothing has run on a Thor, the Home button is still unexplained, no GPU ring unless your device exposes the clock, fan/FPS/quick-toggles remain out of reach.
+
+---
+
 ## 0.28.0-beta.3 — 2026-08-26 (beta)
 
 ## Mod versions and links, in the app
