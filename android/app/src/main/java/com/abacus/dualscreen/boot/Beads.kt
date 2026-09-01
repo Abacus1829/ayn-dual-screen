@@ -86,6 +86,20 @@ internal class Beads {
     var onContact: ((strength: Float) -> Unit)? = null
 
     /**
+     * Which neighbouring pairs are currently in contact.
+     *
+     * The contact solver runs six passes per four-millisecond sub-step — around two dozen times per
+     * drawn frame — and a pair that is touching is *resolved* on every one of them. Reporting each of
+     * those as a strike meant one collision produced dozens of sounds, and the seat, where the spring
+     * holds every bead pressed against its neighbour, produced a continuous roar. That was the noise
+     * at the end of the animation.
+     *
+     * A strike is a *transition*: apart, then touching. Held contact is silence, which is also what
+     * two beads resting against each other sound like.
+     */
+    private val touching = Array(RODS) { BooleanArray(PER_ROD - 1) }
+
+    /**
      * Stay in free play rather than moving on to seat and eject.
      *
      * This is the loading state, and it is the *same* simulation rather than a second animation: the
@@ -259,7 +273,13 @@ internal class Beads {
                     val a = beads[i]
                     val b = beads[i + 1]
                     val gap = b.x - a.x
-                    if (gap >= 2 * BEAD_R) continue
+                    if (gap >= 2 * BEAD_R) {
+                        // Far enough apart to be able to strike again. The margin stops a pair that
+                        // is resting exactly at the contact distance from flickering in and out and
+                        // chattering.
+                        if (gap > 2 * BEAD_R + CONTACT_RELEASE) touching[rod][i] = false
+                        continue
+                    }
 
                     val push = (2 * BEAD_R - gap) / 2f
                     a.x -= push
@@ -277,14 +297,15 @@ internal class Beads {
                     b.v = bv
 
                     /*
-                     * A contact worth hearing.
+                     * One sound per strike, on the frame the beads meet.
                      *
-                     * Two beads resting against each other under gravity are technically colliding
-                     * on every one of the contact passes, thousands of times a second, and sounding
-                     * all of those would be a buzz rather than a clink. Only a genuine strike — one
-                     * with real closing speed behind it — is reported.
+                     * Two conditions, and both are needed. The pair must not have *already* been
+                     * touching — otherwise the solver's own passes each count as a fresh collision —
+                     * and there has to be real closing speed behind it, or the stack merely settling
+                     * under gravity would tick.
                      */
-                    if (closing > CONTACT_THRESHOLD) {
+                    if (!touching[rod][i] && closing > CONTACT_THRESHOLD) {
+                        touching[rod][i] = true
                         onContact?.invoke((closing / CONTACT_LOUD).coerceIn(0.15f, 1f))
                     }
 
@@ -405,6 +426,9 @@ internal class Beads {
 
         /** The closing speed that counts as a full-strength strike. */
         private const val CONTACT_LOUD = 1.6f
+
+        /** How far a pair must separate before it can strike again, as a fraction of a rod. */
+        private const val CONTACT_RELEASE = 0.012f
 
         private const val SPIN_MS = 1_200f
         private const val TURNS = 1.5f
