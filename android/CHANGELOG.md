@@ -7,6 +7,75 @@ time — so they say what the commits show and no more.
 
 ---
 
+## 0.28.0 — 2026-09-01
+
+The beta line promoted unchanged. Everything below in the four betas is in this
+release; the notes are consolidated here.
+
+Four betas' worth of work, promoted. If you've been on the beta channel you already have all of this.
+
+## Quick controls, from anywhere
+
+There's a handle on the right edge of every screen. Tap it and a panel comes up over whatever you were doing:
+
+- **Volume and brightness** as live sliders
+- **Keep the screen awake**, applied to the screen you're looking at, immediately
+- One tap to the **keyboard, notes, macros, dashboard**, or home
+
+It's a panel, not a screen — dismiss it and you're exactly where you were. It's on 22 screens; the game surfaces and full-screen tools deliberately don't get one, since a handle floating over the thing you opened would just be in the way.
+
+Brightness works even without the system permission — it dims the window instead, which is what your eyes are actually judging.
+
+Writing a note, building a macro, moving files: those are still proper screens. A panel you're meant to dismiss is a terrible place to work.
+
+## Settings: 5 categories instead of 32 rows in a trench
+
+The groups already existed as headers — you just had to scroll past all of them. Now they're real destinations, and each renames the header so you know where you are. Nothing was cut or moved: 33 rows before, 33 after.
+
+## The controller works
+
+It genuinely never did. A button written in a layout is D-pad reachable automatically; a **box built in code with a click listener is not**. That's basically every row and tile in this app — tool grid, settings, profiles, notes, macros. All touch-only, on a console with a stick on it.
+
+All reachable now, with a highlight. The first press of the stick lands somewhere sensible. Touch users see no focus ring at all.
+
+## Mod versions and download links
+
+**Settings → System → Check for updates** lists every mod on the newest release with its version. Tap to download. A **★ NEW** appears when a mod has changed since you last looked.
+
+Being straight about that badge: nothing tells the app which mod version is on your PC, so "you need to update" would be invented. "This changed since you last looked" is true and is the actual question.
+
+## The intro
+
+Twelve seconds longer, by *holding* rather than slowing anything down — the same physics keeps running, so there's simply more of the part worth watching. Full intro only; the short one still plays on launches in between.
+
+**And it's scored by its own physics.** It used to have three sounds firing on a timer whether or not anything was happening on screen. Now the simulation reports actual collisions and each is one glass clink, pitched to the impact. Ten across the whole intro. The ending is silent.
+
+## Offline is a normal launch
+
+It used to fail its update check, put "No connection" under the logo, and hold that there for the whole animation. Nothing was broken and there was no way to know that. Offline now says nothing, and the launch check gives up in four seconds instead of fifteen.
+
+## Everything else
+
+- What changed after an update, shown once, after it installs
+- **Rearrange your tools** — that setting has been saved and read since forever with nothing able to set it
+- **60/120 Hz** on the Dashboard, behind the permission the brightness slider already uses
+- **FTP "serve the whole device"** — there'd been a grant button there for ages with nothing behind it
+- The dashboard is its own screen and stopped vanishing
+- The touchscreen stopped shaking when held
+- Temperature reads the CPU zones, not a power regulator that idles at 50°C
+- 28 dead strings, a dead setting, a dead drawable
+
+## Known limitations
+
+- **None of this has run on an AYN Thor.** It builds, lints and passes 84 tests on a desk. That's the whole claim.
+- **The Home button may still not work** and I don't know why. Developer → Copy info tells me which of five reasons it is — send it over.
+- **No GPU ring** unless your device exposes its clock. Same report answers that.
+- **Fan control, real FPS, the eight quick toggles** are absent and will stay absent. They're vendor driver calls a sideloaded app cannot make.
+- Notes and macros aren't game-specific yet.
+- The session concept — remembering game, connection, theme and layout together — isn't built.
+
+---
+
 ## 0.28.0-beta.4 — 2026-09-01 (beta)
 
 ## The loud noise at the end — actually gone this time
