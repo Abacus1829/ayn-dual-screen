@@ -53,7 +53,6 @@ class DashboardActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         Appearance.apply(this, binding.root, settings, binding.backgroundImage)
-        com.abacus.dualscreen.control.ControlCenter.attach(this, settings)
 
         // Straight away rather than after the first interval: a dashboard that opens empty and fills
         // in two seconds later reads as broken, however briefly.

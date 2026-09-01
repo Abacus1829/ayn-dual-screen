@@ -129,6 +129,17 @@ class UpdateManager private constructor(private val context: Context) {
         check(manual = false)
     }
 
+    /**
+     * Note the newest release, so the mod list has something to read even when nothing is available.
+     *
+     * Blanks are ignored rather than written: a 304 carries no release, and overwriting a good tag
+     * with an empty one would make the mod list disappear on the second check of the day.
+     */
+    private fun remember(tag: String?, title: String?) {
+        if (!tag.isNullOrBlank()) prefs.latestTag = tag
+        if (!title.isNullOrBlank()) prefs.latestTitle = title
+    }
+
     /** The button in Settings. Always asks, and always reports what happened. */
     fun checkNow() = check(manual = true)
 
@@ -147,11 +158,16 @@ class UpdateManager private constructor(private val context: Context) {
                 is UpdateChecker.Outcome.Available -> {
                     prefs.etag = outcome.etag
                     prefs.cached = outcome.update
+                    remember(outcome.update.tag, outcome.update.title)
                     publish(State.Available(outcome.update))
                 }
 
                 is UpdateChecker.Outcome.UpToDate -> {
                     prefs.etag = outcome.etag ?: prefs.etag
+
+                    // Being current is the *most* likely moment for somebody to be asking whether a
+                    // mod has moved on, so this is exactly where the release has to be remembered.
+                    remember(outcome.tag, outcome.title)
 
                     /*
                      * A 304 says "nothing published since you last looked", not "you are current":

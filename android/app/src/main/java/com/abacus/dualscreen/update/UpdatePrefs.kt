@@ -69,6 +69,21 @@ class UpdatePrefs(context: Context, private val sourceId: String = "app") {
      * version is installed on the PC, but the app does know what it last showed you, and "this is
      * newer than the last one you saw" is both true and the thing worth flagging.
      */
+    /**
+     * The newest release this device has heard about: its tag and its title.
+     *
+     * Kept separately from [cached], which only ever holds an update that is *actually available*
+     * and is cleared the moment the app is current. The mod list needs neither of those things — it
+     * needs the newest release, whether or not the app itself has anything to do about it.
+     */
+    var latestTag: String
+        get() = prefs.getString(key("latest_tag"), "").orEmpty()
+        set(value) = prefs.edit().putString(key("latest_tag"), value).apply()
+
+    var latestTitle: String
+        get() = prefs.getString(key("latest_title"), "").orEmpty()
+        set(value) = prefs.edit().putString(key("latest_title"), value).apply()
+
     var seenMods: Map<String, String>
         get() = prefs.getStringSet(key("seen_mods"), emptySet()).orEmpty()
             .mapNotNull { entry ->

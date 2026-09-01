@@ -648,13 +648,6 @@
     <string name="update_mods_new">NEW</string>
     <string name="update_mods_none">No version listed</string>
     <string name="update_mods_open_failed">Could not open a browser for that link</string>
-    <string name="control_title">Quick controls</string>
-    <string name="control_open">Open quick controls</string>
-    <string name="control_volume">Volume</string>
-    <string name="control_brightness">Brightness</string>
-    <string name="control_awake">Keep the screen awake</string>
-    <string name="control_shortcuts">Go to</string>
-    <string name="control_home">Home</string>
     <string name="tool_controls">Controls</string>
     <string name="tool_dashboard">Dashboard</string>
     <string name="dash_title">Dashboard</string>

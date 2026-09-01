@@ -100,7 +100,6 @@ class UpdateActivity : AppCompatActivity() {
 
         Appearance.apply(this, binding.root, settings, binding.backgroundImage)
 
-        com.abacus.dualscreen.control.ControlCenter.attach(this, settings)
         binding.progressBar.progressTintList =
             ColorStateList.valueOf(Appearance.accentOf(settings))
 
@@ -146,10 +145,20 @@ class UpdateActivity : AppCompatActivity() {
      * since you last looked" is true, and is the question somebody actually has.
      */
     private fun showMods() {
-        val cached = updates.prefs.cached
-        val mods = cached?.let {
-            ModCatalog.of(updates.repo, it.tag, it.title)
-        }.orEmpty()
+        /*
+         * From the newest release, not from a pending update.
+         *
+         * These were read off `prefs.cached`, which only holds an update that is actually available
+         * and is cleared as soon as the app is current — so the mod list appeared only for people
+         * who happened to be out of date, and vanished the moment they updated. Which is backwards:
+         * somebody running the newest app is the most likely person to be asking whether a mod has
+         * moved on.
+         */
+        val mods = ModCatalog.of(
+            updates.repo,
+            updates.prefs.latestTag,
+            updates.prefs.latestTitle,
+        )
 
         binding.modsCard.visibility = if (mods.isEmpty()) View.GONE else View.VISIBLE
         if (mods.isEmpty()) return

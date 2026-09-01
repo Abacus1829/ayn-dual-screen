@@ -72,7 +72,6 @@ class NotesActivity : AppCompatActivity() {
 
         buildSortSpinner()
         Appearance.apply(this, binding.root, settings, binding.backgroundImage)
-        com.abacus.dualscreen.control.ControlCenter.attach(this, settings)
     }
 
     override fun onResume() {

@@ -585,7 +585,6 @@ class HomeActivity : AppCompatActivity() {
         // appearance may have been changed in the Appearance screen and we've come back: the grid and the
         // mode buttons are drawn in code, so they need rebuilding rather than just repainting
         Appearance.apply(this, binding.root, settings, binding.backgroundImage)
-        com.abacus.dualscreen.control.ControlCenter.attach(this, settings)
         binding.accentBar.setBackgroundColor(Appearance.accentOf(settings))
         maybeAutoStartFtp()
         buildTools()

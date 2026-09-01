@@ -17,7 +17,21 @@ object UpdateChecker {
         data class Available(val update: Update, val etag: String?) : Outcome
 
         /** Nothing newer. [latest] is what was found, for a screen that wants to say so. */
-        data class UpToDate(val latest: Version?, val etag: String?) : Outcome
+        /**
+         * @param tag the newest release's tag, and [title] its title, when this check actually saw
+         *   one. Both are null after a 304, where by definition nothing new was fetched.
+         *
+         * These are carried even though there is no update, because the release is where the *mod*
+         * versions live. Reporting them only alongside an app update meant the mod list existed
+         * solely for people who happened to be out of date, which is exactly backwards: somebody
+         * running the newest app is the most likely person to be checking whether a mod has moved.
+         */
+        data class UpToDate(
+            val latest: Version?,
+            val etag: String?,
+            val tag: String? = null,
+            val title: String? = null,
+        ) : Outcome
 
         data class Broken(val failure: Failure) : Outcome
     }
@@ -90,7 +104,7 @@ object UpdateChecker {
             if (!channel.accepts(version)) continue
 
             if (installed != null && version <= installed)
-                return Outcome.UpToDate(version, newEtag)
+                return Outcome.UpToDate(version, newEtag, release.tag, release.title)
 
             /*
              * The same bytes we are already running.
@@ -102,7 +116,7 @@ object UpdateChecker {
              */
             val expected = manifest?.sha256 ?: payload.sha256
             if (expected != null && source is AppSource && expected == source.installedFingerprint())
-                return Outcome.UpToDate(installed, newEtag)
+                return Outcome.UpToDate(installed, newEtag, release.tag, release.title)
 
             return Outcome.Available(
                 Update(

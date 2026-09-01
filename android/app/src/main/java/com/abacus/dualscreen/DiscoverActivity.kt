@@ -51,7 +51,6 @@ class DiscoverActivity : AppCompatActivity() {
 
         Appearance.apply(this, binding.root, settings, binding.backgroundImage)
 
-        com.abacus.dualscreen.control.ControlCenter.attach(this, settings)
     }
 
     /** Mod defaults and whatever the saved profiles use, without duplicates. */

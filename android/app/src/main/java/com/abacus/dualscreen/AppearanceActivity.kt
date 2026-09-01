@@ -407,7 +407,6 @@ class AppearanceActivity : AppCompatActivity() {
     /** Re-apply to this very screen, so the settings page is its own preview. */
     private fun refresh() {
         Appearance.apply(this, binding.root, settings, binding.backgroundImage)
-        com.abacus.dualscreen.control.ControlCenter.attach(this, settings)
 
         val accent = Appearance.accentOf(settings)
         binding.previewBar.setBackgroundColor(accent)

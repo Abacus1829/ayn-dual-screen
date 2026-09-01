@@ -77,7 +77,6 @@ class MacrosActivity : AppCompatActivity() {
         buildProfiles()
         buildList()
         Appearance.apply(this, binding.root, settings, binding.backgroundImage)
-        com.abacus.dualscreen.control.ControlCenter.attach(this, settings)
 
         /*
          * Opened straight onto one button, from the layout editor.
