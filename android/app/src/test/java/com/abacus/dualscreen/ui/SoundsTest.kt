@@ -75,24 +75,29 @@ class SoundsTest {
     }
 
     @Test
-    fun `interface cues are short and the intro is not`() {
+    fun `every cue is short enough to be feedback`() {
         val rate = 44_100
 
         for (cue in Sounds.Cue.entries) {
             val ms = Sounds.render(cue).size * 1000 / rate
 
-            if (cue == Sounds.Cue.INTRO) {
-                // Long enough to be a phrase, short enough to finish inside the animation it plays
-                // under — the intro is about two and a half seconds and the last part of it is
-                // deliberately quiet.
-                assertTrue("the intro is $ms ms, which will be cut off", ms in 400..2_000)
-            } else {
-                assertTrue(
-                    "$cue is $ms ms. Anything past a fifth of a second stops being feedback and " +
-                        "starts being a noise you are waiting out.",
-                    ms in 20..260,
-                )
-            }
+            /*
+             * Every cue, with no exception any more.
+             *
+             * There used to be one: INTRO was a second-long phrase played over the animation. It is
+             * gone, and with it the idea that this app has a piece of music in it — the introduction
+             * is scored by its own physics now, one clink per contact. So there is nothing left here
+             * that is allowed to be long.
+             *
+             * BEAD is the longest of them because a struck glass bead rings, and a ring cut off at a
+             * fifth of a second is a click. It still has to end well inside the gap between two
+             * contacts or a busy moment turns into a smear.
+             */
+            assertTrue(
+                "$cue is $ms ms. Anything past a third of a second stops being feedback and " +
+                    "starts being a noise you are waiting out.",
+                ms in 20..330,
+            )
         }
     }
 
@@ -112,7 +117,7 @@ class SoundsTest {
     fun `rendering is deterministic, including the noisy one`() {
         // The knock uses a random source. It is seeded, so it is the same knock every time rather
         // than a slightly different one per launch — which would be audible as inconsistency.
-        for (cue in listOf(Sounds.Cue.BEAD, Sounds.Cue.INTRO)) {
+        for (cue in listOf(Sounds.Cue.BEAD)) {
             val first = Sounds.render(cue)
             val second = Sounds.render(cue)
             assertTrue("$cue changed between renders", first.contentEquals(second))
@@ -148,8 +153,17 @@ class SoundsTest {
 
     @Test
     fun `the palette has not silently lost a cue`() {
-        // A cue removed from the enum is a call site that stops making a sound with no compile
-        // error anywhere, because everything goes through Feedback.
-        assertEquals(9, Sounds.Cue.entries.size)
+        /*
+         * A cue removed from the enum is a call site that stops making a sound with no compile error
+         * anywhere, because everything goes through Feedback.
+         *
+         * It went from nine to eight deliberately: INTRO, the phrase that played over the boot
+         * animation, was removed rather than quietly stopping — the introduction is scored by its own
+         * physics now, one clink per bead contact, and a tune on top of that is a soundtrack.
+         *
+         * This test caught that change, which is exactly its job. The number is updated because the
+         * removal was intended; if it ever fails again the first question is whether it was.
+         */
+        assertEquals(8, Sounds.Cue.entries.size)
     }
 }

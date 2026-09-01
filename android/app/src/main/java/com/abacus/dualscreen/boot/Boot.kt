@@ -125,29 +125,26 @@ object Boot {
          * and only the arrival plays: a two-second musical phrase over a one-second animation is a
          * phrase that gets cut off.
          */
-        view.onBeadSeated = { index ->
-            // Quieter than they were, and rising less steeply. Six of these land in the run-up to a
-            // figure that is itself made of struck beads; at the old level they were competing with
-            // the thing they are supposed to be leading into.
-            Feedback.knock(view, volume = 0.3f + 0.05f * index)
-            if (index == 0) Feedback.tap(view)
+        /*
+         * The intro has one sound now: beads hitting each other.
+         *
+         * It used to have three — a knock as each bead arrived at its stop, a tap on the first, and a
+         * five-note glass figure over the top as the mark landed. All of it played whether or not
+         * anything was happening on screen at that moment, which is the giveaway: it was a soundtrack
+         * rather than the sound of the thing.
+         *
+         * The simulation now says when two beads genuinely strike and how hard, and each of those is
+         * one clink, pitched and levelled to the impact. When the beads are only drifting it is
+         * silent, because drifting beads do not make a noise.
+         */
+        view.onBeadContact = { strength ->
+            Feedback.knock(view, volume = 0.14f + 0.30f * strength)
         }
 
         view.onLanded = {
-            /*
-             * One sound at the arrival, and only the haptic beside it.
-             *
-             * This used to call Feedback.success, which plays a confirmation chord at nine tenths
-             * volume — *and* then played the intro figure at nine tenths on the same frame. Two full
-             * cues stacked on one moment, in different keys, both at the top of their range. That is
-             * the bang at the end of the animation, and it was not the figure being too loud so much
-             * as there being two of them.
-             *
-             * The haptic stays, because a landing you can feel is worth having. The chord goes: the
-             * figure already is the arrival, and announcing an arrival twice is just louder.
-             */
+            // Felt, not heard. The clinks are the sound of this animation; a chord on top of them
+            // would be the soundtrack coming back.
             Feedback.land(view)
-            Sounds.play(activity, Sounds.Cue.INTRO, volume = 0.45f)
         }
 
         view.setOnClickListener {

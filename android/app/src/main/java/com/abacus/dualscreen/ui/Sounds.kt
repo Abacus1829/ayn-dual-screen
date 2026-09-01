@@ -65,11 +65,16 @@ object Sounds {
         /** Something refused. Low and flat rather than harsh; a buzzer is a punishment. */
         ERROR,
 
-        /** A bead arriving at its stop in the intro: a wooden knock, not a tone. */
+        /**
+         * Two glass beads striking each other.
+         *
+         * Not a note and not a wooden knock. It is the sound the intro makes now, and the only sound
+         * the intro makes: one of these on each genuine contact, pitched and levelled by how hard the
+         * beads actually hit. Everything else that used to play over the animation is gone.
+         */
         BEAD,
 
-        /** The intro's rising figure, played once as the mark lands. */
-        INTRO,
+
     }
 
     private const val TAG = "AynSound"
@@ -139,7 +144,7 @@ object Sounds {
     fun warmUp() {
         Thread {
             runCatching {
-                for (cue in listOf(Cue.INTRO, Cue.BEAD, Cue.TAP, Cue.CONFIRM))
+                for (cue in listOf(Cue.BEAD, Cue.TAP, Cue.CONFIRM))
                     cache.getOrPut(cue) { render(cue) }
             }.onFailure { Log.w(TAG, "warm-up failed", it) }
         }.apply {
@@ -161,10 +166,10 @@ object Sounds {
      * never expressed an opinion. What actually matters is whether the stream this plays on is
      * turned up, so that is what is checked.
      *
-     * **The system's touch-sounds switch no longer silences [Cue.INTRO].** It still silences the
+     * **The system's touch-sounds switch no longer silences [Cue.BEAD].** It still silences the
      * small per-press cues, which is what it is for and what somebody who turned it off was asking
      * for. But the introduction is a thing this app's own switch opted into deliberately, and on a
-     * device where touch sounds ship off by default, honouring it there meant the branded moment was
+     * device where touch sounds ship off by default, honouring it there meant the introduction was
      * silent for everybody.
      */
     private fun allowed(context: Context, cue: Cue): Boolean {
@@ -180,7 +185,7 @@ object Sounds {
             return false
         }
 
-        if (cue == Cue.INTRO) return true
+        if (cue == Cue.BEAD) return true
 
         val touchSounds = runCatching {
             Settings.System.getInt(context.contentResolver, Settings.System.SOUND_EFFECTS_ENABLED, 1)
@@ -366,9 +371,8 @@ object Sounds {
             note(C4 * 0.97, 190, gain = 0.16, attack = 6.0, curve = 9.0),
         )
 
-        Cue.BEAD -> knock()
+        Cue.BEAD -> bead(hz = 1_320.0, ms = 210, gain = 0.30)
 
-        Cue.INTRO -> intro()
     }
 
     private data class Step(val hz: Double, val ms: Int, val gain: Double)
@@ -433,31 +437,6 @@ object Sounds {
         return out
     }
 
-    /**
-     * A bead hitting its stop: a wooden knock rather than a note.
-     *
-     * Noise through a very fast decay, with a low sine under it for body. Wood is mostly transient —
-     * pitch it and it becomes a marimba, which is a different and much busier instrument.
-     */
-    private fun knock(): ShortArray {
-        val ms = 55
-        val count = (RATE * ms / 1000.0).toInt()
-        val out = ShortArray(count)
-        var noise = 0.0
-        val random = java.util.Random(7)   // fixed seed: the same knock every time, not a new one
-
-        for (i in 0 until count) {
-            val fraction = i.toDouble() / count
-            val envelope = exp(-30.0 * fraction)
-
-            // One-pole low pass, which is what turns hiss into something with a body to it.
-            noise = noise * 0.6 + (random.nextDouble() * 2 - 1) * 0.4
-            val body = sin(2 * PI * 180.0 * i / RATE)
-
-            out[i] = ((noise * 0.7 + body * 0.5) * envelope * 0.30 * Short.MAX_VALUE).toInt().toShort()
-        }
-        return out
-    }
 
     /**
      * The intro figure.
@@ -512,51 +491,6 @@ object Sounds {
         return out
     }
 
-    /**
-     * The intro: a handful of beads settling against each other.
-     *
-     * This used to be a four-note rising arpeggio, which was pleasant and belonged to a different
-     * app — it sounded like a notification, and it had nothing to do with the six beads visibly
-     * knocking down two rods on screen while it played.
-     *
-     * So it is those beads. Five strikes, tuned to the pentatonic scale everything else here uses so
-     * it stays consonant, laid out with **shrinking gaps** — 150, 120, 95, 80ms — because objects
-     * coming to rest arrive closer and closer together. A tiny detune on each keeps them from
-     * sounding like the same bead struck five times.
-     *
-     * Underneath, one low bloom with a very slow attack. It is barely audible on its own and it is
-     * what stops five short strikes from sounding thin on a handheld speaker.
-     */
-    private fun intro(): ShortArray {
-        val strikes = listOf(
-            Triple(C5 * 1.000, 0, 0.34),
-            Triple(E5 * 0.998, 150, 0.30),
-            Triple(G5 * 1.003, 270, 0.32),
-            Triple(A5 * 0.997, 365, 0.28),
-            Triple(C6 * 1.001, 445, 0.38),
-        )
-
-        val pad = mix(
-            note(C4, 1_150, gain = 0.085, attack = 300.0, curve = 2.6),
-            note(G4, 1_150, gain = 0.055, attack = 340.0, curve = 2.6),
-        )
-
-        val out = ShortArray(maxOf(pad.size, RATE * 1_250 / 1_000))
-
-        for ((hz, atMs, gain) in strikes) {
-            // The last one rings longest; it is the one the branding lands on.
-            val length = if (atMs >= 445) 620 else 300
-            val samples = bead(hz, length, gain)
-            val offset = RATE * atMs / 1_000
-            for (i in samples.indices) {
-                val at = offset + i
-                if (at < out.size) out[at] = clamp(out[at] + samples[i])
-            }
-        }
-
-        for (i in pad.indices) out[i] = clamp(out[i] + pad[i])
-        return out
-    }
 
     private fun clamp(value: Int): Short =
         value.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()

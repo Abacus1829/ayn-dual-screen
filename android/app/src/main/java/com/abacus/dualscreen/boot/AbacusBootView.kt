@@ -101,6 +101,15 @@ class AbacusBootView @JvmOverloads constructor(
      */
     var full: Boolean = true
 
+    /**
+     * Two beads struck each other, and how hard, 0 to 1.
+     *
+     * Forwarded straight from the simulation rather than timed against the clock: the whole point is
+     * that the sound happens on the frame the beads actually meet, so it belongs to the physics and
+     * not to a schedule somebody wrote while watching it once.
+     */
+    var onBeadContact: ((Float) -> Unit)? = null
+
     /** Called as each bead reaches its stop, with its index, so a knock can land on that frame. */
     var onBeadSeated: ((Int) -> Unit)? = null
 
@@ -209,6 +218,7 @@ class AbacusBootView @JvmOverloads constructor(
         // Carried onto the fresh simulation, so an intro that starts already waiting holds from its
         // first frame rather than resolving once and then being told to wait.
         beads.holding = waiting
+        beads.onContact = { strength -> onBeadContact?.invoke(strength) }
         seated.clear()
         landed = false
         startedAt = System.currentTimeMillis()

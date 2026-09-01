@@ -77,6 +77,15 @@ internal class Beads {
     private val hops = mutableListOf<FloatArray>()
 
     /**
+     * Called when two beads actually strike each other, with how hard.
+     *
+     * The strength is the closing speed, normalised — so a glancing touch and a hard knock are told
+     * apart by the caller rather than every contact sounding identical. This is a *contact*, not an
+     * arrival: a bead reaching its final stop is a different event and is not reported here.
+     */
+    var onContact: ((strength: Float) -> Unit)? = null
+
+    /**
      * Stay in free play rather than moving on to seat and eject.
      *
      * This is the loading state, and it is the *same* simulation rather than a second animation: the
@@ -259,10 +268,25 @@ internal class Beads {
 
                     // Equal masses: at restitution 1 the velocities simply swap, which is why an
                     // abacus rattles the way it does.
+                    // How hard, before the velocities are changed by the collision itself.
+                    val closing = a.v - b.v
+
                     val av = ((1 - BEAD_E) * a.v + (1 + BEAD_E) * b.v) / 2f
                     val bv = ((1 + BEAD_E) * a.v + (1 - BEAD_E) * b.v) / 2f
                     a.v = av
                     b.v = bv
+
+                    /*
+                     * A contact worth hearing.
+                     *
+                     * Two beads resting against each other under gravity are technically colliding
+                     * on every one of the contact passes, thousands of times a second, and sounding
+                     * all of those would be a buzz rather than a clink. Only a genuine strike — one
+                     * with real closing speed behind it — is reported.
+                     */
+                    if (closing > CONTACT_THRESHOLD) {
+                        onContact?.invoke((closing / CONTACT_LOUD).coerceIn(0.15f, 1f))
+                    }
 
                     if (seating || timeMs - lastTransferMs < TRANSFER_COOLDOWN_MS) continue
 
@@ -370,6 +394,17 @@ internal class Beads {
 
         /** How much of the rock survives while the intro is waiting on startup work. */
         private const val HOLD_ROCK_FLOOR = 0.34f
+
+        /**
+         * The closing speed below which a contact is beads settling rather than beads striking.
+         *
+         * Tuned to the units the simulation works in — rod length is 1.0 — so this is "a fifth of a
+         * rod per second", which is a nudge. Anything slower is the stack breathing.
+         */
+        private const val CONTACT_THRESHOLD = 0.2f
+
+        /** The closing speed that counts as a full-strength strike. */
+        private const val CONTACT_LOUD = 1.6f
 
         private const val SPIN_MS = 1_200f
         private const val TURNS = 1.5f
