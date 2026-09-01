@@ -7,6 +7,36 @@ time — so they say what the commits show and no more.
 
 ---
 
+## 0.28.0-beta.3 — 2026-08-26 (beta)
+
+## Mod versions and links, in the app
+
+The app's always been able to update *itself*. The mods are files you have to drop onto a PC by hand, and the app said absolutely nothing about them — you found out a mod had changed by going and reading the release page, assuming it occurred to you to check.
+
+**Settings → System → Check for updates** now lists every mod on the newest release with its version. Tap one and it opens the download.
+
+A mod gets a **★ NEW** next to it when its version has changed since the last time you looked at that list.
+
+To be straight about what that does and doesn't mean: nothing tells the app which mod version is actually sitting on your PC. The companion mod serves game state, not its own version number. So "you need to update" would be me making it up. "This is different from the last one you saw" is true, and it's the thing you actually want to know.
+
+Links are built from the release tag rather than fetched, so this works from cache with no connection — handy, since a list of things to install later is exactly what you'd want offline. Checked against the live release: all four resolve.
+
+## The intro only makes noise when beads hit each other
+
+It had three sounds: a knock as each bead arrived, a tap on the first one, and a five-note glass figure over the top as the mark landed. All fired on a timer whether or not anything was happening on screen. Which is the giveaway — it was a soundtrack, not the sound of the thing.
+
+The physics now reports actual collisions and how hard they were. Each one is a single glass clink, pitched and levelled to the impact. When the beads are just drifting it's silent, because drifting beads don't make a noise.
+
+Two beads resting against each other technically collide thousands of times a second, so only strikes with real speed behind them count.
+
+## Known limitations
+
+Unchanged: nothing has run on a Thor, the Home button is still unexplained, no GPU ring unless your device exposes the clock, fan/FPS/quick-toggles remain out of reach.
+
+New one: the mod list only appears after a successful update check, since that's where the version list comes from.
+
+---
+
 ## 0.28.0-beta.2 — 2026-08-26 (beta)
 
 ## "It doesn't work without internet"
