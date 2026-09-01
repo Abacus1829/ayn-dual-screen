@@ -272,6 +272,45 @@
                     android:text="@string/update_skip" />
             </LinearLayout>
 
+            <!--
+                ===== the game mods =====
+
+                The app can update itself; the mods are files somebody has to put on a PC by hand,
+                and until now the app said nothing about them at all. Built at runtime because what
+                is in a release is only known once one has been fetched.
+            -->
+            <LinearLayout
+                android:id="@+id/modsCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space"
+                android:orientation="vertical"
+                android:padding="@dimen/space"
+                android:tag="card"
+                android:visibility="gone">
+
+                <TextView
+                    style="@style/Label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/update_mods" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="@string/update_mods_detail"
+                    android:textColor="@color/text_dim"
+                    android:textSize="@dimen/text_caption" />
+
+                <LinearLayout
+                    android:id="@+id/modsList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_small"
+                    android:orientation="vertical" />
+            </LinearLayout>
+
             <!-- ===== release notes ===== -->
             <LinearLayout
                 android:id="@+id/notesCard"

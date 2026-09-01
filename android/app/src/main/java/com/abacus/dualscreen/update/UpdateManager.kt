@@ -53,6 +53,9 @@ class UpdateManager private constructor(private val context: Context) {
     private val listeners = mutableListOf<(State) -> Unit>()
 
     private val source = AppSource(context)
+
+    /** Where releases come from, for anything that needs to build a link into one. */
+    val repo: GitHubRepo get() = source.repo
     val prefs = UpdatePrefs(context, source.id)
 
     @Volatile

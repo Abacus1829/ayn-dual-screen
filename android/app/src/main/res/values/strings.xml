@@ -643,6 +643,11 @@
     <string name="settings_cat_look">Theme, accent, sounds, haptics and the intro</string>
     <string name="settings_cat_controls">Macros and the on-screen keyboard</string>
     <string name="settings_cat_system">Updates, permissions, developer tools</string>
+    <string name="update_mods">Game mods</string>
+    <string name="update_mods_detail">The newest published version of each. Tap one to download it — install it on the PC running the game, not here.</string>
+    <string name="update_mods_new">NEW</string>
+    <string name="update_mods_none">No version listed</string>
+    <string name="update_mods_open_failed">Could not open a browser for that link</string>
     <string name="control_title">Quick controls</string>
     <string name="control_open">Open quick controls</string>
     <string name="control_volume">Volume</string>

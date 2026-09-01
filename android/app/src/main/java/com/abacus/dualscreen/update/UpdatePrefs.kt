@@ -61,6 +61,25 @@ class UpdatePrefs(context: Context, private val sourceId: String = "app") {
     // ── decisions ───────────────────────────────────────────────────────────
 
     /** Is a startup check due? Manual checks do not ask. */
+    /**
+     * The mod versions this device has already been shown.
+     *
+     * Stored as "name=version" pairs so a mod appearing or disappearing from a release does not
+     * disturb the others. It answers the only honest question available: nothing reports which mod
+     * version is installed on the PC, but the app does know what it last showed you, and "this is
+     * newer than the last one you saw" is both true and the thing worth flagging.
+     */
+    var seenMods: Map<String, String>
+        get() = prefs.getStringSet(key("seen_mods"), emptySet()).orEmpty()
+            .mapNotNull { entry ->
+                val at = entry.indexOf('=')
+                if (at <= 0) null else entry.take(at) to entry.substring(at + 1)
+            }
+            .toMap()
+        set(value) = prefs.edit()
+            .putStringSet(key("seen_mods"), value.map { "${it.key}=${it.value}" }.toSet())
+            .apply()
+
     fun dueForCheck(now: Long = System.currentTimeMillis()): Boolean =
         autoCheck && now - lastCheck >= CHECK_INTERVAL_MS
 

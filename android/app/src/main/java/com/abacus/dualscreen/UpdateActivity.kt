@@ -13,6 +13,11 @@ import com.abacus.dualscreen.ui.Feedback
 import com.abacus.dualscreen.ui.Motion
 import com.abacus.dualscreen.ui.Nav
 import com.abacus.dualscreen.update.AppSource
+import com.abacus.dualscreen.update.ModCatalog
+import com.abacus.dualscreen.ui.Ui
+import android.widget.LinearLayout
+import android.widget.TextView
+import android.util.TypedValue
 import com.abacus.dualscreen.update.Channel
 import com.abacus.dualscreen.update.Downloader
 import com.abacus.dualscreen.update.Failure
@@ -126,6 +131,124 @@ class UpdateActivity : AppCompatActivity() {
         updates.recover()
         binding.installedVersion.text = updates.installedName().ifBlank { getString(R.string.update_unknown) }
         render(updates.state)
+    }
+
+    /**
+     * The game mods on the newest release: version, size, and a tap to download.
+     *
+     * Fed from whatever release the checker last saw, so it fills in after the first check and stays
+     * filled from the cache afterwards — including offline, which is exactly when somebody is likely
+     * to be looking at a list of things to install later.
+     *
+     * **A mod is marked NEW when its version differs from the one this device was last shown**, not
+     * from what is installed. Nothing reports the version sitting on the PC — the companion serves
+     * game state, not its own version — so "you need to update" would be invented. "This changed
+     * since you last looked" is true, and is the question somebody actually has.
+     */
+    private fun showMods() {
+        val cached = updates.prefs.cached
+        val mods = cached?.let {
+            ModCatalog.of(updates.repo, it.tag, it.title)
+        }.orEmpty()
+
+        binding.modsCard.visibility = if (mods.isEmpty()) View.GONE else View.VISIBLE
+        if (mods.isEmpty()) return
+
+        val seen = updates.prefs.seenMods
+        binding.modsList.removeAllViews()
+
+        for (mod in mods) {
+            val version = mod.version?.text
+            val fresh = version != null && seen[mod.name] != null && seen[mod.name] != version
+
+            val detail = version ?: getString(R.string.update_mods_none)
+
+            val title = if (fresh) {
+                mod.name + "  ·  " + getString(R.string.update_mods_new)
+            } else {
+                mod.name
+            }
+
+            binding.modsList.addView(modRow(title, detail, fresh, mod.url))
+        }
+
+        // Seen now. A star that survived the visit would be a badge nobody could clear.
+        updates.prefs.seenMods = mods
+            .mapNotNull { mod -> mod.version?.text?.let { mod.name to it } }
+            .toMap()
+    }
+
+    /**
+     * One mod row.
+     *
+     * Built here rather than through Ui.link because that takes string resources and these are
+     * runtime values — a mod name from a table, a version parsed out of a release title. It borrows
+     * Ui.card so the surface, corners and accent still come from one place.
+     */
+    private fun modRow(title: String, detail: String, fresh: Boolean, url: String): View =
+        Ui.card(this, settings).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            val pad = Ui.dp(this@UpdateActivity, 12)
+            setPadding(pad, pad, pad, pad)
+            minimumHeight = Ui.dp(this@UpdateActivity, 52)
+
+            (layoutParams as? LinearLayout.LayoutParams ?: LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).also { layoutParams = it }).topMargin = Ui.dp(this@UpdateActivity, 6)
+
+            addView(TextView(this@UpdateActivity).apply {
+                text = if (fresh) "★" else "⇩"
+                setTextColor(Appearance.accentOf(settings))
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ).apply { marginEnd = Ui.dp(this@UpdateActivity, 12) }
+            })
+
+            addView(LinearLayout(this@UpdateActivity).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+
+                addView(TextView(this@UpdateActivity).apply {
+                    text = title
+                    setTextColor(
+                        if (fresh) Appearance.accentOf(settings)
+                        else getColor(R.color.text)
+                    )
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+                })
+
+                addView(TextView(this@UpdateActivity).apply {
+                    text = detail
+                    setTextColor(getColor(R.color.text_dim))
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                })
+            })
+
+            setOnClickListener {
+                Feedback.select(it)
+                openLink(url)
+            }
+
+            Motion.pressable(this, scale = 0.985f)
+            com.abacus.dualscreen.ui.Focus.reachable(this, Appearance.accentOf(settings))
+        }
+
+    /** Open a download link in whatever the device uses for links. */
+    private fun openLink(url: String) {
+        val opened = runCatching {
+            startActivity(
+                Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        }.isSuccess
+
+        if (!opened) {
+            Feedback.failed(this, binding.root, getString(R.string.update_mods_open_failed))
+        }
     }
 
     // ── the one button ──────────────────────────────────────────────────────
