@@ -7,6 +7,34 @@ time — so they say what the commits show and no more.
 
 ---
 
+## 0.29.0 — 2026-09-01
+
+## Quick controls are gone
+
+The handle on the edge of every screen, and the panel behind it. Removed.
+
+Nothing went with it. Volume and brightness are the **Controls** tile; keyboard, notes, macros and the dashboard all have their own tiles already. It was a second way to reach things that already had one.
+
+## The mod list actually shows up now
+
+Added in the last beta, and it turns out it was never going to appear for anybody.
+
+It was reading from the "pending update" slot — which only holds an update that's *actually available*, and gets cleared the second your app is current. So the list only existed for people who happened to be out of date, and vanished the moment they updated. Since 0.28.0 went out, that's everyone. It was invisible from the day it shipped.
+
+Which is backwards twice over, because someone running the newest app is the **most** likely person to be wondering whether a mod has moved on.
+
+The newest release is now remembered on every successful check — including the "you're up to date" one — in its own place rather than borrowed from the update slot.
+
+**Settings → System → Check for updates.** Every mod on the newest release with its version, tap to download, and a ★ NEW when one has changed since you last looked.
+
+If the list is empty, it just hasn't checked yet — hit Check for updates once.
+
+## Known limitations
+
+Unchanged: nothing has run on an AYN Thor, the Home button is still unexplained, no GPU ring unless your device exposes its clock, and fan control, real FPS and the eight quick toggles remain out of reach.
+
+---
+
 ## 0.28.0 — 2026-09-01
 
 The beta line promoted unchanged. Everything below in the four betas is in this
